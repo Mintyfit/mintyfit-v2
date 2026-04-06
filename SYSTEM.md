@@ -128,6 +128,7 @@ AprillBuild/
 │   │   ├── portionCalc.js            # BMR, TDEE, portion scaling
 │   │   ├── nutrition.js              # NUTRITION_FIELDS, getNutritionData
 │   │   ├── memberRDA.js              # 47-nutrient daily targets
+│   │   ├── glycemicLoad.js           # GL estimation
 │   │   ├── usdaLookup.js             # USDA API
 │   │   └── usdaNutrition.js          # USDA nutrient mapping
 │   ├── recipe/
@@ -137,11 +138,15 @@ AprillBuild/
 │   │   ├── ingredientSwap.js         # AI ingredient substitution
 │   │   └── foodGroups.js             # Food group classification
 │   ├── journal/
+│   │   ├── grokFoodLookup.js         # Grok AI food nutrition lookup
 │   │   └── openFoodFacts.js          # Barcode lookup
 │   ├── member/
 │   │   ├── syncFamily.js             # Load + compute family data
-│   │   └── memberColors.js           # Member avatar colors
+│   │   ├── memberColors.js           # Member avatar colors
+│   │   ├── activityCalories.js       # Activity calorie estimation
+│   │   └── recoveryFactor.js         # Recovery / rest day factor
 │   ├── stripe.js                     # Stripe config, FREE_LIMITS
+│   ├── promotions.js                 # Promotional pricing logic
 │   ├── usageLimits.js                # Rate limiting
 │   └── mealParser.js                 # Meal text parsing
 │
@@ -152,7 +157,9 @@ AprillBuild/
 │   ├── useAuth.js                    # Re-export from AuthContext
 │   ├── useFamily.js                  # Family members state
 │   ├── useProfile.js                 # Profile state
-│   └── useSubscription.js            # Stripe subscription state
+│   ├── useSubscription.js            # Stripe subscription state
+│   ├── useStorage.js                 # localStorage wrapper
+│   └── useVoice.js                   # Web Speech API wrapper
 │
 ├── components/                       # UI components (to be built)
 │
@@ -253,7 +260,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://[project].supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=...              (server-side only)
 ANTHROPIC_API_KEY=sk-ant-...              (server-side only)
-GROK_API_KEY=...                          (server-side only)
+XAI_API_KEY=...                           (server-side only, used by /api/grok)
 IDEOGRAM_API_KEY=...                      (server-side only)
 STRIPE_SECRET_KEY=...                     (server-side only)
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=...    (browser-safe)
@@ -303,8 +310,4 @@ Key formulas (dc = baseDailyCalories, w = weight kg):
 
 - **Components**: No UI components built yet — `app/page.jsx` is placeholder
 - **Pages**: Only home route exists; all authenticated routes to be built
-- **Supabase migrations**: Need to be written (schema above is target state)
-- **Edge Functions**: Stripe checkout/portal Edge Functions not yet created for v2
-- **`lib/nutrition/memberRDA.js`**: Not yet transplanted from v1
-- **`lib/usageLimits.js`**: Not yet transplanted from v1
-- **`lib/mealParser.js`**: Not yet transplanted from v1
+- **`STRIPE_SECRET_KEY`**: Not found in old project env — must be added manually before Stripe features work
