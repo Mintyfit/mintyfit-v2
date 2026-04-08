@@ -1,0 +1,31 @@
+import { createPublicClient } from '@/lib/supabase/server'
+import BlogListClient from '@/components/blog/BlogListClient'
+
+export const metadata = {
+  title: 'Family Nutrition Blog — MintyFit',
+  description: 'Evidence-based nutrition articles, meal planning tips, and family health guides from the MintyFit team.',
+  openGraph: {
+    title: 'Family Nutrition Blog — MintyFit',
+    description: 'Evidence-based nutrition articles, meal planning tips, and family health guides.',
+    images: [{ url: '/MintyHero.webp', width: 1200, height: 630 }],
+    type: 'website',
+  },
+}
+
+export const revalidate = 300
+
+async function getPosts() {
+  const supabase = createPublicClient()
+  const { data } = await supabase
+    .from('blog_posts')
+    .select('id, slug, title, excerpt, cover_url, categories, published_at, author_name')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(100)
+  return data || []
+}
+
+export default async function BlogPage() {
+  const posts = await getPosts()
+  return <BlogListClient initialPosts={posts} />
+}
