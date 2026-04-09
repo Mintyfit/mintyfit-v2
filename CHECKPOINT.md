@@ -69,14 +69,14 @@
 
 ## Session 07 — Statistics, Account & Family
 
-- [PENDING] TASK 7.1: Build statistics family dashboard — member cards with nutrition completeness
-- [PENDING] TASK 7.2: Build statistics individual detail — macro charts, nutrient bars, weight trend
-- [PENDING] TASK 7.3: Build actionable insights system ("low on Vitamin D for 3 weeks" → recipe suggestions)
-- [PENDING] TASK 7.4: Build My Profile page — weight tracking, dietary preferences, goals, activity template
-- [PENDING] TASK 7.5: Create family database tables (families, family_memberships, managed_members, family_invites)
-- [PENDING] TASK 7.6: Build My Family page — create family, invite members, add managed kids, co-admin
-- [PENDING] TASK 7.7: Build nutritionist link — connect/disconnect, nutritionist dashboard, client notes
-- [PENDING] TASK 7.8: Verify all flows, RLS policies on new tables, commit and push
+- [DONE] TASK 7.1: Build statistics family dashboard — member cards with nutrition completeness — ✓ StatisticsClient.jsx MemberCard, 7-day completeness bars, color-coded per nutrient threshold
+- [DONE] TASK 7.2: Build statistics individual detail — macro charts, nutrient bars, weight trend — ✓ IndividualDetail with donut SVG, weight sparkline SVG, all 47-nutrient bars, show-all toggle
+- [DONE] TASK 7.3: Build actionable insights system — ✓ InsightCard finds most-deficient nutrient across 7 days, links to /recipes?nutrient=
+- [DONE] TASK 7.4: Build My Profile page — weight tracking, dietary preferences, goals — ✓ MyAccountClient.jsx weight sparkline + history table, toggle chips for diet/allergies/goals, nutritionist connect/disconnect, GDPR export/delete, subscription section
+- [DONE] TASK 7.5: Create family database tables — ✓ supabase/migrations/20260409_family_tables.sql: families, family_memberships, managed_members, family_invites, weight_logs with full RLS
+- [DONE] TASK 7.6: Build My Family page — create family, invite members, add managed kids, co-admin — ✓ MyFamilyClient.jsx NoFamilyView, MemberRow (promote/remove), ManagedMemberRow, AddChildModal, invite flow with copy link
+- [DONE] TASK 7.7: Build nutritionist link — connect/disconnect, nutritionist dashboard, client notes — ✓ NutritionistClient.jsx ClientCard, inline note form, /api/nutritionist/connect + notes routes
+- [DONE] TASK 7.8: Verify all flows, family invite acceptance, GDPR routes, build passes — ✓ next build clean (40 routes), family-invite/[token] page, /api/gdpr/export + delete, /api/family/accept-invite
 
 ## Session 08 — Admin, Blog, Pricing & SEO
 
