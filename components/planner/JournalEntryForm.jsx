@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useVoice } from '@/hooks/useVoice'
 
@@ -17,6 +17,38 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
   const [resolved, setResolved] = useState(null) // parsed + nutrition data
   const [error, setError] = useState('')
   const barcodeRef = useRef(null)
+  const [frequentFoods, setFrequentFoods] = useState([])
+
+  // Fetch frequent foods (logged ≥2 times) on mount
+  useEffect(() => {
+    async function fetchFrequentFoods() {
+      const supabase = createClient()
+      if (!supabase) return
+      const { data } = await supabase
+        .from('journal_entries')
+        .select('food_name, amount, unit')
+        .eq('profile_id', userId)
+        .order('logged_at', { ascending: false })
+        .limit(200)
+      if (!data) return
+      // Count occurrences
+      const counts = {}
+      const meta = {}
+      for (const row of data) {
+        const key = row.food_name?.toLowerCase()
+        if (!key) continue
+        counts[key] = (counts[key] || 0) + 1
+        if (!meta[key]) meta[key] = { food_name: row.food_name, amount: row.amount, unit: row.unit }
+      }
+      const frequent = Object.keys(counts)
+        .filter(k => counts[k] >= 2)
+        .sort((a, b) => counts[b] - counts[a])
+        .slice(0, 8)
+        .map(k => meta[k])
+      setFrequentFoods(frequent)
+    }
+    fetchFrequentFoods()
+  }, [userId])
 
   const { isListening, startListening } = useVoice({
     onTranscript: text => {
@@ -185,6 +217,27 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
           {/* Quick add */}
           {tab === 'quick' && (
             <div>
+              {/* Frequent foods chips */}
+              {frequentFoods.length > 0 && (
+                <div style={{ marginBottom: '0.875rem' }}>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)' }}>🕐 Recent favourites</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                    {frequentFoods.map((f, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setFoodName(f.food_name)
+                          if (f.amount) setAmount(String(f.amount))
+                          if (f.unit) setUnit(f.unit)
+                        }}
+                        style={{ padding: '0.3rem 0.75rem', borderRadius: '16px', border: '1px solid var(--border)', background: 'var(--bg-page)', color: 'var(--text-2)', fontSize: '0.8125rem', cursor: 'pointer' }}
+                      >
+                        {f.food_name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.875rem' }}>
                 <input
                   type="text"

@@ -25,6 +25,8 @@ function toDateKey(date) {
   return date.toISOString().split('T')[0]
 }
 
+const MEAL_LABELS = { breakfast: '🌅 Breakfast', snack: '🍎 Morning Snack', lunch: '☀️ Lunch', snack2: '🍊 Afternoon Snack', dinner: '🌙 Dinner' }
+
 export default function PlannerClient({ userId, profile, members }) {
   const [today] = useState(() => new Date())
   const [weekOffset, setWeekOffset] = useState(0)
@@ -34,6 +36,17 @@ export default function PlannerClient({ userId, profile, members }) {
   const [loading, setLoading] = useState(false)
   const [view, setView] = useState('week') // 'week' | 'day'
   const touchStartX = useRef(null)
+
+  // Drag-and-drop sidebar
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [sidebarRecipes, setSidebarRecipes] = useState([])
+  const [sidebarSearch, setSidebarSearch] = useState('')
+  const [sidebarLoading, setSidebarLoading] = useState(false)
+  const draggedRecipe = useRef(null)
+  const [dragActive, setDragActive] = useState(false)
+  // Drop target modal: { date, dateKey }
+  const [dropTarget, setDropTarget] = useState(null)
+  const [addingToMeal, setAddingToMeal] = useState(false)
 
   const anchorDate = new Date(today)
   anchorDate.setDate(today.getDate() + weekOffset * 7)
@@ -95,6 +108,56 @@ export default function PlannerClient({ userId, profile, members }) {
         setActivities(actMap)
       })
   }, [userId, weekOffset])
+
+  // Fetch sidebar recipes when sidebar opens or search changes
+  useEffect(() => {
+    if (!showSidebar) return
+    setSidebarLoading(true)
+    const supabase = createClient()
+    if (!supabase) { setSidebarLoading(false); return }
+    const query = supabase
+      .from('recipes')
+      .select('id, title, slug, image_url, nutrition')
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
+      .limit(30)
+    if (sidebarSearch.trim()) {
+      query.ilike('title', `%${sidebarSearch.trim()}%`)
+    }
+    query.then(({ data }) => {
+      setSidebarRecipes(data || [])
+      setSidebarLoading(false)
+    })
+  }, [showSidebar, sidebarSearch])
+
+  // Handle drop on a day card
+  function handleDropRecipe(date, dateKey) {
+    if (!draggedRecipe.current) return
+    setDropTarget({ date, dateKey })
+  }
+
+  // After user picks a meal slot → insert calendar entry
+  async function handleMealSlotPick(mealType) {
+    if (!dropTarget || !draggedRecipe.current) return
+    setAddingToMeal(true)
+    const supabase = createClient()
+    if (supabase) {
+      const { dateKey } = dropTarget
+      const currentSlotLen = (entries[dateKey]?.[mealType] || []).length
+      await supabase.from('calendar_entries').insert({
+        profile_id: userId,
+        date: dateKey,
+        meal_type: mealType,
+        recipe_id: draggedRecipe.current.id,
+        order_index: currentSlotLen,
+      })
+      await refreshDay(dateKey)
+    }
+    setDropTarget(null)
+    draggedRecipe.current = null
+    setDragActive(false)
+    setAddingToMeal(false)
+  }
 
   // Swipe support for mobile week navigation
   function handleTouchStart(e) {
@@ -182,9 +245,42 @@ export default function PlannerClient({ userId, profile, members }) {
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <button
+            onClick={() => setShowSidebar(v => !v)}
+            className="recipe-sidebar-btn"
+            style={{
+              padding: '0.5rem 1rem', borderRadius: '8px',
+              border: `1px solid ${showSidebar ? 'var(--primary)' : 'var(--border)'}`,
+              background: showSidebar ? 'rgba(61,138,62,0.08)' : 'var(--bg-card)',
+              color: showSidebar ? 'var(--primary)' : 'var(--text-2)',
+              fontSize: '0.875rem', cursor: 'pointer', display: 'none',
+            }}
+          >
+            📌 Recipes
+          </button>
+          <button
             onClick={async () => {
-              // TASK 5.7: Shopping list generation placeholder
-              alert('Shopping list generation coming in Session 06!')
+              // Collect unique recipe IDs from the current week's entries
+              const recipeIds = new Set()
+              for (const dayEntries of Object.values(entries)) {
+                for (const mealEntries of Object.values(dayEntries)) {
+                  for (const entry of mealEntries || []) {
+                    if (entry.recipe_id) recipeIds.add(entry.recipe_id)
+                  }
+                }
+              }
+              if (recipeIds.size === 0) {
+                window.location.href = '/shopping-list'
+                return
+              }
+              // Add all week's recipes to shopping list then navigate
+              for (const recipe_id of recipeIds) {
+                await fetch('/api/shopping-list', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ recipe_id }),
+                }).catch(() => {})
+              }
+              window.location.href = '/shopping-list'
             }}
             style={{
               padding: '0.5rem 1rem', borderRadius: '8px',
@@ -255,23 +351,117 @@ export default function PlannerClient({ userId, profile, members }) {
         </div>
       </div>
 
-      {/* Week overview grid */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-4)' }}>Loading…</div>
-      ) : (
-        <WeekOverview
-          weekDates={weekDates}
-          entries={entries}
-          activities={activities}
-          members={members}
-          today={today}
-          onSelectDay={selectDay}
-        />
+      {/* Week + Sidebar layout */}
+      <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
+        {/* Week overview grid */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-4)' }}>Loading…</div>
+          ) : (
+            <WeekOverview
+              weekDates={weekDates}
+              entries={entries}
+              activities={activities}
+              members={members}
+              today={today}
+              onSelectDay={selectDay}
+              onDropRecipe={handleDropRecipe}
+              dragActive={dragActive}
+            />
+          )}
+        </div>
+
+        {/* Recipe sidebar (desktop only) */}
+        {showSidebar && (
+          <div className="recipe-sidebar" style={{ width: 240, flexShrink: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+            <div style={{ padding: '0.75rem 1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-1)' }}>Drag recipes</span>
+              <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: '1rem' }}>×</button>
+            </div>
+            <div style={{ padding: '0.625rem' }}>
+              <input
+                type="text"
+                value={sidebarSearch}
+                onChange={e => setSidebarSearch(e.target.value)}
+                placeholder="Search recipes…"
+                style={{ width: '100%', padding: '0.4rem 0.625rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ maxHeight: 480, overflowY: 'auto', padding: '0 0.625rem 0.625rem' }}>
+              {sidebarLoading ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>Loading…</p>
+              ) : sidebarRecipes.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>No recipes found</p>
+              ) : (
+                sidebarRecipes.map(r => (
+                  <div
+                    key={r.id}
+                    draggable
+                    onDragStart={() => { draggedRecipe.current = r; setDragActive(true) }}
+                    onDragEnd={() => { if (!dropTarget) { draggedRecipe.current = null; setDragActive(false) } }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
+                  >
+                    {r.image_url && (
+                      <img src={r.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                    <span style={{ fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      {r.title}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sidebar toggle button */}
+      {!showSidebar && (
+        <button
+          onClick={() => setShowSidebar(true)}
+          className="recipe-sidebar-toggle"
+          style={{ marginTop: '1rem', padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-2)', fontSize: '0.875rem', cursor: 'pointer', display: 'none' }}
+        >
+          📌 Drag recipes onto days
+        </button>
+      )}
+
+      {/* Meal slot picker modal (after dropping a recipe on a day) */}
+      {dropTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={e => { if (e.target === e.currentTarget) { setDropTarget(null); draggedRecipe.current = null; setDragActive(false) } }}>
+          <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '1.5rem', maxWidth: 340, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 0.25rem', fontSize: '1rem', fontWeight: 700, color: 'var(--text-1)' }}>
+              Add to {dropTarget.date.toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'short' })}
+            </h3>
+            <p style={{ margin: '0 0 1rem', fontSize: '0.875rem', color: 'var(--text-3)' }}>
+              {draggedRecipe.current?.title} — choose a meal slot:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {MEAL_TYPES.map(mt => (
+                <button
+                  key={mt}
+                  onClick={() => handleMealSlotPick(mt)}
+                  disabled={addingToMeal}
+                  style={{ padding: '0.625rem 1rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-page)', color: 'var(--text-1)', cursor: 'pointer', textAlign: 'left', fontSize: '0.9375rem', fontWeight: 500 }}
+                >
+                  {MEAL_LABELS[mt]}
+                </button>
+              ))}
+            </div>
+            {addingToMeal && <p style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: '0.875rem', marginTop: '0.75rem' }}>Adding…</p>}
+          </div>
+        </div>
       )}
 
       <style>{`
         @media (max-width: 640px) {
           .mobile-date-strip { display: block !important; margin-bottom: 1rem; }
+        }
+        @media (min-width: 900px) {
+          .recipe-sidebar { display: block !important; }
+          .recipe-sidebar-toggle { display: block !important; }
+          .recipe-sidebar-btn { display: block !important; }
         }
       `}</style>
     </div>

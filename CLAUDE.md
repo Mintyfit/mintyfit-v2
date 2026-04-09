@@ -112,3 +112,42 @@ After completing any task, check if you changed:
 4. New API routes → update SYSTEM.md
 5. New environment variables → update SYSTEM.md
 6. Knowledge base changes → update knowledge/INDEX.md
+
+
+CLAUDE.md — Overnight Execution Protocol Addition
+> Paste this section into the bottom of your CLAUDE.md after the Knowledge System section.
+---
+Overnight Execution Protocol
+This project supports unattended overnight builds. An external script (`run-overnight.bat`) relaunches Claude Code after credit exhaustion. Claude Code must be resilient to interruption and resumption.
+How It Works
+Read CHECKPOINT.md at the start of every session
+Find the next [PENDING] task — skip all [DONE] and [FAILED] tasks
+Verify the last [DONE] task actually works before moving forward (quick sanity check)
+Execute the pending task using the matching TASK-REFERENCE.md section for full instructions
+Verify the task — run build, check files exist, test the feature
+Update CHECKPOINT.md — change [PENDING] to [DONE] or [FAILED] with a short verification note
+Log learnings — append to `knowledge/sessions/overnight-learnings.md`
+Continue to the next task — repeat from step 2
+When all tasks are [DONE] — create `OVERNIGHT-COMPLETE.md` in the project root and stop
+Checkpoint Format
+```
+- [DONE] TASK 1.1: Create GitHub repo — ✓ repo created, initial commit pushed
+- [FAILED] TASK 1.2: Install deps — npm install failed on sharp, needs manual fix
+- [PENDING] TASK 1.3: Create CLAUDE.md
+```
+Rules
+Never skip verification. Every task must be proven to work before marking [DONE].
+If a task fails and you can fix it, fix it. Only mark [FAILED] if you genuinely cannot resolve it.
+If a [FAILED] task blocks subsequent tasks, note the dependency in CHECKPOINT.md and skip dependent tasks with [BLOCKED].
+Work through as many tasks as possible in each session before credits run out.
+Keep CHECKPOINT.md updated after EVERY task — this is your save file.
+The full task instructions live in TASK-REFERENCE.md — read the relevant section for each task.
+Learnings File Format
+Append to `knowledge/sessions/overnight-learnings.md`:
+```markdown
+### TASK X.Y — [task name] — [timestamp]
+- Status: DONE/FAILED
+- What happened: [brief description]
+- Issues encountered: [any problems and how they were resolved]
+- Files created/modified: [list]
+```

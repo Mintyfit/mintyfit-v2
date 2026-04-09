@@ -207,7 +207,7 @@ function NutritionSection({ nutrition, memberMultiplier, memberGoal }) {
 export default function RecipeDetailClient({ recipe, members }) {
   const [selectedMemberId, setSelectedMemberId] = useState(members[0]?.id || null)
   const [showAddPlanMsg, setShowAddPlanMsg] = useState(false)
-  const [showAddShoppingMsg, setShowAddShoppingMsg] = useState(false)
+  const [shoppingState, setShoppingState] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
 
   const selectedMember = members.find(m => m.id === selectedMemberId) || null
 
@@ -300,10 +300,34 @@ export default function RecipeDetailClient({ recipe, members }) {
           📅 Add to Plan
         </button>
         <button
-          onClick={() => { setShowAddShoppingMsg(true); setTimeout(() => setShowAddShoppingMsg(false), 2000) }}
-          style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+          onClick={async () => {
+            if (shoppingState === 'loading') return
+            setShoppingState('loading')
+            try {
+              const res = await fetch('/api/shopping-list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ recipe_id: recipe.id }),
+              })
+              if (!res.ok) throw new Error('failed')
+              setShoppingState('success')
+              setTimeout(() => setShoppingState('idle'), 3000)
+            } catch {
+              setShoppingState('error')
+              setTimeout(() => setShoppingState('idle'), 3000)
+            }
+          }}
+          style={{
+            padding: '0.625rem 1.25rem', borderRadius: '10px',
+            background: shoppingState === 'success' ? 'rgba(61,138,62,0.1)' : 'transparent',
+            border: `2px solid ${shoppingState === 'error' ? '#ef4444' : 'var(--primary)'}`,
+            color: shoppingState === 'error' ? '#ef4444' : 'var(--primary)',
+            fontWeight: 600, fontSize: '0.9375rem',
+            cursor: shoppingState === 'loading' ? 'wait' : 'pointer',
+            opacity: shoppingState === 'loading' ? 0.7 : 1,
+          }}
         >
-          🛒 Add to Shopping List
+          {shoppingState === 'loading' ? '⏳ Adding…' : shoppingState === 'success' ? '✅ Added!' : shoppingState === 'error' ? '❌ Failed' : '🛒 Add to Shopping List'}
         </button>
         <button
           onClick={() => navigator?.share?.({ title: recipe.title, url: window.location.href })}
@@ -313,9 +337,9 @@ export default function RecipeDetailClient({ recipe, members }) {
         </button>
       </div>
 
-      {(showAddPlanMsg || showAddShoppingMsg) && (
+      {showAddPlanMsg && (
         <div style={{ padding: '0.75rem 1rem', background: '#d1fae5', borderRadius: '10px', color: '#065f46', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 500 }}>
-          {showAddPlanMsg ? '✅ Planner coming in Session 05!' : '✅ Shopping list coming in Session 06!'}
+          ✅ Go to your Planner to schedule this recipe!
         </div>
       )}
 

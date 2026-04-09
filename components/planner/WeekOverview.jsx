@@ -42,7 +42,7 @@ function NutritionRing({ ratio, size = 32, color = 'var(--primary)' }) {
   )
 }
 
-export default function WeekOverview({ weekDates, entries, activities, members, today, onSelectDay }) {
+export default function WeekOverview({ weekDates, entries, activities, members, today, onSelectDay, onDropRecipe, dragActive }) {
   const todayKey = toDateKey(today)
 
   return (
@@ -83,19 +83,21 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
           <button
             key={dk}
             onClick={() => onSelectDay(date)}
+            onDragOver={dragActive ? e => e.preventDefault() : undefined}
+            onDrop={dragActive && onDropRecipe ? e => { e.preventDefault(); onDropRecipe(date, dk) } : undefined}
             style={{
               background: isToday ? 'rgba(61,138,62,0.06)' : 'var(--bg-card)',
               border: `2px solid ${isToday ? 'var(--primary)' : 'var(--border)'}`,
               borderRadius: '12px',
               padding: '0.75rem 0.5rem',
-              cursor: 'pointer',
+              cursor: dragActive ? 'copy' : 'pointer',
               textAlign: 'left',
-              transition: 'transform 0.1s, box-shadow 0.1s',
+              transition: 'transform 0.1s, box-shadow 0.1s, border-color 0.1s',
               opacity: isPast ? 0.75 : 1,
             }}
             onMouseEnter={e => {
               e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'
+              e.currentTarget.style.boxShadow = dragActive ? '0 0 0 3px rgba(61,138,62,0.35)' : '0 4px 12px rgba(0,0,0,0.08)'
             }}
             onMouseLeave={e => {
               e.currentTarget.style.transform = 'none'

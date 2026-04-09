@@ -61,11 +61,11 @@
 
 ## Session 06 — Menus & Shopping List
 
-- [PENDING] TASK 6.1: Build menus list page with grid, search, filters
-- [PENDING] TASK 6.2: Build menu detail page with plan overview and "Use this plan" flow
-- [PENDING] TASK 6.3: Create shopping list database tables (shopping_lists, shopping_list_items)
-- [PENDING] TASK 6.4: Build shopping list page — grouped by category, checkboxes, manual add, share
-- [PENDING] TASK 6.5: Wire shopping list entry points (recipe detail, planner, standalone), update nav, commit and push
+- [DONE] TASK 6.1: Build menus list page with grid, search, filters — ✓ app/menus/page.jsx + MenusClient.jsx, SSR + client filters (diet type, sort), menu card with image/badges
+- [DONE] TASK 6.2: Build menu detail page with plan overview and "Use this plan" flow — ✓ app/menus/[slug]/page.jsx + MenuDetailClient.jsx, recipes grouped by meal type, UsePlanModal with date picker, /api/menus/apply copies to calendar
+- [DONE] TASK 6.3: Create shopping list database tables (shopping_lists, shopping_list_items) — ✓ supabase/migrations/20260408_shopping_list.sql with RLS, indexes, updated_at trigger
+- [DONE] TASK 6.4: Build shopping list page — grouped by category, checkboxes, manual add, share — ✓ app/shopping-list/page.jsx + ShoppingListClient.jsx, 7 categories, optimistic toggle, clear checked, share/clipboard, refresh from plan
+- [DONE] TASK 6.5: Wire shopping list entry points (recipe detail, planner, standalone), update nav, commit and push — ✓ recipe detail "Add to Shopping List", planner "Generate shopping list", AppNav with ShoppingCartLink badge, build passes (25 routes)
 
 ## Session 07 — Statistics, Account & Family
 

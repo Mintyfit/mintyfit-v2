@@ -42,6 +42,22 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
 
   const selectedMember = members.find(m => m.id === memberId) || members[0]
 
+  // Build default template chips from member's activity profiles for this day of week
+  const dayOfWeek = new Date(dateKey + 'T12:00:00').getDay() // 0=Sun … 6=Sat
+  const defaultTemplates = (selectedMember?.activityProfiles || []).filter(p =>
+    p.day_of_week === dayOfWeek || p.day_of_week == null
+  )
+
+  function applyTemplate(tpl) {
+    handleActivityTypeChange(tpl.activity_type || 'Walking')
+    const dur = String(tpl.duration_minutes || 30)
+    setDuration(dur)
+    if (tpl.activity_type && tpl.duration_minutes) {
+      const weight = selectedMember?.weight_kg || 70
+      setCaloriesBurned(String(estimateCalories(tpl.activity_type, tpl.duration_minutes, weight)))
+    }
+  }
+
   function handleDurationChange(val) {
     setDuration(val)
     if (val && activityType) {
@@ -94,6 +110,26 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
         </div>
 
         <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* Default templates for today */}
+          {defaultTemplates.length > 0 && (
+            <div>
+              <p style={{ margin: '0 0 0.5rem', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)' }}>
+                📋 Today's usual
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {defaultTemplates.map((tpl, i) => (
+                  <button
+                    key={i}
+                    onClick={() => applyTemplate(tpl)}
+                    style={{ padding: '0.375rem 0.875rem', borderRadius: '20px', border: '1.5px solid var(--primary)', background: 'rgba(61,138,62,0.08)', color: 'var(--primary)', fontSize: '0.8125rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {tpl.activity_type || 'Activity'} {tpl.duration_minutes ? `· ${tpl.duration_minutes} min` : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Member selector */}
           {members.length > 1 && (
             <div>

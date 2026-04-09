@@ -29,10 +29,15 @@ export default function DayAgenda({
 
   const dayLabel = date.toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  // Per-member day summary
+  // Per-member day summary — target includes activity calorie burn
   const memberSummaries = members.map(member => {
     const needs = computeMemberDailyNeeds(member)
-    const target = needs?.energy_kcal || member.daily_calories_target || 2000
+    const baseTarget = needs?.energy_kcal || member.daily_calories_target || 2000
+
+    // Activity calories burned this day bump the calorie target
+    const memberActivities = activities[member.id] || []
+    const activityKcal = memberActivities.reduce((sum, act) => sum + (act.calories_burned || 0), 0)
+    const target = baseTarget + activityKcal
 
     let consumed = 0
     for (const mealType of MEAL_TYPES) {
@@ -41,7 +46,6 @@ export default function DayAgenda({
         if (!entry.member_id || entry.member_id === member.id) {
           consumed += kcal / Math.max(1, members.length)
         }
-        // Journal entries
         if (entry.journal_entries) {
           for (const je of entry.journal_entries) {
             if (!je.member_id || je.member_id === member.id) {
@@ -53,7 +57,7 @@ export default function DayAgenda({
     }
 
     const ratio = target > 0 ? Math.min(1, consumed / target) : 0
-    return { member, target, consumed: Math.round(consumed), ratio }
+    return { member, baseTarget, activityKcal, target, consumed: Math.round(consumed), ratio }
   })
 
   async function handleRemove(entryId) {
@@ -164,16 +168,24 @@ export default function DayAgenda({
             })}
 
             {/* Journal entries */}
-            {slotEntries.filter(e => e.journal_entries).flatMap(e => e.journal_entries || []).map((je, i) => (
-              <div key={je.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.625rem', background: 'rgba(99,102,241,0.05)', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.2)', marginBottom: '0.375rem' }}>
-                <span style={{ fontSize: '1rem' }}>📓</span>
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: '0.875rem', color: 'var(--text-1)', fontWeight: 500 }}>{je.food_name}</span>
-                  {je.amount && <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginLeft: '0.375rem' }}>{je.amount} {je.unit}</span>}
-                  {je.nutrition?.energy_kcal && <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginLeft: '0.375rem' }}>· {Math.round(je.nutrition.energy_kcal)} kcal</span>}
+            {slotEntries.filter(e => e.journal_entries).flatMap(e => e.journal_entries || []).map((je, i) => {
+              const jeMember = je.member_id ? members.find(x => x.id === je.member_id) : null
+              return (
+                <div key={je.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.625rem', background: 'rgba(99,102,241,0.05)', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.2)', marginBottom: '0.375rem' }}>
+                  <span style={{ fontSize: '1rem' }}>📓</span>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-1)', fontWeight: 500 }}>{je.food_name}</span>
+                    {je.amount && <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginLeft: '0.375rem' }}>{je.amount} {je.unit}</span>}
+                    {je.nutrition?.energy_kcal && <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginLeft: '0.375rem' }}>· {Math.round(je.nutrition.energy_kcal)} kcal</span>}
+                    {jeMember && (
+                      <span style={{ fontSize: '0.6875rem', color: 'var(--primary)', background: 'rgba(61,138,62,0.1)', borderRadius: '4px', padding: '0.1rem 0.375rem', marginLeft: '0.375rem', fontWeight: 500 }}>
+                        {jeMember.display_name || jeMember.first_name}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
 
             {/* Add buttons */}
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.375rem' }}>
@@ -198,15 +210,22 @@ export default function DayAgenda({
       <section style={{ marginTop: '1.5rem' }}>
         <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', marginBottom: '0.875rem' }}>Day Summary</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-          {memberSummaries.map(({ member, target, consumed, ratio }) => (
+          {memberSummaries.map(({ member, baseTarget, activityKcal, target, consumed, ratio }) => (
             <div key={member.id} style={{ background: 'var(--bg-card)', borderRadius: '10px', padding: '0.75rem 1rem', border: '1px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-1)' }}>
                   {member.display_name || member.first_name || 'Member'}
                 </span>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
-                  {consumed} / {Math.round(target)} kcal
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                  {activityKcal > 0 && (
+                    <span style={{ fontSize: '0.75rem', color: '#6366f1', background: 'rgba(99,102,241,0.08)', borderRadius: '4px', padding: '0.1rem 0.375rem' }}>
+                      +{activityKcal} active
+                    </span>
+                  )}
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
+                    {consumed} / {Math.round(target)} kcal
+                  </span>
+                </div>
               </div>
               <div style={{ height: 8, background: 'var(--bg-page)', borderRadius: 4, overflow: 'hidden' }}>
                 <div style={{
