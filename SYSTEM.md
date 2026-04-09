@@ -118,7 +118,24 @@ AprillBuild/
 │       ├── claude/route.js           # Claude API proxy
 │       ├── grok/route.js             # Grok API proxy
 │       ├── ideogram/route.js         # Ideogram proxy
-│       └── proxy-image/route.js      # Image resize/cache proxy
+│       ├── proxy-image/route.js      # Image resize/cache proxy
+│       ├── profile/route.js          # PATCH profile fields
+│       ├── weight/route.js           # POST/GET weight logs
+│       ├── family/
+│       │   ├── create/route.js       # POST create family
+│       │   ├── invite/route.js       # POST/GET family invites
+│       │   ├── accept-invite/route.js # POST accept family invite
+│       │   ├── members/route.js      # PATCH/DELETE linked members
+│       │   └── managed/route.js      # POST/PATCH/DELETE managed children
+│       ├── nutritionist/
+│       │   ├── connect/route.js      # POST/DELETE nutritionist link
+│       │   └── notes/route.js        # POST nutritionist notes
+│       ├── gdpr/
+│       │   ├── export/route.js       # GET full data export (JSON download)
+│       │   └── delete/route.js       # DELETE account + all data
+│       ├── shopping-list/route.js    # Shopping list CRUD
+│       ├── menus/apply/route.js      # POST copy menu to calendar
+│       └── stripe/                   # Stripe checkout + portal
 │
 ├── lib/                              # Business logic (no UI)
 │   ├── supabase/
@@ -161,7 +178,22 @@ AprillBuild/
 │   ├── useStorage.js                 # localStorage wrapper
 │   └── useVoice.js                   # Web Speech API wrapper
 │
-├── components/                       # UI components (to be built)
+├── components/                       # UI components
+│   ├── shared/                       # AppNav, ShoppingCartLink, ThemeToggle
+│   ├── home/                         # HeroSection, LandingClient
+│   ├── landing/                      # LandingClient (full landing page)
+│   ├── auth/                         # AuthModal (login/register/Google OAuth)
+│   ├── recipes/                      # RecipesClient, RecipeCard, RecipeDetailClient, RecipeGeneratorClient
+│   ├── planner/                      # PlannerClient, WeekOverview, DayAgenda, ActivityForm, JournalEntryForm, RecipePickerModal
+│   ├── shopping/                     # ShoppingListClient
+│   ├── menus/                        # MenusClient, MenuDetailClient
+│   ├── statistics/                   # StatisticsClient (family dashboard + individual detail)
+│   ├── account/                      # MyAccountClient (profile, weight, nutritionist, GDPR)
+│   ├── family/                       # MyFamilyClient, FamilyInviteClient
+│   ├── nutritionist/                 # NutritionistClient (dashboard, client cards, notes)
+│   ├── blog/                         # BlogListClient, BlogEditorClient
+│   ├── admin/                        # AdminClient
+│   └── pricing/                      # PricingClient
 │
 ├── knowledge/                        # Self-learning knowledge base
 │   ├── INDEX.md                      # Table of contents
@@ -226,14 +258,27 @@ All tables in Supabase PostgreSQL. RLS enabled on everything.
 **`profiles`** — User accounts
 - id (uuid, PK = auth.uid()), email, full_name, role, subscription_tier (free|pro|family), stripe_customer_id, units_preference
 
-**`family_memberships`** — Links users to a family account
-- id, owner_id (FK→profiles), member_id (FK→profiles), role (owner|member), status
+**`families`** — Family groups
+- id (uuid PK), name, created_by (FK→profiles), created_at
 
-**`family_members`** — Family member profiles (can be managed members with no auth)
+**`family_memberships`** — Links profiles to a family
+- id, family_id (FK→families), profile_id (FK→profiles), role (admin|co-admin|member), status (active|removed), joined_at
+
+**`managed_members`** — Children/dependents with no auth account
+- id, family_id, managed_by (FK→profiles), name, gender, date_of_birth, weight_kg, height_cm, allergies (text[]), created_at
+
+**`family_invites`** — Pending email invites
+- id, family_id, invited_by (FK→profiles), email, token (unique, gen_random_bytes(32)), status (pending|accepted|cancelled|expired), expires_at, created_at
+
+**`family_members`** — Legacy family member profiles (v1 compat)
 - id, profile_id (FK→profiles), name, gender, date_of_birth, allergies, activity_profiles (jsonb), is_managed (bool)
 
-**`measurements`** — Weight/height history per member
+**`measurements`** — Weight/height history per family_member (legacy)
 - id, family_member_id, weight_kg, height_cm, recorded_at
+
+**`weight_logs`** — Weight history per profile (v2)
+- id, profile_id (FK→profiles), weight_kg, logged_date (date), created_at
+- UNIQUE(profile_id, logged_date)
 
 **`recipes`** — All recipes
 - id, profile_id, title, description, meal_type, food_type, cuisine_type, servings, instructions (jsonb), nutrition (jsonb: {totals, perServing}), image_url, image_thumb_url, is_public, slug, created_at
@@ -269,6 +314,7 @@ STRIPE_PRO_YEARLY_PRICE_ID=...
 STRIPE_FAMILY_MONTHLY_PRICE_ID=...
 STRIPE_FAMILY_YEARLY_PRICE_ID=...
 STRIPE_WEBHOOK_SECRET=...
+NEXT_PUBLIC_APP_URL=https://mintyfit.com      # Used for family invite link generation
 ```
 
 No `VITE_` prefixed variables. All browser-safe vars use `NEXT_PUBLIC_`.
@@ -306,8 +352,31 @@ Key formulas (dc = baseDailyCalories, w = weight kg):
 
 ---
 
-## Known Gaps / Build Status
+## Build Status (v2 Complete)
 
-- **Components**: No UI components built yet — `app/page.jsx` is placeholder
-- **Pages**: Only home route exists; all authenticated routes to be built
-- **`STRIPE_SECRET_KEY`**: Not found in old project env — must be added manually before Stripe features work
+All 40 routes built and passing `next build`. Sessions 01–09 complete.
+
+### Implemented Routes
+
+| Category | Routes |
+|---|---|
+| Public | `/`, `/recipes`, `/recipes/[slug]`, `/recipes/generate`, `/menus`, `/menus/[slug]`, `/blog`, `/blog/[slug]`, `/pricing`, `/pages/[slug]` |
+| Authenticated | `/plan`, `/statistics`, `/my-account`, `/my-family`, `/shopping-list`, `/nutritionist`, `/family-invite/[token]` |
+| Admin | `/admin`, `/blog/new`, `/blog/[slug]/edit` |
+| SEO | `/sitemap.xml`, `/robots.txt` |
+
+### Environment Variables Required for Production
+
+- `STRIPE_SECRET_KEY` — Must be added manually
+- `STRIPE_WEBHOOK_SECRET` — Stripe webhook secret
+- All Stripe price IDs (4 vars)
+- `SUPABASE_SERVICE_ROLE_KEY` — For GDPR delete and admin operations
+- `IDEOGRAM_API_KEY` — For recipe image generation
+
+### Post-Deploy Checklist (not yet done)
+
+- [ ] Switch `mintyfit.com` to new Vercel project
+- [ ] Update Stripe webhook URL
+- [ ] Update Supabase Auth redirect URLs
+- [ ] Update Google OAuth authorized redirect URIs
+- [ ] Submit sitemap to Google Search Console
