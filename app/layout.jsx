@@ -1,19 +1,8 @@
-import { Suspense } from 'react'
-import localFont from 'next/font/local'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import ThemeToggle from '@/components/shared/ThemeToggle'
 import AppNav from '@/components/shared/AppNav'
 import './globals.css'
-
-const montserrat = localFont({
-  src: [
-    { path: '../public/fonts/montserrat-300-700-latin-ext.woff2', weight: '300 800', style: 'normal' },
-    { path: '../public/fonts/montserrat-300-700-latin.woff2', weight: '300 800', style: 'normal' },
-  ],
-  variable: '--font-montserrat',
-  display: 'swap',
-})
 
 export const metadata = {
   metadataBase: new URL('https://mintyfit.com'),
@@ -55,11 +44,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={montserrat.variable}>
-      <body className={montserrat.variable}>
+    <html lang="en">
+      <body>
         <ThemeProvider>
           <AuthProvider>
-            <Suspense fallback={null}><AppNav /></Suspense>
+            <AppNav />
             <main style={{ minHeight: '100vh' }}>{children}</main>
             <ThemeToggle />
           </AuthProvider>
