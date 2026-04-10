@@ -12,10 +12,8 @@ export default function Navbar({ onOpenAuth }) {
 
   const loading = authLoading || themeLoading
 
-  // Wait for theme to load before rendering anything that depends on dark
-  if (themeLoading) {
-    return <nav style={{ height: 64 }} />
-  }
+  // use a stable default for dark mode to match server render
+  const isDark = dark === true
 
   return (
     <nav style={{
@@ -38,7 +36,7 @@ export default function Navbar({ onOpenAuth }) {
         <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={dark ? '/images/MintyfitWhite.svg' : '/images/Mintyfit.svg'}
+            src={isDark ? '/images/MintyfitWhite.svg' : '/images/Mintyfit.svg'}
             alt="MintyFit"
             style={{ height: 36, width: 'auto' }}
           />
