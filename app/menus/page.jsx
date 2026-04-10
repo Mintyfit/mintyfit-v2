@@ -22,13 +22,17 @@ async function getMenus() {
 
     const publicClient = createPublicClient()
 
-    // Fetch public menus with recipe count
-    const { data: publicMenus } = await publicClient
-      .from('menus')
-      .select('*, menu_recipes(count)')
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-      .limit(100)
+    // Handle missing env vars gracefully
+    let publicMenus = []
+    if (publicClient) {
+      const { data } = await publicClient
+        .from('menus')
+        .select('*, menu_recipes(count)')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      publicMenus = data || []
+    }
 
     let userMenus = []
     if (userId) {

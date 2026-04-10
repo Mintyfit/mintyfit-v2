@@ -12,29 +12,34 @@ export const revalidate = 60
 async function getRecipes(userId) {
   const supabase = createPublicClient()
 
-  let query = supabase
-    .from('recipes')
-    .select('*')
-    .eq('is_public', true)
-    .order('created_at', { ascending: false })
-    .limit(200)
-
-  const { data: publicRecipes, error } = await query
+  // Handle missing env vars gracefully
+  let publicRecipes = []
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('*')
+      .eq('is_public', true)
+      .order('created_at', { ascending: false })
+      .limit(200)
+    publicRecipes = data || []
+  }
 
   let privateRecipes = []
   if (userId) {
-    const authClient = await createClient()
-    const { data } = await authClient
-      .from('recipes')
-      .select('*')
-      .eq('profile_id', userId)
-      .eq('is_public', false)
-      .order('created_at', { ascending: false })
-      .limit(100)
-    privateRecipes = data || []
+    try {
+      const authClient = await createClient()
+      const { data } = await authClient
+        .from('recipes')
+        .select('*')
+        .eq('profile_id', userId)
+        .eq('is_public', false)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      privateRecipes = data || []
+    } catch {}
   }
 
-  const all = [...(publicRecipes || []), ...privateRecipes]
+  const all = [...publicRecipes, ...privateRecipes]
   return all.map(normalizeRecipe).filter(Boolean)
 }
 
