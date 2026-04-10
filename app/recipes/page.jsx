@@ -12,22 +12,16 @@ export const revalidate = 60
 async function getRecipes(userId) {
   const supabase = createPublicClient()
 
-  // Handle missing env vars gracefully
-  let publicRecipes = []
-  if (supabase) {
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('*')
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-      .limit(200)
-    if (error) {
-      console.error('Recipes query error:', error)
-    } else {
-      publicRecipes = data || []
-    }
-  } else {
-    console.warn('createPublicClient null - missing env vars')
+  // Always fetch public recipes
+  const { data: publicRecipes, error } = await supabase
+    .from('recipes')
+    .select('*')
+    .eq('is_public', true)
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (error) {
+    console.error('Recipes query error:', error)
   }
 
   let privateRecipes = []
@@ -45,7 +39,7 @@ async function getRecipes(userId) {
     } catch {}
   }
 
-  const all = [...publicRecipes, ...privateRecipes]
+  const all = [...(publicRecipes || []), ...privateRecipes]
   return all.map(normalizeRecipe).filter(Boolean)
 }
 
