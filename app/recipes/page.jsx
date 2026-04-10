@@ -24,7 +24,6 @@ async function getRecipes(userId) {
     if (error) console.error('Recipes query error:', error)
     publicRecipes = data || []
   }
-  console.log('publicRecipes count:', publicRecipes.length)
 
   let privateRecipes = []
   if (userId) {
