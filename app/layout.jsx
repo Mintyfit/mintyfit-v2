@@ -1,7 +1,6 @@
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import ThemeToggle from '@/components/shared/ThemeToggle'
-import AppNav from '@/components/shared/AppNav'
 import './globals.css'
 
 export const metadata = {
@@ -48,7 +47,6 @@ export default function RootLayout({ children }) {
       <body>
         <ThemeProvider>
           <AuthProvider>
-            <AppNav />
             <main style={{ minHeight: '100vh' }}>{children}</main>
             <ThemeToggle />
           </AuthProvider>

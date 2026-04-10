@@ -54,23 +54,29 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
     setError(null)
 
     let result
-    if (tab === 'signup') {
-      result = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: { onboarding_pending: true },
-        },
-      })
-    } else {
-      result = await supabase.auth.signInWithPassword({ email, password })
+    try {
+      if (tab === 'signup') {
+        result = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            data: { onboarding_pending: true },
+          },
+        })
+      } else {
+        result = await supabase.auth.signInWithPassword({ email, password })
+      }
+    } catch (err) {
+      setLoading(false)
+      setError(err?.message || 'Network error. Check your connection and try again.')
+      return
     }
 
     setLoading(false)
 
-    if (result.error) {
-      setError(result.error.message)
+    if (!result || result.error) {
+      setError(result?.error?.message || 'Something went wrong. Please try again.')
       return
     }
 

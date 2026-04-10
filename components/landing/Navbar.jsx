@@ -3,10 +3,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/contexts/ThemeContext'
 
 export default function Navbar({ onOpenAuth }) {
-  const { user, loading } = useAuth()
+  const { user, loading: authLoading } = useAuth()
+  const { dark, loading: themeLoading } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const loading = authLoading || themeLoading
+
+  // Wait for theme to load before rendering anything that depends on dark
+  if (themeLoading) {
+    return <nav style={{ height: 64 }} />
+  }
 
   return (
     <nav style={{
@@ -26,14 +35,13 @@ export default function Navbar({ onOpenAuth }) {
         justifyContent: 'space-between',
       }}>
         {/* Logo */}
-        <Link href="/" style={{
-          fontSize: '1.25rem',
-          fontWeight: 700,
-          color: 'var(--primary)',
-          textDecoration: 'none',
-          letterSpacing: '-0.02em',
-        }}>
-          🌿 MintyFit
+        <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={dark ? '/images/MintyfitWhite.svg' : '/images/Mintyfit.svg'}
+            alt="MintyFit"
+            style={{ height: 36, width: 'auto' }}
+          />
         </Link>
 
         {/* Desktop nav */}
@@ -43,9 +51,9 @@ export default function Navbar({ onOpenAuth }) {
           <a href="#pricing" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.9375rem' }}>Pricing</a>
           <a href="#faq" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.9375rem' }}>FAQ</a>
 
-          {!loading && (
+{!loading && (
             user ? (
-              <Link href="/planner" style={{
+              <Link href="/plan" style={{
                 background: 'var(--primary)',
                 color: '#fff',
                 padding: '0.5rem 1.25rem',
