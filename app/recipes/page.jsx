@@ -21,8 +21,10 @@ async function getRecipes(userId) {
       .eq('is_public', true)
       .order('created_at', { ascending: false })
       .limit(200)
+    if (error) console.error('Recipes query error:', error)
     publicRecipes = data || []
   }
+  console.log('publicRecipes count:', publicRecipes.length)
 
   let privateRecipes = []
   if (userId) {
