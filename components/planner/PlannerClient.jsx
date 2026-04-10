@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 import WeekOverview from './WeekOverview'
 import DayAgenda from './DayAgenda'
+import AppNav from '@/components/shared/AppNav'
 
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
 
@@ -232,11 +233,13 @@ export default function PlannerClient({ userId, profile, members }) {
   }
 
   return (
-    <div
-      style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem 1.25rem 5rem' }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <>
+      <AppNav />
+      <div
+        style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem 1.25rem 5rem' }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
@@ -465,5 +468,6 @@ export default function PlannerClient({ userId, profile, members }) {
         }
       `}</style>
     </div>
+    </>
   )
 }
