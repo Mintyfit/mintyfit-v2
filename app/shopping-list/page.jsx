@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ShoppingListClient from '@/components/shopping/ShoppingListClient'
@@ -43,10 +42,19 @@ async function getShoppingList(userId, supabase) {
 }
 
 export default async function ShoppingListPage() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  let supabase
+  try {
+    supabase = await createClient()
+  } catch {
+    redirect('/?auth=login')
+  }
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user
+  try {
+    const authData = await supabase.auth.getUser()
+    user = authData.data?.user
+  } catch {}
+
   if (!user) redirect('/?auth=login')
 
   const { list, items } = await getShoppingList(user.id, supabase)

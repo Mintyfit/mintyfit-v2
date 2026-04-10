@@ -121,8 +121,19 @@ async function getStatisticsData(userId, supabase) {
 }
 
 export default async function StatisticsPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  let supabase
+  try {
+    supabase = await createClient()
+  } catch {
+    redirect('/?auth=login')
+  }
+
+  let user
+  try {
+    const authData = await supabase.auth.getUser()
+    user = authData.data?.user
+  } catch {}
+
   if (!user) redirect('/?auth=login')
 
   const data = await getStatisticsData(user.id, supabase)
