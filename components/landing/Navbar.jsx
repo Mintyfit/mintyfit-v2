@@ -7,10 +7,8 @@ import { useTheme } from '@/contexts/ThemeContext'
 
 export default function Navbar({ onOpenAuth }) {
   const { user, loading: authLoading } = useAuth()
-  const { dark, loading: themeLoading } = useTheme()
+  const { dark } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
-
-  const loading = authLoading || themeLoading
 
   // use a stable default for dark mode to match server render
   const isDark = dark === true

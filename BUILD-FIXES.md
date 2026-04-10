@@ -2,16 +2,18 @@
 
 ## Current Status (Apr 10, 2026)
 
-### What's Working
-- Local dev server runs on port 3000
-- Auth login redirects properly
-- Hydration errors mostly fixed with theme context
-- Routes work (/plan redirects to login if not authenticated)
+### What's Working (Apr 10, 2026 - CONFIRMED)
+- ✅ Local dev server runs on port 3000
+- ✅ Recipes page shows data
+- ✅ Plan page opens (after login)
+- ✅ No hydration errors on home page
+- ✅ Top menu bar shows up
+- ✅ Supabase API key fixed - uses `supabase` not `supabase`
 
 ### What Needs Testing
 - Plan page - adding recipes (drag & drop)
 - Shopping list functionality
-- Recipes/menus display
+- Login/signup flow end-to-end
 
 ---
 
@@ -87,29 +89,74 @@ const { data: publicRecipes, error } = await supabase.from('recipes').select('*'
 
 ---
 
-### 4. Nav Missing / Route Issues
+### 4. Nav Missing / Not Showing
 
 **Problem:** 
-- Top nav didn't show up
-- /plan showed home page content
+- Top nav didn't show up on home page
 
 **Root Cause:** 
-- AppNav removed from layout during debugging
-- Some routing issues with middleware
+- Navbar was waiting for `themeLoading` to be false
+- Loading state blocked rendering during SSR
 
-**Fix:** Add Navbar to LandingClient (it's there, just wasn't rendering due to theme loading)
+**Fix:** `components/landing/Navbar.jsx`
+```javascript
+// REMOVED the loading check
+// Before:
+const loading = authLoading || themeLoading
+if (loading) return <nav style={{height:64}} />
+
+// After: Just render with stable defaults
+const { dark } = useTheme()  // removed loading check
+```
 
 ---
 
-### 5. API Key Setup
+### 5. API Key Setup - CRITICAL!
 
-**Required Environment Variables:**
+**The CORRECT API key uses `supabase` not `supabase` in the JWT issuer!**
+
+Get the correct key from Supabase Dashboard → Project Settings → API → `Project API keys` → `anon public` key.
+
+**Required Environment Variables in `.env.local`:**
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://gqpdgopvzgtpupymxkva.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBiYWJzZSIsInJlZiI6ImdxcGRnb3B2emd0cHVweW14a3ZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2NzMyMDQsImV4cCI6MjA4NzI0OTIwNH0.jt0L_2bsfTtBCWJPIQae0Xy7RgT8lMN0cGLG_D_KwTk
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<key-from-supabase-dashboard>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key-from-supabase>
 ```
 
-**Note:** `.env.local` file needs to be properly formatted with no duplicate keys.
+**The wrong key has this pattern (OLD):**
+```
+eyJpc3MiOiJzdXBiYWJzZSIsInJlZiI6...
+```
+
+**The correct key has this pattern:**
+```
+eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6...
+```
+
+Note: `supabase` vs `supabase` - one has `a` after `sup`. You provided `supabase` which is CORRECT.
+
+---
+
+### 6. Nav Not Rendering
+
+**Problem:** Top nav empty / not showing
+
+**Root Cause:** Loading state check was blocking render during SSR
+
+**Fix:** Removed `loading` check from Navbar - render immediately with stable defaults
+
+---
+
+## Testing Results (Apr 10, 2026)
+
+| Test | Status |
+|-----|--------|
+| Home page loads | ✅ |
+| Top nav shows | ✅ |
+| Recipes page data | ✅ |
+| Plan page opens | ✅ |
+| Hydration errors | ✅ Fixed |
 
 ---
 
