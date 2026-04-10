@@ -21,8 +21,13 @@ async function getRecipes(userId) {
       .eq('is_public', true)
       .order('created_at', { ascending: false })
       .limit(200)
-    if (error) console.error('Recipes query error:', error)
-    publicRecipes = data || []
+    if (error) {
+      console.error('Recipes query error:', error)
+    } else {
+      publicRecipes = data || []
+    }
+  } else {
+    console.warn('createPublicClient null - missing env vars')
   }
 
   let privateRecipes = []
