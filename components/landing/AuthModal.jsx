@@ -11,6 +11,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [message, setMessage] = useState(null)
+  const [forgotMode, setForgotMode] = useState(false)
 
   // Reset state when modal opens
   useEffect(() => {
@@ -23,6 +24,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
       setMessage(null)
     }
   }, [isOpen, defaultTab])
+
+  // Debug: log supabase client status on mount
+  useEffect(() => {
+    const client = createClient()
+    console.log('[AuthModal] Supabase client created:', !!client)
+    console.log('[AuthModal] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) + '...')
+    console.log('[AuthModal] Supabase key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  }, [])
 
   // Close on Escape
   useEffect(() => {
@@ -46,16 +55,27 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
 
   async function handleEmailSubmit(e) {
     e.preventDefault()
+    console.log('[AuthModal] Form submitted, tab:', tab)
+    
     if (tab === 'signup' && !gdpr) {
       setError('Please agree to the Privacy Policy and Terms of Service to continue.')
       return
     }
+    
+    if (!supabase) {
+      console.error('[AuthModal] Supabase client is null')
+      setError('Authentication service not configured. Please check your connection.')
+      return
+    }
+    
     setLoading(true)
     setError(null)
+    console.log('[AuthModal] Starting auth with email:', email)
 
     let result
     try {
       if (tab === 'signup') {
+        console.log('[AuthModal] Calling signUp...')
         result = await supabase.auth.signUp({
           email,
           password,
@@ -64,10 +84,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
             data: { onboarding_pending: true },
           },
         })
+        console.log('[AuthModal] signUp result:', result)
       } else {
+        console.log('[AuthModal] Calling signInWithPassword...')
         result = await supabase.auth.signInWithPassword({ email, password })
+        console.log('[AuthModal] signIn result:', result)
       }
     } catch (err) {
+      console.error('[AuthModal] Auth error:', err)
       setLoading(false)
       setError(err?.message || 'Network error. Check your connection and try again.')
       return
@@ -76,15 +100,38 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
     setLoading(false)
 
     if (!result || result.error) {
+      console.error('[AuthModal] Auth failed:', result?.error)
       setError(result?.error?.message || 'Something went wrong. Please try again.')
       return
     }
 
+    console.log('[AuthModal] Auth successful')
     if (tab === 'signup') {
+      console.log('[AuthModal] Signup - showing message')
       setMessage('Check your email for a confirmation link!')
     } else {
+      console.log('[AuthModal] Signin - calling onSuccess and onClose')
       onSuccess?.()
       onClose()
+    }
+  }
+
+  async function handleForgotPassword(e) {
+    e.preventDefault()
+    if (!email.trim()) {
+      setError('Please enter your email address first.')
+      return
+    }
+    setLoading(true)
+    setError(null)
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    })
+    setLoading(false)
+    if (err) {
+      setError(err.message)
+    } else {
+      setMessage(`Password reset link sent to ${email.trim()}. Check your inbox.`)
     }
   }
 
@@ -139,7 +186,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
           {['signup', 'signin'].map(t => (
             <button
               key={t}
-              onClick={() => { setTab(t); setError(null); setMessage(null) }}
+              onClick={() => { setTab(t); setError(null); setMessage(null); setForgotMode(false) }}
               style={{
                 flex: 1, padding: '0.625rem', background: 'none', border: 'none',
                 cursor: 'pointer', fontSize: '0.9375rem', fontWeight: tab === t ? 700 : 400,
@@ -225,6 +272,21 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
                 </span>
               </label>
             )}
+            {tab === 'signin' && (
+              <div style={{ textAlign: 'right', marginBottom: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); handleForgotPassword(e) }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--primary)', fontSize: '0.8125rem', fontWeight: 500,
+                    padding: 0,
+                  }}
+                >
+                  Forgot password?
+                </button>
+              </div>
+            )}
 
             {error && (
               <div style={{
@@ -239,6 +301,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
             <button
               type="submit"
               disabled={loading}
+              onClick={(e) => {
+                console.log('[AuthModal] Submit button clicked, loading:', loading)
+              }}
               style={{
                 width: '100%', padding: '0.875rem', borderRadius: '10px',
                 background: loading ? 'var(--text-4)' : 'var(--primary)',

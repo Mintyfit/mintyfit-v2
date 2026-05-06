@@ -18,12 +18,11 @@ export default function BlogEditorClient({ post, isNew }) {
   const [slug, setSlug] = useState(post?.slug || '')
   const [excerpt, setExcerpt] = useState(post?.excerpt || '')
   const [content, setContent] = useState(post?.content || '')
-  const [coverUrl, setCoverUrl] = useState(post?.cover_url || '')
+  const [coverUrl, setCoverUrl] = useState(post?.image_url || post?.cover_url || '')
   const [categories, setCategories] = useState(post?.categories || [])
   const [status, setStatus] = useState(post?.status || 'draft')
   const [seoTitle, setSeoTitle] = useState(post?.seo_title || '')
   const [seoDesc, setSeoDesc] = useState(post?.seo_description || '')
-  const [authorName, setAuthorName] = useState(post?.author_name || 'MintyFit Team')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState(null)
 
@@ -45,8 +44,9 @@ export default function BlogEditorClient({ post, isNew }) {
     setMessage(null)
 
     const payload = {
-      title, slug, excerpt, content, cover_url: coverUrl, categories, status,
-      seo_title: seoTitle, seo_description: seoDesc, author_name: authorName,
+      title, slug, excerpt, content, image_url: coverUrl, categories, status,
+      seo_title: seoTitle, seo_description: seoDesc,
+      is_published: status === 'published',
       published_at: status === 'published' ? (post?.published_at || new Date().toISOString()) : null,
       updated_at: new Date().toISOString(),
     }
@@ -127,11 +127,6 @@ export default function BlogEditorClient({ post, isNew }) {
         <div>
           <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500 }}>Cover Image URL</label>
           <input value={coverUrl} onChange={e => setCoverUrl(e.target.value)} placeholder="https://..." style={inputStyle} />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500 }}>Author Name</label>
-          <input value={authorName} onChange={e => setAuthorName(e.target.value)} style={inputStyle} />
         </div>
 
         <div>

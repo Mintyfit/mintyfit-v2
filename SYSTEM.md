@@ -134,6 +134,8 @@ AprillBuild/
 │       │   ├── export/route.js       # GET full data export (JSON download)
 │       │   └── delete/route.js       # DELETE account + all data
 │       ├── shopping-list/route.js    # Shopping list CRUD
+│       ├── ingredient-alternatives/
+│       │   └── route.js              # GET ingredient swap suggestions
 │       ├── menus/apply/route.js      # POST copy menu to calendar
 │       └── stripe/                   # Stripe checkout + portal
 │
@@ -282,6 +284,11 @@ All tables in Supabase PostgreSQL. RLS enabled on everything.
 
 **`recipes`** — All recipes
 - id, profile_id, title, description, meal_type, food_type, cuisine_type, servings, instructions (jsonb), nutrition (jsonb: {totals, perServing}), image_url, image_thumb_url, is_public, slug, created_at
+
+**`recipe_ingredient_swaps`** — Persisted ingredient swaps per user per recipe
+- id, profile_id (FK→profiles), recipe_id (FK→recipes), original_name, replacement_name, replacement_note, amount_factor
+- UNIQUE(profile_id, recipe_id, original_name)
+- RLS: auth.uid() = profile_id
 
 **`calendar_entries`** — Meal plan (one row per member per recipe per slot)
 - id, profile_id, date_str (YYYY-MM-DD), meal_type, recipe_id, recipe_name, member_id, personal_nutrition (jsonb)

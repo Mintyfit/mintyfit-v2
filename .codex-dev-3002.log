@@ -1,0 +1,30 @@
+
+> mintyfit-v2@2.0.0 dev
+> next dev --port 3002
+
+   ▲ Next.js 15.5.14
+   - Local:        http://localhost:3002
+   - Network:      http://88.196.62.189:3002
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1451ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1035ms (166 modules)
+ ○ Compiling /blog/[slug] ...
+ ✓ Compiled /blog/[slug] in 5s (894 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /blog 200 in 6368ms
+ GET /blog/what-are-fodmaps 200 in 6402ms
+ GET /blog 200 in 307ms
+ GET /blog/comprehensive-vitamin-d3-calculator 200 in 182ms
+ GET /blog/water-calculator 200 in 166ms
+ GET /blog/how-stress-might-be-the-hidden-cause-of-your-weight-gain 200 in 168ms
+ ○ Compiling /plan ...
+ ✓ Compiled /plan in 592ms (918 modules)
+ GET /plan 200 in 1141ms
+ GET /blog 200 in 220ms
+ GET /plan 200 in 1391ms
+ ✓ Compiled in 494ms (918 modules)

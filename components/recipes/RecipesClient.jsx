@@ -1,8 +1,12 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import RecipeCard from './RecipeCard'
+import { createClient } from '@/lib/supabase/client'
+import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
+
+const LIST_COLUMNS = 'id,slug,title,description,image_url,image_thumb_url,meal_type,food_type,cuisine_type,glycemic_load,price_level,calorie_range,cooking_technique,prep_time_minutes,cook_time_minutes,is_public,profile_id,created_at,updated_at,nutrition'
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
 const FOOD_TYPES = ['omnivore', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'paleo']
@@ -25,6 +29,33 @@ const SORT_OPTIONS = [
 const PAGE_SIZE = 12
 
 export default function RecipesClient({ initialRecipes = [] }) {
+  const [allRecipes, setAllRecipes] = useState(initialRecipes)
+
+  // Fetch the logged-in user's private recipes client-side (avoids making the
+  // server route dynamic, which would bust the ISR cache on every request)
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('recipes')
+        .select(LIST_COLUMNS)
+        .eq('profile_id', user.id)
+        .eq('is_public', false)
+        .order('created_at', { ascending: false })
+        .limit(100)
+        .then(({ data }) => {
+          if (!data?.length) return
+          const normalized = data.map(normalizeRecipe).filter(Boolean)
+          setAllRecipes(prev => {
+            const ids = new Set(prev.map(r => r.id))
+            return [...prev, ...normalized.filter(r => !ids.has(r.id))]
+          })
+        })
+    })
+  }, [])
+
   const [search, setSearch] = useState('')
   const [mealType, setMealType] = useState('')
   const [foodType, setFoodType] = useState('')
@@ -36,7 +67,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
   const [showFilters, setShowFilters] = useState(false)
 
   const filtered = useMemo(() => {
-    let list = [...initialRecipes]
+    let list = [...allRecipes]
 
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -64,7 +95,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
     else if (sort === 'calories-desc') list.sort((a, b) => (b.nutrition?.perServing?.energy_kcal || 0) - (a.nutrition?.perServing?.energy_kcal || 0))
 
     return list
-  }, [initialRecipes, search, mealType, foodType, cuisine, gl, calRange, sort])
+  }, [allRecipes, search, mealType, foodType, cuisine, gl, calRange, sort])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)

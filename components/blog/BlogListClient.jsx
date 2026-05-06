@@ -6,9 +6,24 @@ import Link from 'next/link'
 
 const CATEGORIES = ['All', 'Nutrition', 'Meal Planning', 'Family Health', 'Recipes', 'Weight Loss', 'Kids']
 
+function getPlainText(html = '') {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function getExcerpt(post) {
+  return post.excerpt?.trim() || getPlainText(post.content).slice(0, 180)
+}
+
 function PostCard({ post }) {
   const date = post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
   const cats = Array.isArray(post.categories) ? post.categories : (post.categories ? [post.categories] : [])
+  const imageUrl = post.image_url || post.cover_url
+  const excerpt = getExcerpt(post)
 
   return (
     <Link href={`/blog/${post.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -20,9 +35,9 @@ function PostCard({ post }) {
         onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.10)'}
         onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
       >
-        {post.cover_url && (
+        {imageUrl && (
           <div style={{ position: 'relative', height: 200, flexShrink: 0 }}>
-            <Image src={post.cover_url} alt={post.title} fill style={{ objectFit: 'cover' }} />
+            <Image src={imageUrl} alt={post.title} fill style={{ objectFit: 'cover' }} />
           </div>
         )}
         <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -38,13 +53,13 @@ function PostCard({ post }) {
           <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', lineHeight: 1.35, color: 'var(--text-primary, #111827)' }}>
             {post.title}
           </h2>
-          {post.excerpt && (
+          {excerpt && (
             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #6b7280)', lineHeight: 1.6, flex: 1, marginBottom: '1rem' }}>
-              {post.excerpt.length > 140 ? post.excerpt.slice(0, 140) + '…' : post.excerpt}
+              {excerpt.length > 140 ? excerpt.slice(0, 140) + '...' : excerpt}
             </p>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-secondary, #9ca3af)', marginTop: 'auto' }}>
-            <span>{post.author_name || 'MintyFit Team'}</span>
+            <span>MintyFit Team</span>
             <span>{date}</span>
           </div>
         </div>
@@ -61,9 +76,10 @@ export default function BlogListClient({ initialPosts }) {
 
   const filtered = initialPosts.filter(p => {
     const cats = Array.isArray(p.categories) ? p.categories : (p.categories ? [p.categories] : [])
+    const query = search.toLowerCase()
     const matchesCat = activeCategory === 'All' || cats.includes(activeCategory)
-    const matchesSearch = !search || p.title?.toLowerCase().includes(search.toLowerCase()) ||
-      p.excerpt?.toLowerCase().includes(search.toLowerCase())
+    const matchesSearch = !query || p.title?.toLowerCase().includes(query) ||
+      getExcerpt(p).toLowerCase().includes(query)
     return matchesCat && matchesSearch
   })
 
@@ -81,7 +97,6 @@ export default function BlogListClient({ initialPosts }) {
         </p>
       </div>
 
-      {/* Search */}
       <div style={{ marginBottom: '1.5rem' }}>
         <input
           value={search}
@@ -91,7 +106,6 @@ export default function BlogListClient({ initialPosts }) {
         />
       </div>
 
-      {/* Category filters */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
         {CATEGORIES.map(cat => (
           <button key={cat} onClick={() => { setActiveCategory(cat); setPage(1) }}
@@ -107,10 +121,9 @@ export default function BlogListClient({ initialPosts }) {
         ))}
       </div>
 
-      {/* Grid */}
       {pagePosts.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-secondary, #9ca3af)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>No articles</div>
           <p>No articles found. Check back soon!</p>
         </div>
       ) : (
@@ -119,7 +132,6 @@ export default function BlogListClient({ initialPosts }) {
         </div>
       )}
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (

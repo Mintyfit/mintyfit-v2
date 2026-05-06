@@ -1,458 +1,550 @@
-'use client'
+﻿'use client'
 
-import { useState, useMemo } from 'react'
-import Link from 'next/link'
+import { useMemo, useState } from 'react'
+import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 
-function computeNutritionTotals(entries, memberId) {
-  const memberEntries = entries.filter(e => e.member_id === memberId)
-  const totals = {}
-  for (const entry of memberEntries) {
-    const n = entry.personal_nutrition || {}
-    for (const key of Object.keys(n)) {
-      totals[key] = (totals[key] || 0) + (n[key] || 0)
+const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
+
+const NUTRIENT_GROUPS = [
+  { title: 'Energy', keys: ['energy_kcal', 'energy_kj'] },
+  { title: 'Macronutrients', keys: ['protein', 'carbs_total', 'carbs_absorbed', 'fiber'] },
+  { title: 'Sugars', keys: ['sucrose', 'glucose', 'fructose', 'galactose'] },
+  { title: 'Fats', keys: ['fat_total', 'fat_saturated', 'fat_monounsaturated', 'fat_polyunsaturated', 'fat_trans', 'fat_linoleic', 'fat_linolenic', 'cholesterol'] },
+  { title: 'Minerals', keys: ['sodium', 'salt_equiv', 'potassium', 'calcium', 'magnesium', 'phosphorus', 'iron', 'zinc', 'copper', 'manganese', 'iodine', 'selenium', 'chrome'] },
+  { title: 'Vitamins', keys: ['vit_a', 'vit_d', 'vit_e', 'vit_k', 'vit_b1', 'vit_b2', 'niacin', 'pantothenic_acid', 'vit_b6', 'biotin', 'folates', 'vit_b12', 'vit_c'] },
+  { title: 'Other', keys: ['water', 'ash'] },
+]
+
+function toDateKey(date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function parseDate(value) {
+  return new Date(`${value}T12:00:00`)
+}
+
+function ageFromDob(dob) {
+  if (!dob) return null
+  const birth = new Date(`${dob}T12:00:00`)
+  if (Number.isNaN(birth.getTime())) return null
+  const now = new Date()
+  let age = now.getFullYear() - birth.getFullYear()
+  const monthDiff = now.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age -= 1
+  return age
+}
+
+function addNutrition(target, source, factor = 1) {
+  if (!source) return
+  for (const [key, value] of Object.entries(source)) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      target[key] = (target[key] || 0) + value * factor
     }
   }
-  return totals
 }
 
-function getCompleteness(totals, nutritionFields) {
-  const fields = nutritionFields.filter(f => f.rda)
-  if (!fields.length) return 0
-  let met = 0
-  for (const f of fields) {
-    if ((totals[f.key] || 0) >= f.rda * 0.7) met++
+function getRange(period, customStart, customEnd) {
+  const today = new Date()
+  const end = toDateKey(today)
+
+  if (period === 'today') return { from: end, to: end }
+  if (period === '7d') {
+    const fromDate = new Date(today)
+    fromDate.setDate(today.getDate() - 6)
+    return { from: toDateKey(fromDate), to: end }
   }
-  return Math.round((met / fields.length) * 100)
+  if (period === '30d') {
+    const fromDate = new Date(today)
+    fromDate.setDate(today.getDate() - 29)
+    return { from: toDateKey(fromDate), to: end }
+  }
+  if (period === 'month') {
+    const fromDate = new Date(today.getFullYear(), today.getMonth(), 1)
+    return { from: toDateKey(fromDate), to: end }
+  }
+
+  const from = customStart || end
+  const to = customEnd || from
+  return from <= to ? { from, to } : { from: to, to: from }
 }
 
-function getDeficiencies(totals, nutritionFields) {
-  return nutritionFields
-    .filter(f => f.rda && (totals[f.key] || 0) < f.rda * 0.7)
-    .map(f => ({
-      ...f,
-      pct: Math.round(((totals[f.key] || 0) / f.rda) * 100),
-    }))
-    .sort((a, b) => a.pct - b.pct)
+function pct(value, target) {
+  if (!target || target <= 0) return null
+  return (value / target) * 100
 }
 
-function NutritionBar({ label, value, rda, unit }) {
-  if (!rda) return null
-  const pct = Math.min(Math.round((value / rda) * 100), 150)
-  const color = pct >= 100 ? '#22c55e' : pct >= 70 ? '#f59e0b' : '#ef4444'
+function computeTDEE(weight, height, age, gender) {
+  if (!weight || !height || !age) return 2000
+  const bmr = gender === 'female'
+    ? (10 * weight + 6.25 * height - 5 * age - 161)
+    : (10 * weight + 6.25 * height - 5 * age + 5)
+  return Math.round(bmr * 1.2)
+}
+
+export default function StatisticsClient({ initialData, nutritionFields }) {
+  const [period, setPeriod] = useState('7d')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+  const [selectedMeals, setSelectedMeals] = useState(new Set(MEAL_TYPES))
+  const [selectedMembers, setSelectedMembers] = useState(new Set())
+  const [expandedGroups, setExpandedGroups] = useState(new Set(['Energy', 'Macronutrients']))
+
+  const members = initialData?.members || []
+  const calendarEntries = initialData?.calendarEntries || []
+  const journalEntries = initialData?.journalEntries || []
+
+  const { from, to } = useMemo(() => getRange(period, customStart, customEnd), [period, customStart, customEnd])
+
+  const filteredMembers = useMemo(() => {
+    if (selectedMembers.size === 0) return members
+    return members.filter(m => selectedMembers.has(m.id))
+  }, [members, selectedMembers])
+
+  const memberCountForShared = Math.max(filteredMembers.length, 1)
+
+  const dailyTargets = useMemo(() => {
+    const target = {}
+
+    for (const member of filteredMembers) {
+      const weight = Number(member.weight) || 70
+      const height = Number(member.height) || 170
+      const age = ageFromDob(member.date_of_birth) || 30
+      const gender = member.gender || 'female'
+      const baseDailyCalories = computeTDEE(weight, height, age, gender) || 2000
+
+      const needs = computeMemberDailyNeeds({
+        weight,
+        age,
+        gender,
+        baseDailyCalories,
+      })
+
+      addNutrition(target, needs)
+    }
+
+    if (filteredMembers.length === 0) {
+      for (const field of nutritionFields) {
+        if (field.rda) target[field.key] = field.rda
+      }
+    }
+
+    return target
+  }, [filteredMembers, nutritionFields])
+
+  const normalizedRows = useMemo(() => {
+    const rows = []
+
+    for (const entry of calendarEntries) {
+      const dateStr = entry.date_str
+      if (!dateStr || dateStr < from || dateStr > to) continue
+      if (!selectedMeals.has(entry.meal_type)) continue
+
+      let nutrition = entry.personal_nutrition
+      if (!nutrition || typeof nutrition !== 'object' || Object.keys(nutrition).length === 0) {
+        nutrition = entry.recipes?.nutrition?.perServing || null
+      }
+      if (!nutrition) continue
+
+      rows.push({
+        source: 'calendar',
+        date: dateStr,
+        mealType: entry.meal_type,
+        memberId: entry.member_id || null,
+        label: entry.recipe_name || entry.recipes?.title || 'Recipe',
+        nutrition,
+      })
+    }
+
+    for (const entry of journalEntries) {
+      const dateStr = entry.logged_date
+      if (!dateStr || dateStr < from || dateStr > to) continue
+      if (entry.meal_type && !selectedMeals.has(entry.meal_type)) continue
+      if (!entry.nutrition || typeof entry.nutrition !== 'object') continue
+
+      rows.push({
+        source: 'journal',
+        date: dateStr,
+        mealType: entry.meal_type || 'snack',
+        memberId: entry.member_id || null,
+        label: entry.food_name || 'Journal entry',
+        nutrition: entry.nutrition,
+      })
+    }
+
+    return rows
+  }, [calendarEntries, journalEntries, from, to, selectedMeals])
+
+  const visibleRows = useMemo(() => {
+    if (selectedMembers.size === 0) return normalizedRows
+
+    return normalizedRows.filter(row => {
+      if (row.memberId) return selectedMembers.has(row.memberId)
+      return true
+    })
+  }, [normalizedRows, selectedMembers])
+
+  const totals = useMemo(() => {
+    const result = {}
+
+    for (const row of visibleRows) {
+      if (row.memberId) {
+        addNutrition(result, row.nutrition)
+      } else {
+        addNutrition(result, row.nutrition, 1 / memberCountForShared)
+      }
+    }
+
+    return result
+  }, [visibleRows, memberCountForShared])
+
+  const loggedDays = useMemo(() => {
+    const s = new Set(visibleRows.map(r => r.date))
+    return Math.max(s.size, 1)
+  }, [visibleRows])
+
+  const avg = useMemo(() => {
+    const result = {}
+    for (const key of Object.keys(totals)) result[key] = totals[key] / loggedDays
+    return result
+  }, [totals, loggedDays])
+
+  const memberCards = useMemo(() => {
+    return members.map(member => {
+      const mTotals = {}
+
+      for (const row of normalizedRows) {
+        if (row.memberId === member.id) {
+          addNutrition(mTotals, row.nutrition)
+        } else if (!row.memberId) {
+          addNutrition(mTotals, row.nutrition, 1 / Math.max(members.length, 1))
+        }
+      }
+
+      const required = nutritionFields.filter(f => f.rda)
+      const met = required.filter(f => {
+        const memberTarget = dailyTargets[f.key] ? dailyTargets[f.key] / Math.max(filteredMembers.length, 1) : f.rda
+        const value = (mTotals[f.key] || 0) / loggedDays
+        return value >= memberTarget * 0.7
+      }).length
+
+      const completeness = required.length ? Math.round((met / required.length) * 100) : 0
+
+      return {
+        ...member,
+        completeness,
+        totals: mTotals,
+      }
+    })
+  }, [members, normalizedRows, nutritionFields, dailyTargets, filteredMembers.length, loggedDays])
+
+  const notable = useMemo(() => {
+    const lows = []
+    const highs = []
+
+    for (const field of nutritionFields) {
+      const target = dailyTargets[field.key] || field.rda
+      if (!target) continue
+
+      const value = avg[field.key] || 0
+      const ratio = pct(value, target)
+      if (ratio == null) continue
+
+      if (ratio < 70) lows.push({ field, ratio, value, target })
+      else if (ratio > 150) highs.push({ field, ratio, value, target })
+    }
+
+    lows.sort((a, b) => a.ratio - b.ratio)
+    highs.sort((a, b) => b.ratio - a.ratio)
+
+    return {
+      lows: lows.slice(0, 5),
+      highs: highs.slice(0, 5),
+    }
+  }, [nutritionFields, dailyTargets, avg])
+
+  const rowsByDate = useMemo(() => {
+    const map = new Map()
+
+    for (const row of visibleRows) {
+      if (!map.has(row.date)) map.set(row.date, [])
+      map.get(row.date).push(row)
+    }
+
+    return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1))
+  }, [visibleRows])
+
+  function toggleMeal(meal) {
+    setSelectedMeals(prev => {
+      const next = new Set(prev)
+      if (next.has(meal)) next.delete(meal)
+      else next.add(meal)
+      return next.size ? next : new Set(MEAL_TYPES)
+    })
+  }
+
+  function toggleMember(memberId) {
+    setSelectedMembers(prev => {
+      const next = new Set(prev)
+      if (next.has(memberId)) next.delete(memberId)
+      else next.add(memberId)
+      return next
+    })
+  }
+
+  function toggleGroup(title) {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(title)) next.delete(title)
+      else next.add(title)
+      return next
+    })
+  }
+
   return (
-    <div style={{ marginBottom: '8px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px', fontSize: '13px' }}>
-        <span style={{ color: 'var(--text-2)' }}>{label}</span>
-        <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>{pct}%</span>
-      </div>
-      <div style={{ height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: color, borderRadius: '3px', transition: 'width 0.3s' }} />
-      </div>
-    </div>
-  )
-}
+    <div style={{ maxWidth: 1180, margin: '0 auto', padding: '24px 16px 90px' }}>
+      <h1 style={{ fontSize: 42, lineHeight: 1.1, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>
+        Nutrition Statistics
+      </h1>
+      <p style={{ color: 'var(--text-3)', fontSize: 18, marginBottom: 22 }}>
+        Rebuilt for Next.js App Router with family analytics, day breakdowns, and nutrient insight.
+      </p>
 
-function MacroDonut({ calories, protein, carbs, fat, size = 80 }) {
-  const total = protein * 4 + carbs * 4 + fat * 9
-  if (!total) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--border)' }} />
-  const proteinDeg = (protein * 4 / total) * 360
-  const carbsDeg = (carbs * 4 / total) * 360
-  const fatDeg = (fat * 9 / total) * 360
-  return (
-    <svg width={size} height={size} viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--border)" strokeWidth="3.8" />
-      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#3b82f6" strokeWidth="3.8"
-        strokeDasharray={`${proteinDeg / 360 * 100} ${100 - proteinDeg / 360 * 100}`}
-        strokeDashoffset="25" transform="rotate(-90 18 18)" />
-      <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f59e0b" strokeWidth="3.8"
-        strokeDasharray={`${carbsDeg / 360 * 100} ${100 - carbsDeg / 360 * 100}`}
-        strokeDashoffset={25 - proteinDeg / 360 * 100}
-        transform="rotate(-90 18 18)" />
-      <text x="18" y="20.5" textAnchor="middle" fontSize="7" fill="var(--text-1)" fontWeight="600">
-        {Math.round(calories)}
-      </text>
-      <text x="18" y="26" textAnchor="middle" fontSize="4" fill="var(--text-3)">kcal</text>
-    </svg>
-  )
-}
-
-function MemberCard({ member, totals, nutritionFields, onClick, isCurrentUser }) {
-  const completeness = getCompleteness(totals, nutritionFields)
-  const deficiencies = getDeficiencies(totals, nutritionFields).slice(0, 3)
-  const barColor = completeness >= 80 ? '#22c55e' : completeness >= 60 ? '#f59e0b' : '#ef4444'
-
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: '12px',
-        padding: '20px',
-        cursor: 'pointer',
-        transition: 'box-shadow 0.2s',
-      }}
-      onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
-      onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-        <div style={{
-          width: '40px', height: '40px', borderRadius: '50%',
-          background: 'var(--primary)', color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: '700', fontSize: '16px',
-        }}>
-          {(member.name || 'U')[0].toUpperCase()}
+      <section style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+          Time Range
         </div>
-        <div>
-          <div style={{ fontWeight: '600', color: 'var(--text-1)' }}>
-            {member.name}{isCurrentUser && ' (you)'}
-          </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>This week</div>
-        </div>
-        <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: barColor }}>{completeness}%</div>
-          <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>targets met</div>
-        </div>
-      </div>
-
-      <div style={{ height: '8px', background: 'var(--border)', borderRadius: '4px', marginBottom: '12px', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${completeness}%`, background: barColor, borderRadius: '4px', transition: 'width 0.4s' }} />
-      </div>
-
-      {deficiencies.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-          {deficiencies.map(d => (
-            <span key={d.key} style={{
-              padding: '2px 8px', borderRadius: '10px', fontSize: '11px',
-              background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca',
-            }}>
-              {d.label} {d.pct}%
-            </span>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+          {[
+            { key: 'today', label: 'Today' },
+            { key: '7d', label: 'Last 7 days' },
+            { key: '30d', label: 'Last 30 days' },
+            { key: 'month', label: 'This month' },
+            { key: 'custom', label: 'Custom' },
+          ].map(item => (
+            <button
+              key={item.key}
+              onClick={() => setPeriod(item.key)}
+              style={{
+                border: '1px solid var(--border)',
+                background: period === item.key ? 'var(--primary)' : 'var(--bg-subtle)',
+                color: period === item.key ? '#fff' : 'var(--text-2)',
+                borderRadius: 999,
+                padding: '7px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {item.label}
+            </button>
           ))}
         </div>
-      )}
-    </div>
-  )
-}
 
-function InsightCard({ calendarEntries, nutritionFields, userId }) {
-  // Find nutrient with longest streak below 70%
-  const nutrientStreaks = {}
-  for (const f of nutritionFields.filter(n => n.rda)) {
-    nutrientStreaks[f.key] = { label: f.label, count: 0 }
-  }
+        {period === 'custom' && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', background: 'var(--bg-page)', color: 'var(--text-1)' }} />
+            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', background: 'var(--bg-page)', color: 'var(--text-1)' }} />
+          </div>
+        )}
 
-  // Group by date
-  const byDate = {}
-  for (const e of calendarEntries) {
-    if (!byDate[e.date_str]) byDate[e.date_str] = {}
-    const n = e.personal_nutrition || {}
-    for (const key of Object.keys(n)) {
-      byDate[e.date_str][key] = (byDate[e.date_str][key] || 0) + (n[key] || 0)
-    }
-  }
-
-  const dates = Object.keys(byDate).sort()
-  for (const f of nutritionFields.filter(n => n.rda)) {
-    let streak = 0
-    for (const date of dates) {
-      if ((byDate[date][f.key] || 0) < f.rda * 0.7) streak++
-    }
-    nutrientStreaks[f.key].count = streak
-  }
-
-  const worst = Object.entries(nutrientStreaks).sort((a, b) => b[1].count - a[1].count)[0]
-  if (!worst || worst[1].count < 2) return null
-
-  return (
-    <div style={{
-      background: '#fffbeb',
-      border: '1px solid #fde68a',
-      borderRadius: '12px',
-      padding: '16px 20px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      marginBottom: '24px',
-    }}>
-      <span style={{ fontSize: '24px' }}>💡</span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '4px' }}>
-          Your family has been below 70% on {worst[1].label} for {worst[1].count} days.
+        <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-3)' }}>
+          Active range: {from} to {to}
         </div>
-        <div style={{ fontSize: '14px', color: '#b45309' }}>
-          <Link href={`/recipes?nutrient=${worst[0]}`} style={{ color: '#d97706', fontWeight: '500' }}>
-            See recipes high in {worst[1].label} →
-          </Link>
+      </section>
+
+      <section style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+          Meal Types
         </div>
-      </div>
-    </div>
-  )
-}
-
-function IndividualDetail({ member, totals, nutritionFields, weightLogs, onBack }) {
-  const [showAll, setShowAll] = useState(false)
-
-  const bigFour = ['energy_kcal', 'protein', 'carbs_total', 'fat_total']
-  const fields = showAll ? nutritionFields : nutritionFields.filter(f => f.rda).slice(0, 20)
-
-  const calories = totals.energy_kcal || 0
-  const protein = totals.protein || 0
-  const carbs = totals.carbs_total || 0
-  const fat = totals.fat_total || 0
-
-  return (
-    <div>
-      <button
-        onClick={onBack}
-        style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: 'var(--primary)', fontSize: '14px', fontWeight: '500',
-          marginBottom: '20px', padding: '0',
-        }}
-      >
-        ← Back to family view
-      </button>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
-        <div style={{
-          width: '56px', height: '56px', borderRadius: '50%',
-          background: 'var(--primary)', color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: '700', fontSize: '22px',
-        }}>
-          {(member.name || 'U')[0].toUpperCase()}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {MEAL_TYPES.map(meal => (
+            <button
+              key={meal}
+              onClick={() => toggleMeal(meal)}
+              style={{
+                border: '1px solid var(--border)',
+                background: selectedMeals.has(meal) ? '#1f6b2a' : 'var(--bg-subtle)',
+                color: selectedMeals.has(meal) ? '#fff' : 'var(--text-2)',
+                borderRadius: 999,
+                padding: '7px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                textTransform: 'capitalize',
+              }}
+            >
+              {meal}
+            </button>
+          ))}
         </div>
-        <div>
-          <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-1)' }}>{member.name}</h2>
-          <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>Last 7 days nutrition summary</div>
-        </div>
-      </div>
 
-      {/* Macro Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+        {members.length > 0 && (
+          <>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 14, marginBottom: 8 }}>
+              Family Members
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {members.map(member => (
+                <button
+                  key={member.id}
+                  onClick={() => toggleMember(member.id)}
+                  style={{
+                    border: '1px solid var(--border)',
+                    background: selectedMembers.has(member.id) ? '#153f4f' : 'var(--bg-subtle)',
+                    color: selectedMembers.has(member.id) ? '#fff' : 'var(--text-2)',
+                    borderRadius: 999,
+                    padding: '7px 14px',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {member.name}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 16 }}>
         {[
-          { label: 'Calories', value: Math.round(calories), unit: 'kcal', color: '#8b5cf6' },
-          { label: 'Protein', value: Math.round(protein), unit: 'g', color: '#3b82f6' },
-          { label: 'Carbs', value: Math.round(carbs), unit: 'g', color: '#f59e0b' },
-          { label: 'Fat', value: Math.round(fat), unit: 'g', color: '#ef4444' },
-        ].map(m => (
-          <div key={m.label} style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: '10px', padding: '14px', textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '22px', fontWeight: '700', color: m.color }}>{m.value}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>{m.unit}/week</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-2)', marginTop: '2px' }}>{m.label}</div>
+          { label: 'Avg Calories', value: Math.round(avg.energy_kcal || 0), unit: 'kcal/day', color: '#1f6b2a' },
+          { label: 'Avg Protein', value: Math.round(avg.protein || 0), unit: 'g/day', color: '#2563eb' },
+          { label: 'Avg Carbs', value: Math.round(avg.carbs_total || 0), unit: 'g/day', color: '#c2410c' },
+          { label: 'Avg Fat', value: Math.round(avg.fat_total || 0), unit: 'g/day', color: '#be185d' },
+          { label: 'Logged Days', value: loggedDays, unit: 'days', color: '#334155' },
+        ].map(card => (
+          <div key={card.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 8 }}>{card.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: card.color, lineHeight: 1 }}>{card.value}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{card.unit}</div>
           </div>
         ))}
-      </div>
+      </section>
 
-      {/* Donut */}
-      <div style={{
-        background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: '12px', padding: '20px', marginBottom: '24px',
-        display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap',
-      }}>
-        <MacroDonut calories={calories} protein={protein} carbs={carbs} fat={fat} size={100} />
-        <div style={{ flex: 1, minWidth: '180px' }}>
-          <div style={{ fontSize: '13px', color: 'var(--text-2)', marginBottom: '8px', fontWeight: '600' }}>Macro breakdown</div>
-          {[
-            { label: 'Protein', color: '#3b82f6', g: protein },
-            { label: 'Carbs', color: '#f59e0b', g: carbs },
-            { label: 'Fat', color: '#ef4444', g: fat },
-          ].map(m => (
-            <div key={m.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: m.color }} />
-              <span style={{ fontSize: '13px', color: 'var(--text-2)' }}>{m.label}</span>
-              <span style={{ marginLeft: 'auto', fontSize: '13px', fontWeight: '600', color: 'var(--text-1)' }}>{Math.round(m.g)}g</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Weight sparkline */}
-      {weightLogs.length > 1 && (
-        <div style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: '12px', padding: '20px', marginBottom: '24px',
-        }}>
-          <div style={{ fontWeight: '600', color: 'var(--text-1)', marginBottom: '12px' }}>Weight trend</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', height: '60px' }}>
-            {weightLogs.slice(0, 14).reverse().map((log, i) => {
-              const weights = weightLogs.slice(0, 14).map(l => l.weight)
-              const min = Math.min(...weights)
-              const max = Math.max(...weights)
-              const range = max - min || 1
-              const h = Math.max(8, Math.round(((log.weight - min) / range) * 52 + 8))
+      {memberCards.length > 0 && (
+        <section style={{ marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>Family Completeness</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+            {memberCards.map(member => {
+              const color = member.completeness >= 80 ? '#15803d' : member.completeness >= 60 ? '#b45309' : '#dc2626'
               return (
-                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                  <div style={{ width: '100%', height: `${h}px`, background: 'var(--primary)', borderRadius: '2px 2px 0 0', opacity: 0.8 }} />
+                <div key={member.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text-1)' }}>{member.name}</div>
+                    <div style={{ fontWeight: 800, color }}>{member.completeness}%</div>
+                  </div>
+                  <div style={{ height: 8, background: 'var(--bg-subtle)', borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{ width: `${member.completeness}%`, height: '100%', background: color }} />
+                  </div>
                 </div>
               )
             })}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '8px' }}>
-            Current: {weightLogs[0]?.weight} kg · Logged {weightLogs.length} times
-          </div>
-        </div>
+        </section>
       )}
 
-      {/* All 47 nutrients */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div style={{ fontWeight: '600', color: 'var(--text-1)' }}>Nutrient completeness (weekly totals)</div>
-          <button
-            onClick={() => setShowAll(v => !v)}
-            style={{
-              background: 'none', border: '1px solid var(--border)',
-              borderRadius: '6px', padding: '4px 12px', cursor: 'pointer',
-              fontSize: '12px', color: 'var(--text-2)',
-            }}
-          >
-            {showAll ? 'Show less' : 'Show all 47'}
-          </button>
-        </div>
-        {fields.map(f => (
-          <NutritionBar
-            key={f.key}
-            label={f.label}
-            value={totals[f.key] || 0}
-            rda={f.rda ? f.rda * 7 : null}
-            unit={f.unit}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-export default function StatisticsClient({ userId, initialData, nutritionFields }) {
-  const [selectedMember, setSelectedMember] = useState(null)
-  const [dateRange, setDateRange] = useState('7days')
-
-  const {
-    profile,
-    familyMembers,
-    managedMembers,
-    calendarEntries,
-    journalEntries,
-    weightLogs,
-    nutritionistNotes,
-  } = initialData
-
-  // Build member list: current user + linked family members
-  const allMembers = useMemo(() => {
-    const current = { id: userId, name: profile?.name || 'You', isCurrentUser: true }
-    const linked = familyMembers.filter(m => m.id !== userId).map(m => ({ id: m.id, name: m.name }))
-    return [current, ...linked]
-  }, [userId, profile, familyMembers])
-
-  const memberTotals = useMemo(() => {
-    const result = {}
-    for (const m of allMembers) {
-      result[m.id] = computeNutritionTotals(calendarEntries, m.id)
-    }
-    return result
-  }, [allMembers, calendarEntries])
-
-  const selectedMemberObj = selectedMember ? allMembers.find(m => m.id === selectedMember) : null
-
-  return (
-    <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px 80px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '4px' }}>
-          Nutrition Statistics
-        </h1>
-        <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>
-          {selectedMember ? 'Individual detail' : 'Family overview · Last 7 days'}
-        </p>
-      </div>
-
-      {/* Nutritionist notes */}
-      {nutritionistNotes.length > 0 && !selectedMember && (
-        <div style={{
-          background: '#f0fdf4', border: '1px solid #bbf7d0',
-          borderRadius: '12px', padding: '16px', marginBottom: '20px',
-        }}>
-          {nutritionistNotes.slice(0, 1).map((note, i) => (
-            <div key={i}>
-              <div style={{ fontSize: '12px', color: '#166534', fontWeight: '500', marginBottom: '6px' }}>
-                📝 Note from your nutritionist
-              </div>
-              <div style={{ color: '#15803d', fontSize: '14px' }}>&ldquo;{note.content}&rdquo;</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {selectedMember ? (
-        <IndividualDetail
-          member={selectedMemberObj}
-          totals={memberTotals[selectedMember] || {}}
-          nutritionFields={nutritionFields}
-          weightLogs={weightLogs}
-          onBack={() => setSelectedMember(null)}
-        />
-      ) : (
-        <>
-          <InsightCard
-            calendarEntries={calendarEntries}
-            nutritionFields={nutritionFields}
-            userId={userId}
-          />
-
-          {allMembers.length === 0 && (
-            <div style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              borderRadius: '12px', padding: '40px', textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>📊</div>
-              <div style={{ fontWeight: '600', color: 'var(--text-1)', marginBottom: '8px' }}>No nutrition data yet</div>
-              <div style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '20px' }}>
-                Add recipes to your meal plan to see nutrition statistics
-              </div>
-              <Link href="/plan" style={{
-                display: 'inline-block', background: 'var(--primary)', color: '#fff',
-                padding: '10px 24px', borderRadius: '8px', textDecoration: 'none',
-                fontSize: '14px', fontWeight: '500',
-              }}>
-                Open Planner →
-              </Link>
+      {(notable.lows.length > 0 || notable.highs.length > 0) && (
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 10, marginBottom: 16 }}>
+          {notable.lows.length > 0 && (
+            <div style={{ background: '#fff5f5', border: '1px solid #fecaca', borderRadius: 12, padding: 14 }}>
+              <div style={{ fontWeight: 700, color: '#b91c1c', marginBottom: 8 }}>Potentially Low</div>
+              {notable.lows.map(item => (
+                <div key={item.field.key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#7f1d1d', marginBottom: 5 }}>
+                  <span>{item.field.label}</span>
+                  <span>{Math.round(item.ratio)}%</span>
+                </div>
+              ))}
             </div>
           )}
 
-          <div style={{ display: 'grid', gap: '12px' }}>
-            {allMembers.map(member => (
-              <MemberCard
-                key={member.id}
-                member={member}
-                totals={memberTotals[member.id] || {}}
-                nutritionFields={nutritionFields}
-                isCurrentUser={member.isCurrentUser}
-                onClick={() => setSelectedMember(member.id)}
-              />
-            ))}
-          </div>
-
-          {calendarEntries.length > 0 && (
-            <div style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              borderRadius: '12px', padding: '20px', marginTop: '20px',
-              textAlign: 'center',
-            }}>
-              <div style={{ color: 'var(--text-3)', fontSize: '13px', marginBottom: '8px' }}>
-                Based on {calendarEntries.length} meal entries in the last 7 days
-              </div>
-              <Link href="/plan" style={{ color: 'var(--primary)', fontSize: '14px', fontWeight: '500', textDecoration: 'none' }}>
-                View your meal plan →
-              </Link>
+          {notable.highs.length > 0 && (
+            <div style={{ background: '#fffbea', border: '1px solid #fde68a', borderRadius: 12, padding: 14 }}>
+              <div style={{ fontWeight: 700, color: '#b45309', marginBottom: 8 }}>Potentially High</div>
+              {notable.highs.map(item => (
+                <div key={item.field.key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#92400e', marginBottom: 5 }}>
+                  <span>{item.field.label}</span>
+                  <span>{Math.round(item.ratio)}%</span>
+                </div>
+              ))}
             </div>
           )}
-        </>
+        </section>
       )}
+
+      <section style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>Nutrient Breakdown</h2>
+
+        {NUTRIENT_GROUPS.map(group => {
+          const isOpen = expandedGroups.has(group.title)
+          return (
+            <div key={group.title} style={{ borderTop: '1px solid var(--border-light)', paddingTop: 10, marginTop: 10 }}>
+              <button onClick={() => toggleGroup(group.title)} style={{ width: '100%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{group.title}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{isOpen ? 'Hide' : 'Show'}</span>
+              </button>
+
+              {isOpen && (
+                <div style={{ marginTop: 8 }}>
+                  {group.keys.map(key => {
+                    const field = nutritionFields.find(f => f.key === key)
+                    if (!field) return null
+
+                    const value = avg[key] || 0
+                    const target = dailyTargets[key] || field.rda
+                    const ratio = pct(value, target)
+                    const width = ratio == null ? 0 : Math.min(ratio, 100)
+                    const color = ratio == null ? '#64748b' : ratio >= 80 ? '#15803d' : ratio >= 50 ? '#b45309' : '#dc2626'
+
+                    return (
+                      <div key={key} style={{ marginBottom: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 3 }}>
+                          <span style={{ color: 'var(--text-2)' }}>{field.label}</span>
+                          <span style={{ color: 'var(--text-3)' }}>
+                            {value ? `${Math.round(value * 10) / 10} ${field.unit}` : '-'}
+                            {ratio != null ? ` (${Math.round(ratio)}%)` : ''}
+                          </span>
+                        </div>
+                        <div style={{ height: 7, background: 'var(--bg-subtle)', borderRadius: 999, overflow: 'hidden' }}>
+                          <div style={{ width: `${width}%`, height: '100%', background: color }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </section>
+
+      <section style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>Day Breakdown</h2>
+        {rowsByDate.length === 0 ? (
+          <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No entries in selected range.</p>
+        ) : (
+          rowsByDate.slice(0, 20).map(([date, rows]) => {
+            const dayTotals = {}
+            for (const row of rows) {
+              if (row.memberId) addNutrition(dayTotals, row.nutrition)
+              else addNutrition(dayTotals, row.nutrition, 1 / memberCountForShared)
+            }
+
+            return (
+              <div key={date} style={{ borderTop: '1px solid var(--border-light)', paddingTop: 10, marginTop: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>{parseDate(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{Math.round(dayTotals.energy_kcal || 0)} kcal</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                  {rows.length} entries - {rows.map(r => r.label).slice(0, 3).join(', ')}{rows.length > 3 ? '...' : ''}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </section>
     </div>
   )
 }

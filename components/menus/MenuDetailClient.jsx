@@ -36,7 +36,7 @@ function RecipeRow({ mr }) {
   if (!recipe) return null
   const kcal = recipe.nutrition?.perServing?.energy_kcal
   return (
-    <Link href={`/recipes/${recipe.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+    <Link href={`/recipes/${recipe.slug || recipe.id}`} style={{ textDecoration: 'none', display: 'block' }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: '0.875rem',
         padding: '0.75rem', borderRadius: '10px',

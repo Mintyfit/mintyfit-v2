@@ -12,6 +12,12 @@ const nextConfig = {
     ],
   },
 
+  async redirects() {
+    return [
+      { source: '/planner', destination: '/plan', permanent: true },
+    ]
+  },
+
   async headers() {
     return [
       {

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { extractIngredientsFromRecipe, mergeItems, categorizeIngredient } from '@/lib/shopping/utils'
 
@@ -33,8 +32,7 @@ async function getOrCreateList(supabase, userId) {
 
 export async function GET() {
   try {
-    const cookieStore = await cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -81,8 +79,7 @@ function getMondayOfWeek(date = new Date()) {
 
 export async function POST(request) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -99,7 +96,7 @@ export async function POST(request) {
         .from('calendar_entries')
         .select('recipe_id')
         .eq('profile_id', user.id)
-        .in('date', weekDates)
+        .in('date_str', weekDates)
 
       const recipeIds = [...new Set((entries || []).map(e => e.recipe_id).filter(Boolean))]
 
@@ -116,7 +113,7 @@ export async function POST(request) {
       // Fetch all recipes and extract ingredients
       const { data: recipes } = await supabase
         .from('recipes')
-        .select('id, name, ingredients, steps')
+        .select('id, title, instructions')
         .in('id', recipeIds)
 
       const allNewItems = (recipes || []).flatMap(r => extractIngredientsFromRecipe(r))
@@ -155,18 +152,31 @@ export async function POST(request) {
     let newItems = []
 
     if (body.recipe_id) {
-      // Extract from a recipe
-      const { data: recipe, error: recipeErr } = await supabase
-        .from('recipes')
-        .select('id, name, ingredients, steps')
-        .eq('id', body.recipe_id)
-        .single()
+      // If explicit ingredients provided (checked selection), use those
+      // Otherwise extract all ingredients from the recipe
+      const explicitIngredients = body.ingredients || body.items
+      if (explicitIngredients?.length) {
+        newItems = explicitIngredients.map(item => ({
+          ingredient_name: item.ingredient_name || item.name,
+          amount: item.amount || null,
+          unit: item.unit || null,
+          category: item.category || categorizeIngredient(item.ingredient_name || item.name),
+          source_recipe_id: body.recipe_id,
+        }))
+      } else {
+        // Extract all ingredients from the recipe
+        const { data: recipe, error: recipeErr } = await supabase
+          .from('recipes')
+          .select('id, title, instructions')
+          .eq('id', body.recipe_id)
+          .single()
 
-      if (recipeErr || !recipe) {
-        return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
+        if (recipeErr || !recipe) {
+          return NextResponse.json({ error: 'Recipe not found' }, { status: 404 })
+        }
+
+        newItems = extractIngredientsFromRecipe(recipe)
       }
-
-      newItems = extractIngredientsFromRecipe(recipe)
     } else if (body.items) {
       newItems = body.items.map(item => ({
         ingredient_name: item.ingredient_name,
@@ -241,8 +251,7 @@ export async function POST(request) {
 
 export async function PATCH(request) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -288,8 +297,7 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

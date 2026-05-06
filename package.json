@@ -17,6 +17,7 @@
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "resend": "^6.12.3",
     "stripe": "^20.3.1"
   },
   "browserslist": [
@@ -35,6 +36,7 @@
     "eslint-config-next": "^15.3.0",
     "globals": "^17.4.0",
     "sharp": "^0.34.5",
+    "supabase": "^2.98.1",
     "tailwindcss": "^4.1.4"
   }
 }
