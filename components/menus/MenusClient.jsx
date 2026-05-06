@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 const DIET_TYPES = ['All', 'Mediterranean', 'Plant-based', 'High-protein', 'Low-carb', 'Balanced', 'Vegetarian', 'Vegan']
 const SORT_OPTIONS = [
@@ -76,12 +77,36 @@ function MenuCard({ menu }) {
 }
 
 export default function MenusClient({ initialMenus }) {
+  const [allMenus, setAllMenus] = useState(initialMenus || [])
   const [search, setSearch] = useState('')
   const [diet, setDiet] = useState('All')
   const [sort, setSort] = useState('newest')
 
+  // Load private user menus client-side — keeps server route static (ISR-cacheable)
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase
+        .from('menus')
+        .select('*, menu_recipes(count)')
+        .eq('profile_id', user.id)
+        .eq('is_public', false)
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .then(({ data }) => {
+          if (!data?.length) return
+          setAllMenus(prev => {
+            const ids = new Set(prev.map(m => m.id))
+            return [...prev, ...data.filter(m => !ids.has(m.id))]
+          })
+        })
+    })
+  }, [])
+
   const filtered = useMemo(() => {
-    let result = [...initialMenus]
+    let result = [...allMenus]
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(m =>
@@ -103,7 +128,7 @@ export default function MenusClient({ initialMenus }) {
       result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     }
     return result
-  }, [initialMenus, search, diet, sort])
+  }, [allMenus, search, diet, sort])
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1.25rem 5rem' }}>
@@ -159,7 +184,7 @@ export default function MenusClient({ initialMenus }) {
       {filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-4)' }}>
           <p style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🥗</p>
-          <p style={{ fontSize: '1rem' }}>{initialMenus.length === 0 ? 'No meal plans yet' : 'No plans match your search'}</p>
+          <p style={{ fontSize: '1rem' }}>{allMenus.length === 0 ? 'No meal plans yet' : 'No plans match your search'}</p>
         </div>
       ) : (
         <div style={{

@@ -1,0 +1,729 @@
+Below is a task you can paste directly into Qwen.
+
+````md
+# Task: Implement activity influence on full nutrition/macronutrient profile
+
+## Context
+
+We already calculate activity kcal burned.
+
+User profile data available:
+
+- age
+- sex
+- height
+- weight
+- selected activity type: running, walking, cycling, etc.
+- activity duration
+- activity kcal burned
+- daily food intake with full nutrient totals
+
+Food intake includes:
+
+- Energy
+- Protein
+- Carbohydrates
+- Carbs absorbed
+- Dietary fiber
+- Fat
+- Saturated fat
+- Monounsaturated fat
+- Polyunsaturated fat
+- Trans fat
+- Cholesterol
+- Sodium
+- Potassium
+- Calcium
+- Magnesium
+- Phosphorus
+- Iron
+- Zinc
+- Copper
+- Selenium
+- Iodine
+- Vitamin C
+- Vitamin A
+- Vitamin D
+- Vitamin E
+- Vitamin K
+- Vitamin B1
+- Vitamin B2
+- Vitamin B6
+- Vitamin B12
+- Folate
+- Niacin
+- Biotin
+- Pantothenic acid
+- Salt equivalent
+
+Goal:
+
+When the user selects/logs an activity, show how the activity changes their daily nutrition needs and net nutrient balance.
+
+Do not claim exact biological depletion. Output should be phrased as:
+
+> Estimated additional need / recovery target
+
+not:
+
+> Exact nutrient loss
+
+## Scientific/product principle
+
+Activity affects nutrients in 4 different ways:
+
+1. Energy expenditure
+2. Fuel substrate use: carbohydrate vs fat
+3. Protein recovery need
+4. Sweat/mineral loss and increased micronutrient turnover
+
+Because activity kcal is already available, use kcal as the main input and activity type/intensity as modifiers.
+
+---
+
+# Output object
+
+Implement:
+
+```js
+estimateActivityNutritionImpact({
+  activityType,
+  durationMinutes,
+  kcalBurned,
+  member,
+  environment // optional
+})
+````
+
+Return:
+
+```js
+{
+  energy: {
+    kcalBurned
+  },
+
+  macros: {
+    carbohydrate_g,
+    carbsAbsorbed_g,
+    fat_g,
+    protein_g,
+    fiber_g
+  },
+
+  fats: {
+    saturatedFat_g,
+    monounsaturatedFat_g,
+    polyunsaturatedFat_g,
+    transFat_g,
+    cholesterol_mg
+  },
+
+  minerals: {
+    sodium_mg,
+    saltEquivalent_g,
+    potassium_mg,
+    calcium_mg,
+    magnesium_mg,
+    phosphorus_mg,
+    iron_mg,
+    zinc_mg,
+    copper_mg,
+    selenium_ug,
+    iodine_ug
+  },
+
+  vitamins: {
+    vitaminC_mg,
+    vitaminA_ug,
+    vitaminD_ug,
+    vitaminE_mg,
+    vitaminK_ug,
+    vitaminB1_mg,
+    vitaminB2_mg,
+    vitaminB6_mg,
+    vitaminB12_ug,
+    folate_ug,
+    niacin_mg,
+    biotin_ug,
+    pantothenicAcid_mg
+  },
+
+  confidence: {
+    energy: "high",
+    macros: "medium",
+    sweatMinerals: "low-medium",
+    vitamins: "low"
+  },
+
+  disclaimer: "Estimated recovery targets based on activity energy cost, fuel use, and average sweat/mineral loss. Individual variation is high."
+}
+```
+
+---
+
+# Step 1: Determine activity intensity
+
+```js
+const ACTIVITY_INTENSITY = {
+  walking: "low",
+  yoga: "low",
+  pilates: "low",
+  stretching: "low",
+
+  hiking: "moderate",
+  weight_training: "moderate",
+  dancing: "moderate",
+  swimming: "moderate",
+  cycling: "moderate",
+  elliptical: "moderate",
+
+  running: "high",
+  hiit: "high",
+  soccer: "high",
+  basketball: "high",
+  tennis: "high",
+
+  marathon: "extreme",
+  endurance_cycling: "extreme"
+}
+```
+
+Fallback:
+
+```js
+const intensity = ACTIVITY_INTENSITY[activityType] ?? "moderate"
+```
+
+---
+
+# Step 2: Fuel substrate split
+
+Use kcal burned to estimate how much of the activity was mainly carbohydrate vs fat.
+
+Protein is not treated as a major fuel source.
+
+```js
+const FUEL_SPLIT = {
+  low: {
+    carbShare: 0.35,
+    fatShare: 0.60,
+    proteinShare: 0.05
+  },
+
+  moderate: {
+    carbShare: 0.50,
+    fatShare: 0.45,
+    proteinShare: 0.05
+  },
+
+  high: {
+    carbShare: 0.70,
+    fatShare: 0.25,
+    proteinShare: 0.05
+  },
+
+  extreme: {
+    carbShare: 0.75,
+    fatShare: 0.20,
+    proteinShare: 0.05
+  }
+}
+```
+
+Formulas:
+
+```js
+const carbEnergyKcal = kcalBurned * carbShare
+const fatEnergyKcal = kcalBurned * fatShare
+const proteinEnergyKcal = kcalBurned * proteinShare
+
+const carbohydrate_g = carbEnergyKcal / 4
+const carbsAbsorbed_g = carbohydrate_g
+const fat_g = fatEnergyKcal / 9
+```
+
+Do not subtract protein as “protein burned” from food intake. Instead calculate recovery protein need.
+
+---
+
+# Step 3: Protein recovery target
+
+Protein need should be based mostly on body weight and activity type.
+
+```js
+const PROTEIN_RECOVERY_G_PER_KG_PER_HOUR = {
+  low: 0.00,
+  moderate: 0.05,
+  high: 0.08,
+  extreme: 0.10
+}
+```
+
+Formula:
+
+```js
+const durationHr = durationMinutes / 60
+
+const protein_g =
+  member.weightKg *
+  PROTEIN_RECOVERY_G_PER_KG_PER_HOUR[intensity] *
+  durationHr
+```
+
+Clamp:
+
+```js
+protein_g = Math.min(protein_g, 40)
+```
+
+Rationale:
+
+This estimates additional recovery protein pressure, not total daily protein requirement.
+
+---
+
+# Step 4: Fiber
+
+Activity does not acutely deplete fiber.
+
+```js
+fiber_g = 0
+```
+
+---
+
+# Step 5: Fat subtypes
+
+Exercise does not specifically deplete saturated, monounsaturated, polyunsaturated, or trans fat separately.
+
+Estimate preferred replacement fat mostly as unsaturated fat.
+
+```js
+saturatedFat_g = fat_g * 0.10
+monounsaturatedFat_g = fat_g * 0.55
+polyunsaturatedFat_g = fat_g * 0.35
+transFat_g = 0
+cholesterol_mg = 0
+```
+
+Important:
+
+Do not encourage extra cholesterol intake for activity recovery.
+
+---
+
+# Step 6: Estimate sweat volume
+
+Even though kcal is known, estimate sweat from intensity, duration, and body weight.
+
+```js
+const SWEAT_RATE_L_PER_HOUR = {
+  low: 0.4,
+  moderate: 0.7,
+  high: 1.1,
+  extreme: 1.5
+}
+```
+
+Weight adjustment:
+
+```js
+const weightFactor = member.weightKg / 70
+```
+
+Optional temperature factor:
+
+```js
+function getTemperatureFactor(tempC) {
+  if (tempC == null) return 1.0
+  if (tempC < 10) return 0.75
+  if (tempC < 20) return 0.90
+  if (tempC < 28) return 1.00
+  if (tempC < 35) return 1.25
+  return 1.50
+}
+```
+
+Formula:
+
+```js
+const sweatLiters =
+  SWEAT_RATE_L_PER_HOUR[intensity] *
+  durationHr *
+  weightFactor *
+  getTemperatureFactor(environment?.temperatureC)
+```
+
+Clamp:
+
+```js
+const sweatLitersClamped = clamp(sweatLiters, 0, 4)
+```
+
+---
+
+# Step 7: Sweat mineral loss
+
+Use sweat concentration × sweat volume.
+
+```js
+const SWEAT_MINERALS = {
+  sodium_mg_per_L: 900,
+  potassium_mg_per_L: 200,
+  calcium_mg_per_L: 20,
+  magnesium_mg_per_L: 1.5,
+  zinc_mg_per_L: 0.6,
+  iron_mg_per_L: 0.3,
+  copper_mg_per_L: 0.08
+}
+```
+
+Formulas:
+
+```js
+sodium_mg = sweatLiters * 900
+potassium_mg = sweatLiters * 200
+calcium_mg = sweatLiters * 20
+magnesium_mg_sweat = sweatLiters * 1.5
+zinc_mg = sweatLiters * 0.6
+iron_mg_sweat = sweatLiters * 0.3
+copper_mg = sweatLiters * 0.08
+```
+
+Salt equivalent:
+
+```js
+saltEquivalent_g = sodium_mg * 2.542 / 1000
+```
+
+Because salt is sodium chloride and sodium is about 39.3% of salt.
+
+---
+
+# Step 8: Energy-turnover micronutrient demand
+
+Some nutrients are not mostly lost in sweat, but activity increases metabolic turnover.
+
+Use kcal burned as a fraction of estimated daily expenditure.
+
+If TDEE is not available, estimate:
+
+```js
+function mifflinStJeor(member) {
+  const s = member.sex === "male" ? 5 : -161
+
+  return (
+    10 * member.weightKg +
+    6.25 * member.heightCm -
+    5 * member.age +
+    s
+  )
+}
+
+const estimatedTDEE = mifflinStJeor(member) * 1.4
+```
+
+Activity fraction:
+
+```js
+const activityFraction = kcalBurned / estimatedTDEE
+```
+
+Clamp:
+
+```js
+const activityFractionClamped = clamp(activityFraction, 0, 0.6)
+```
+
+Use user-specific RDA/AI values if available. If not, use defaults from your nutrient target table.
+
+Formula:
+
+```js
+extraNeed = dailyTarget * activityFraction * coefficient
+```
+
+Coefficients:
+
+```js
+const TURNOVER_COEFFICIENTS = {
+  phosphorus: 0.20,
+  magnesium: 0.30,
+
+  vitaminB1: 0.70,
+  vitaminB2: 0.50,
+  niacin: 0.50,
+  vitaminB6: 0.40,
+  pantothenicAcid: 0.30,
+  biotin: 0.20,
+
+  vitaminC: 0.20,
+  vitaminE: 0.15
+}
+```
+
+Examples:
+
+```js
+vitaminB1_mg = targetB1_mg * activityFraction * 0.70
+vitaminB2_mg = targetB2_mg * activityFraction * 0.50
+niacin_mg = targetNiacin_mg * activityFraction * 0.50
+vitaminB6_mg = targetB6_mg * activityFraction * 0.40
+pantothenicAcid_mg = targetPantothenic_mg * activityFraction * 0.30
+biotin_ug = targetBiotin_ug * activityFraction * 0.20
+vitaminC_mg = targetVitaminC_mg * activityFraction * 0.20
+vitaminE_mg = targetVitaminE_mg * activityFraction * 0.15
+phosphorus_mg = targetPhosphorus_mg * activityFraction * 0.20
+magnesium_mg_turnover = targetMagnesium_mg * activityFraction * 0.30
+```
+
+Total magnesium:
+
+```js
+magnesium_mg = magnesium_mg_sweat + magnesium_mg_turnover
+```
+
+---
+
+# Step 9: Running-specific iron modifier
+
+Running has extra iron stress due to foot-strike hemolysis and GI stress.
+
+```js
+const RUNNING_IRON_LOSS_MG_PER_HOUR = 0.2
+```
+
+Formula:
+
+```js
+let iron_mg = iron_mg_sweat
+
+if (activityType === "running") {
+  iron_mg += RUNNING_IRON_LOSS_MG_PER_HOUR * durationHr
+}
+```
+
+For extreme endurance:
+
+```js
+if (intensity === "extreme") {
+  iron_mg += 0.2 * durationHr
+}
+```
+
+---
+
+# Step 10: Nutrients with no acute activity adjustment
+
+Set these to zero unless a better model is added later:
+
+```js
+vitaminA_ug = 0
+vitaminD_ug = 0
+vitaminK_ug = 0
+vitaminB12_ug = 0
+folate_ug = 0
+selenium_ug = 0
+iodine_ug = 0
+cholesterol_mg = 0
+fiber_g = 0
+transFat_g = 0
+```
+
+Reason:
+
+These are not meaningfully acutely depleted by a single activity session from the available inputs.
+
+---
+
+# Step 11: Calculate net daily nutrition after activity
+
+Given:
+
+```js
+foodTotals[nutrient]
+activityImpact[nutrient]
+dailyTarget[nutrient]
+```
+
+Calculate:
+
+```js
+netAfterActivity = foodTotals[nutrient] - activityImpact[nutrient]
+
+remainingToTarget = dailyTarget[nutrient] + activityImpact[nutrient] - foodTotals[nutrient]
+
+percentOfAdjustedTarget =
+  foodTotals[nutrient] /
+  (dailyTarget[nutrient] + activityImpact[nutrient]) *
+  100
+```
+
+For energy:
+
+```js
+netCalories = foodEnergyKcal - activityKcalBurned
+adjustedCalorieTarget = dailyCalorieTarget + activityKcalBurned
+```
+
+For display:
+
+```txt
+Food: 462 kcal
+Activity: -300 kcal
+Net: 162 kcal
+
+Protein eaten: 24.5 g
+Extra recovery target: +8.4 g
+Adjusted target: original target + 8.4 g
+```
+
+---
+
+# Step 12: Display rules
+
+In activity selection UI, show:
+
+```txt
+Estimated impact from this activity:
+- Energy burned: 300 kcal
+- Carbohydrate recovery: +52 g
+- Fat energy used: +8 g
+- Protein recovery: +6 g
+- Sodium/salt loss: +950 mg sodium / +2.4 g salt
+- Magnesium: +5 mg
+- Zinc: +0.5 mg
+- Iron: +0.4 mg
+```
+
+For low-confidence nutrients, show:
+
+```txt
+No meaningful acute adjustment
+```
+
+or hide them by default.
+
+---
+
+# Step 13: Nutrient-by-nutrient behavior table
+
+| Nutrient            | Formula type                                       |
+| ------------------- | -------------------------------------------------- |
+| Energy              | kcal burned, already known                         |
+| Protein             | body weight × intensity factor × duration          |
+| Carbohydrates       | kcal burned × carbShare / 4                        |
+| Carbs absorbed      | same as carbohydrates                              |
+| Dietary fiber       | 0                                                  |
+| Fat                 | kcal burned × fatShare / 9                         |
+| Saturated fat       | fat_g × 0.10                                       |
+| Monounsaturated fat | fat_g × 0.55                                       |
+| Polyunsaturated fat | fat_g × 0.35                                       |
+| Trans fat           | 0                                                  |
+| Cholesterol         | 0                                                  |
+| Sodium              | sweat L × 900                                      |
+| Salt equivalent     | sodium mg × 2.542 / 1000                           |
+| Potassium           | sweat L × 200                                      |
+| Calcium             | sweat L × 20                                       |
+| Magnesium           | sweat L × 1.5 + targetMg × activityFraction × 0.30 |
+| Phosphorus          | targetPhosphorus × activityFraction × 0.20         |
+| Iron                | sweat L × 0.3 + running modifier                   |
+| Zinc                | sweat L × 0.6                                      |
+| Copper              | sweat L × 0.08                                     |
+| Selenium            | 0                                                  |
+| Iodine              | 0                                                  |
+| Vitamin C           | targetVitC × activityFraction × 0.20               |
+| Vitamin A           | 0                                                  |
+| Vitamin D           | 0                                                  |
+| Vitamin E           | targetVitE × activityFraction × 0.15               |
+| Vitamin K           | 0                                                  |
+| Vitamin B1          | targetB1 × activityFraction × 0.70                 |
+| Vitamin B2          | targetB2 × activityFraction × 0.50                 |
+| Vitamin B6          | targetB6 × activityFraction × 0.40                 |
+| Vitamin B12         | 0                                                  |
+| Folate              | 0                                                  |
+| Niacin              | targetNiacin × activityFraction × 0.50             |
+| Biotin              | targetBiotin × activityFraction × 0.20             |
+| Pantothenic acid    | targetPantothenic × activityFraction × 0.30        |
+
+---
+
+# Step 14: Important safety limits
+
+Clamp all activity impacts so they do not exceed reasonable daily values.
+
+```js
+activityImpact[nutrient] = Math.min(
+  calculatedValue,
+  dailyTarget[nutrient] * maxMultiplier
+)
+```
+
+Recommended max multipliers:
+
+```js
+const MAX_ACTIVITY_MULTIPLIER = {
+  sodium: 2.0,
+  potassium: 0.5,
+  calcium: 0.25,
+  magnesium: 0.25,
+  zinc: 0.25,
+  iron: 0.25,
+
+  vitaminB1: 0.5,
+  vitaminB2: 0.5,
+  niacin: 0.5,
+  vitaminB6: 0.5,
+  vitaminC: 0.3,
+  vitaminE: 0.3,
+
+  default: 0.25
+}
+```
+
+Do not recommend exceeding UL values.
+
+---
+
+# Step 15: Implementation files
+
+Create or update:
+
+```txt
+lib/nutrition/activityNutritionImpact.js
+lib/nutrition/dailyTotals.js
+components/planner/ActivityForm.jsx
+components/planner/DayMacroBreakdown.jsx
+```
+
+---
+
+# Final UI behavior
+
+The user should see both:
+
+1. What they ate
+2. How activity adjusted their daily targets
+
+Example:
+
+```txt
+Running, 45 min, 480 kcal burned
+
+Estimated recovery impact:
++84 g carbohydrates
++9 g fat
++7 g protein
++1.4 g salt equivalent
++3 mg magnesium
++0.6 mg zinc
++0.4 mg iron
+
+These are estimates. Sweat rate, temperature, fitness level, and individual biology can change actual values significantly.
+```
+
+```
+
+Key note: for the nutrients you listed, the most honest implementation is **not “activity subtracts all nutrients from food”**. It should be **“activity increases target / recovery need”**. That avoids pretending that exercise directly consumes vitamin D, iodine, selenium, cholesterol, fiber, etc.
+```

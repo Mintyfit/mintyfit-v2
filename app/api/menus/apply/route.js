@@ -79,10 +79,9 @@ export async function POST(request) {
         const dateStr = d.toISOString().split('T')[0]
         rows.push({
           profile_id: user.id,
-          date: dateStr,
+          date_str: dateStr,
           meal_type: mealType,
           recipe_id: mrs[i].recipes.id,
-          order_index: 0,
         })
       }
     }

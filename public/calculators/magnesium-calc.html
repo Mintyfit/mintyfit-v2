@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; font-src 'self' data:;">
+    <title>Magnesium Calculator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        #root {
+            width: 100%;
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+const { useState } = React;
+
+// Lucide icons as inline SVG components
+const Calculator = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="16" height="20" x="4" y="2" rx="2"/>
+    <line x1="8" x2="16" y1="6" y2="6"/>
+    <line x1="16" x2="16" y1="14" y2="14"/>
+    <path d="M16 10h.01"/>
+    <path d="M12 10h.01"/>
+    <path d="M8 10h.01"/>
+    <path d="M12 14h.01"/>
+    <path d="M8 14h.01"/>
+    <path d="M12 18h.01"/>
+    <path d="M8 18h.01"/>
+  </svg>
+);
+
+const User = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+);
+
+const Utensils = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+    <path d="M7 2v20"/>
+    <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+  </svg>
+);
+
+const Pill = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/>
+    <path d="m8.5 8.5 7 7"/>
+  </svg>
+);
+
+const MagnesiumCalculator = () => {
+  const [age, setAge] = useState(30);
+  const [sex, setSex] = useState('male');
+  const [weight, setWeight] = useState(75);
+  const [height, setHeight] = useState(175);
+  const [selectedFood, setSelectedFood] = useState('regular_diet');
+  const [foodAmount, setFoodAmount] = useState(100);
+  const [exerciseType, setExerciseType] = useState('rest');
+  const [exerciseDuration, setExerciseDuration] = useState(30);
+  const [pregnancyStatus, setPregnancyStatus] = useState('none');
+  const [digestiveHealth, setDigestiveHealth] = useState('good');
+  const [stressLevel, setStressLevel] = useState('moderate');
+  const [alcoholType, setAlcoholType] = useState('none');
+  const [numberOfDrinks, setNumberOfDrinks] = useState(0);
+  const [drinkVolume, setDrinkVolume] = useState(150);
+  const [drankYesterday, setDrankYesterday] = useState(false);
+  const [caffeineIntake, setCaffeineIntake] = useState('moderate');
+  
+  // Symptom checker states
+  const [symptoms, setSymptoms] = useState({
+    muscleCramps: false,
+    fatigue: false,
+    sleepIssues: false,
+    eyeTwitches: false,
+    anxiety: false,
+    headaches: false,
+    heartPalpitations: false
+  });
+  const [hasGIUpset, setHasGIUpset] = useState(false);
+
+  // Magnesium-rich foods database (mg per 100g)
+  const foods = {
+    'none_fasting': { name: 'I didn\'t eat today (fasting)', mg: 0, absorption: 0 },
+    'regular_diet': { name: 'No magnesium-rich foods (regular diet)', mg: 60, absorption: 0.25 },
+    'spinach': { name: 'Spinach (cooked)', mg: 87, absorption: 0.30 },
+    'pumpkin_seeds': { name: 'Pumpkin seeds', mg: 550, absorption: 0.40 },
+    'almonds': { name: 'Almonds', mg: 270, absorption: 0.35 },
+    'cashews': { name: 'Cashews', mg: 292, absorption: 0.35 },
+    'black_beans': { name: 'Black beans (cooked)', mg: 70, absorption: 0.25 },
+    'edamame': { name: 'Edamame', mg: 64, absorption: 0.28 },
+    'peanut_butter': { name: 'Peanut butter', mg: 168, absorption: 0.32 },
+    'brown_rice': { name: 'Brown rice (cooked)', mg: 44, absorption: 0.22 },
+    'avocado': { name: 'Avocado', mg: 29, absorption: 0.35 },
+    'dark_chocolate': { name: 'Dark chocolate (70-85%)', mg: 228, absorption: 0.38 },
+    'quinoa': { name: 'Quinoa (cooked)', mg: 64, absorption: 0.26 },
+    'tofu': { name: 'Tofu', mg: 53, absorption: 0.30 },
+    'chia_seeds': { name: 'Chia seeds', mg: 335, absorption: 0.38 },
+    'flaxseeds': { name: 'Flaxseeds', mg: 392, absorption: 0.36 },
+    'brazil_nuts': { name: 'Brazil nuts', mg: 376, absorption: 0.34 },
+    'salmon': { name: 'Salmon', mg: 29, absorption: 0.40 },
+    'mackerel': { name: 'Mackerel', mg: 97, absorption: 0.42 },
+    'banana': { name: 'Banana', mg: 27, absorption: 0.32 },
+    'swiss_chard': { name: 'Swiss chard (cooked)', mg: 81, absorption: 0.28 },
+    'kale': { name: 'Kale (cooked)', mg: 34, absorption: 0.27 }
+  };
+
+  // Exercise activities with MET values (Metabolic Equivalent of Task)
+  // MET represents energy expenditure - higher MET = more sweat/magnesium loss
+  const exercises = {
+    'rest': { name: 'Rest day / No exercise', met: 0, intensity: 'rest' },
+    'walking_casual': { name: 'Walking (casual, 3 km/h)', met: 2.5, intensity: 'light' },
+    'walking_brisk': { name: 'Walking (brisk, 5-6 km/h)', met: 4.0, intensity: 'moderate' },
+    'hiking': { name: 'Hiking', met: 6.0, intensity: 'moderate' },
+    'jogging': { name: 'Jogging (light pace)', met: 6.0, intensity: 'moderate' },
+    'running': { name: 'Running (8-10 km/h)', met: 8.0, intensity: 'vigorous' },
+    'running_fast': { name: 'Running (>10 km/h)', met: 11.0, intensity: 'vigorous' },
+    'cycling_leisure': { name: 'Cycling (leisure, <16 km/h)', met: 4.0, intensity: 'light' },
+    'cycling_moderate': { name: 'Cycling (moderate, 16-19 km/h)', met: 6.8, intensity: 'moderate' },
+    'cycling_vigorous': { name: 'Cycling (vigorous, >20 km/h)', met: 10.0, intensity: 'vigorous' },
+    'swimming_leisure': { name: 'Swimming (leisure)', met: 6.0, intensity: 'moderate' },
+    'swimming_laps': { name: 'Swimming (laps, vigorous)', met: 10.0, intensity: 'vigorous' },
+    'yoga': { name: 'Yoga (Hatha)', met: 2.5, intensity: 'light' },
+    'yoga_power': { name: 'Yoga (Power/Vinyasa)', met: 4.0, intensity: 'moderate' },
+    'pilates': { name: 'Pilates', met: 3.0, intensity: 'light' },
+    'weight_training': { name: 'Weight training (moderate)', met: 5.0, intensity: 'moderate' },
+    'weight_training_vigorous': { name: 'Weight training (vigorous)', met: 6.0, intensity: 'vigorous' },
+    'hiit': { name: 'HIIT / Circuit training', met: 8.0, intensity: 'vigorous' },
+    'crossfit': { name: 'CrossFit', met: 9.0, intensity: 'vigorous' },
+    'rowing': { name: 'Rowing machine', met: 7.0, intensity: 'vigorous' },
+    'elliptical': { name: 'Elliptical trainer', met: 5.0, intensity: 'moderate' },
+    'tennis': { name: 'Tennis (singles)', met: 8.0, intensity: 'vigorous' },
+    'basketball': { name: 'Basketball (game)', met: 8.0, intensity: 'vigorous' },
+    'soccer': { name: 'Soccer', met: 10.0, intensity: 'vigorous' },
+    'dancing': { name: 'Dancing (general)', met: 4.5, intensity: 'moderate' },
+    'martial_arts': { name: 'Martial arts', met: 10.0, intensity: 'vigorous' }
+  };
+
+  // Alcohol types with ABV (Alcohol By Volume) percentages
+  const alcoholTypes = {
+    'none': { name: 'No alcohol today', abv: 0 },
+    'beer_light': { name: 'Light Beer', abv: 0.04 },
+    'beer_regular': { name: 'Regular Beer', abv: 0.05 },
+    'beer_craft': { name: 'Craft Beer / IPA', abv: 0.07 },
+    'wine_red': { name: 'Red Wine', abv: 0.13 },
+    'wine_white': { name: 'White Wine', abv: 0.12 },
+    'wine_sparkling': { name: 'Sparkling Wine / Champagne', abv: 0.12 },
+    'vodka': { name: 'Vodka', abv: 0.40 },
+    'whiskey': { name: 'Whiskey / Bourbon', abv: 0.40 },
+    'rum': { name: 'Rum', abv: 0.40 },
+    'gin': { name: 'Gin', abv: 0.40 },
+    'tequila': { name: 'Tequila', abv: 0.40 },
+    'cocktail_light': { name: 'Light Cocktail (Mojito, Spritz)', abv: 0.10 },
+    'cocktail_strong': { name: 'Strong Cocktail (Margarita, Old Fashioned)', abv: 0.20 }
+  };
+
+  // Calculate RDA based on age and sex
+  const calculateRDA = () => {
+    let baseRDA;
+    
+    if (sex === 'male') {
+      if (age >= 31) baseRDA = 420;
+      else if (age >= 19) baseRDA = 400;
+      else if (age >= 14) baseRDA = 410;
+      else baseRDA = 240;
+    } else {
+      if (age >= 31) baseRDA = 320;
+      else if (age >= 19) baseRDA = 310;
+      else if (age >= 14) baseRDA = 360;
+      else baseRDA = 240;
+      
+      // Adjust for pregnancy and lactation
+      if (pregnancyStatus === 'pregnant') {
+        if (age >= 19) baseRDA = 350;
+        else baseRDA = 400;
+      } else if (pregnancyStatus === 'lactating') {
+        if (age >= 19) baseRDA = 310;
+        else baseRDA = 360;
+      }
+    }
+    
+    return baseRDA;
+  };
+
+  // Calculate magnesium loss from exercise
+  const calculateExerciseMgLoss = () => {
+    const exerciseData = exercises[exerciseType];
+    if (exerciseData.met === 0) return 0;
+    
+    // Average sweat rate: 0.5-2.0 L/hour depending on intensity
+    // Magnesium in sweat: ~0.2-0.5 mg/L (average ~0.35 mg/L)
+    // Formula: MET-based sweat rate × duration × Mg concentration
+    
+    const durationHours = exerciseDuration / 60;
+    let sweatRateLPerHour;
+    
+    if (exerciseData.intensity === 'light') {
+      sweatRateLPerHour = 0.5;
+    } else if (exerciseData.intensity === 'moderate') {
+      sweatRateLPerHour = 1.0;
+    } else { // vigorous
+      sweatRateLPerHour = 1.5;
+    }
+    
+    const totalSweatLiters = sweatRateLPerHour * durationHours;
+    const mgLostInSweat = totalSweatLiters * 0.35; // 0.35 mg Mg per liter of sweat
+    
+    // Also account for increased urinary excretion during/after exercise
+    const urinaryLoss = exerciseData.met * durationHours * 0.5;
+    
+    return mgLostInSweat + urinaryLoss;
+  };
+
+  const exerciseMgLoss = calculateExerciseMgLoss();
+
+  // Calculate magnesium loss from alcohol consumption
+  const calculateAlcoholMgLoss = () => {
+    let totalLoss = 0;
+    
+    // Today's alcohol consumption
+    if (alcoholType !== 'none' && numberOfDrinks > 0) {
+      const alcoholData = alcoholTypes[alcoholType];
+      // Calculate total ethanol in grams
+      // Formula: volume(ml) × ABV × 0.789 (density of ethanol) = grams of ethanol
+      const ethanolGrams = (drinkVolume * numberOfDrinks * alcoholData.abv * 0.789);
+      
+      // Research shows: ~2-3mg magnesium lost per 10g of ethanol consumed
+      // This is due to increased urinary excretion
+      const todayLoss = (ethanolGrams / 10) * 2.5;
+      totalLoss += todayLoss;
+    }
+    
+    // Yesterday's alcohol recovery penalty (continued excretion for 24-48 hours)
+    if (drankYesterday) {
+      // Add 15mg recovery penalty for continued magnesium excretion
+      totalLoss += 15;
+    }
+    
+    return totalLoss;
+  };
+
+  const alcoholMgLoss = calculateAlcoholMgLoss();
+
+  // Calculate BMI for context
+  const calculateBMI = () => {
+    const heightM = height / 100;
+    return weight / (heightM * heightM);
+  };
+
+  // Calculate magnesium from food
+  const foodData = foods[selectedFood];
+  const totalMgInFood = (foodData.mg * foodAmount) / 100;
+  
+  // Calculate absorption rate modifiers
+  let absorptionModifier = 1.0;
+  
+  // Digestive health significantly affects absorption
+  const digestiveModifier = {
+    'excellent': 1.1,
+    'good': 1.0,
+    'fair': 0.85,
+    'poor': 0.65,
+    'ibd': 0.50 // Inflammatory bowel disease
+  };
+  absorptionModifier *= digestiveModifier[digestiveHealth];
+  
+  // Stress increases magnesium excretion
+  const stressModifier = {
+    'low': 1.05,
+    'moderate': 1.0,
+    'high': 0.90,
+    'very_high': 0.80
+  };
+  absorptionModifier *= stressModifier[stressLevel];
+  
+  // Caffeine increases urinary excretion
+  const caffeineModifier = {
+    'none': 1.05,
+    'low': 1.0,
+    'moderate': 0.95,
+    'high': 0.85
+  };
+  absorptionModifier *= caffeineModifier[caffeineIntake];
+  
+  const adjustedAbsorption = foodData.absorption * absorptionModifier;
+  const absorbedMgFromFood = totalMgInFood * adjustedAbsorption;
+
+  // Calculate recommended magnesium glycinate supplement
+  // Magnesium glycinate supplements list ELEMENTAL magnesium content
+  // Absorption rate is approximately 80% for magnesium glycinate
+  const rda = calculateRDA();
+  const totalMgNeeded = rda + exerciseMgLoss + alcoholMgLoss; // Add exercise and alcohol losses to base RDA
+  const deficit = Math.max(0, totalMgNeeded - absorbedMgFromFood);
+  
+  // Calculate elemental magnesium needed in supplement (accounting for 80% absorption)
+  const elementalMgInSupplement = deficit / 0.80;
+  
+  // Round to nearest 50mg for practical dosing
+  const roundedGlycinate = Math.round(elementalMgInSupplement / 50) * 50;
+  
+  // Generate practical capsule recommendations
+  const getCapsuleRecommendation = (amount) => {
+    if (amount === 0) return null;
+    if (amount <= 100) return "1 × 100mg capsule";
+    if (amount <= 200) return "1 × 200mg capsule";
+    if (amount <= 250) return "1 × 250mg capsule";
+    if (amount <= 300) return "1 × 300mg capsule";
+    if (amount <= 400) return "2 × 200mg capsules";
+    if (amount <= 500) return "2 × 250mg capsules";
+    if (amount <= 600) return "3 × 200mg capsules";
+    if (amount <= 800) return "4 × 200mg capsules";
+    if (amount <= 1000) return "5 × 200mg capsules";
+    return `${Math.ceil(amount / 200)} × 200mg capsules`;
+  };
+
+  const bmi = calculateBMI();
+  const percentRDA = (absorbedMgFromFood / totalMgNeeded) * 100;
+
+  // Calculate symptom count and feedback
+  const symptomCount = Object.values(symptoms).filter(Boolean).length;
+  const getSymptomFeedback = () => {
+    if (symptomCount === 0 || symptomCount === 1) {
+      return {
+        message: "✓ Low likelihood of deficiency",
+        color: "text-green-700",
+        bgColor: "bg-green-50",
+        borderColor: "border-green-200"
+      };
+    } else if (symptomCount === 2 || symptomCount === 3) {
+      return {
+        message: "⚠️ Possible deficiency - pay attention to your supplement recommendation",
+        color: "text-yellow-700",
+        bgColor: "bg-yellow-50",
+        borderColor: "border-yellow-200"
+      };
+    } else if (symptomCount === 4 || symptomCount === 5) {
+      return {
+        message: "⚠️ Moderate signs of deficiency - consider medical testing",
+        color: "text-orange-700",
+        bgColor: "bg-orange-50",
+        borderColor: "border-orange-200"
+      };
+    } else {
+      return {
+        message: "🚨 Strong indicators of deficiency - consult healthcare provider",
+        color: "text-red-700",
+        bgColor: "bg-red-50",
+        borderColor: "border-red-200"
+      };
+    }
+  };
+
+  const symptomFeedback = getSymptomFeedback();
+
+  const toggleSymptom = (symptom) => {
+    setSymptoms(prev => ({
+      ...prev,
+      [symptom]: !prev[symptom]
+    }));
+  };
+
+  return (
+    <div className="w-full max-w-4xl mx-auto p-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-xl shadow-lg">
+      <div className="bg-white rounded-lg p-6 shadow-md mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Calculator className="w-8 h-8 text-green-600" />
+          <h1 className="text-3xl font-bold text-gray-800">Magnesium Calculator</h1>
+        </div>
+        
+        {/* Personal Information */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <User className="w-5 h-5 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-700">Personal Information</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Age: {age} years
+              </label>
+              <input
+                type="range"
+                min="10"
+                max="80"
+                value={age}
+                onChange={(e) => setAge(Number(e.target.value))}
+                className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">Sex</label>
+              <div className="flex gap-4 items-center h-10">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sex"
+                    value="male"
+                    checked={sex === 'male'}
+                    onChange={(e) => setSex(e.target.value)}
+                    className="w-4 h-4 text-blue-600 cursor-pointer"
+                  />
+                  <span className="text-gray-700 text-[17px]">Male</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="sex"
+                    value="female"
+                    checked={sex === 'female'}
+                    onChange={(e) => setSex(e.target.value)}
+                    className="w-4 h-4 text-blue-600 cursor-pointer"
+                  />
+                  <span className="text-gray-700 text-[17px]">Female</span>
+                </label>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Weight: {weight} kg
+              </label>
+              <input
+                type="range"
+                min="40"
+                max="150"
+                value={weight}
+                onChange={(e) => setWeight(Number(e.target.value))}
+                className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Height: {height} cm
+              </label>
+              <input
+                type="range"
+                min="140"
+                max="210"
+                value={height}
+                onChange={(e) => setHeight(Number(e.target.value))}
+                className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-[17px] text-gray-700">
+              <strong>BMI:</strong> {bmi.toFixed(1)} kg/m²
+            </p>
+          </div>
+        </div>
+
+        {/* Lifestyle & Health Factors */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <User className="w-5 h-5 text-orange-600" />
+            <h2 className="text-xl font-semibold text-gray-700">Lifestyle & Health Factors</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Today's Exercise Activity
+              </label>
+              <select
+                value={exerciseType}
+                onChange={(e) => setExerciseType(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 text-[17px] focus:ring-orange-500 focus:border-transparent"
+              >
+                <optgroup label="Rest">
+                  <option value="rest">{exercises.rest.name}</option>
+                </optgroup>
+                <optgroup label="Walking & Hiking">
+                  <option value="walking_casual">{exercises.walking_casual.name}</option>
+                  <option value="walking_brisk">{exercises.walking_brisk.name}</option>
+                  <option value="hiking">{exercises.hiking.name}</option>
+                </optgroup>
+                <optgroup label="Running">
+                  <option value="jogging">{exercises.jogging.name}</option>
+                  <option value="running">{exercises.running.name}</option>
+                  <option value="running_fast">{exercises.running_fast.name}</option>
+                </optgroup>
+                <optgroup label="Cycling">
+                  <option value="cycling_leisure">{exercises.cycling_leisure.name}</option>
+                  <option value="cycling_moderate">{exercises.cycling_moderate.name}</option>
+                  <option value="cycling_vigorous">{exercises.cycling_vigorous.name}</option>
+                </optgroup>
+                <optgroup label="Swimming">
+                  <option value="swimming_leisure">{exercises.swimming_leisure.name}</option>
+                  <option value="swimming_laps">{exercises.swimming_laps.name}</option>
+                </optgroup>
+                <optgroup label="Yoga & Pilates">
+                  <option value="yoga">{exercises.yoga.name}</option>
+                  <option value="yoga_power">{exercises.yoga_power.name}</option>
+                  <option value="pilates">{exercises.pilates.name}</option>
+                </optgroup>
+                <optgroup label="Strength Training">
+                  <option value="weight_training">{exercises.weight_training.name}</option>
+                  <option value="weight_training_vigorous">{exercises.weight_training_vigorous.name}</option>
+                  <option value="hiit">{exercises.hiit.name}</option>
+                  <option value="crossfit">{exercises.crossfit.name}</option>
+                </optgroup>
+                <optgroup label="Cardio Machines">
+                  <option value="rowing">{exercises.rowing.name}</option>
+                  <option value="elliptical">{exercises.elliptical.name}</option>
+                </optgroup>
+                <optgroup label="Sports & Dancing">
+                  <option value="tennis">{exercises.tennis.name}</option>
+                  <option value="basketball">{exercises.basketball.name}</option>
+                  <option value="soccer">{exercises.soccer.name}</option>
+                  <option value="dancing">{exercises.dancing.name}</option>
+                  <option value="martial_arts">{exercises.martial_arts.name}</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Exercise Duration: {exerciseDuration} minutes
+              </label>
+              <input
+                type="range"
+                min="10"
+                max="240"
+                step="10"
+                value={exerciseDuration}
+                onChange={(e) => setExerciseDuration(Number(e.target.value))}
+                className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer"
+                disabled={exerciseType === 'rest'}
+              />
+              <p className="text-[15px] text-gray-500 mt-1">
+                {exerciseType === 'rest' ? 'No exercise selected' : `${(exerciseDuration / 60).toFixed(1)} hours`}
+              </p>
+            </div>
+
+            {sex === 'female' && (
+              <div>
+                <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                  Pregnancy/Lactation Status
+                </label>
+                <select
+                  value={pregnancyStatus}
+                  onChange={(e) => setPregnancyStatus(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 text-[17px] focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="none">None</option>
+                  <option value="pregnant">Pregnant</option>
+                  <option value="lactating">Lactating</option>
+                </select>
+              </div>
+            )}
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Digestive Health
+              </label>
+              <select
+                value={digestiveHealth}
+                onChange={(e) => setDigestiveHealth(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 text-[17px] focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="excellent">Excellent</option>
+                <option value="good">Good</option>
+                <option value="fair">Fair</option>
+                <option value="poor">Poor</option>
+                <option value="ibd">IBD/Chronic Issues</option>
+              </select>
+              <p className="text-[15px] text-gray-500 mt-1">Affects absorption rate</p>
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Stress Level
+              </label>
+              <select
+                value={stressLevel}
+                onChange={(e) => setStressLevel(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 text-[17px] focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="low">Low</option>
+                <option value="moderate">Moderate</option>
+                <option value="high">High</option>
+                <option value="very_high">Very High</option>
+              </select>
+              <p className="text-[15px] text-gray-500 mt-1">Increases Mg excretion</p>
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Alcohol Type
+              </label>
+              <select
+                value={alcoholType}
+                onChange={(e) => setAlcoholType(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 text-[17px] focus:ring-orange-500 focus:border-transparent"
+              >
+                <optgroup label="No Alcohol">
+                  <option value="none">{alcoholTypes.none.name}</option>
+                </optgroup>
+                <optgroup label="Beer">
+                  <option value="beer_light">{alcoholTypes.beer_light.name} (4% ABV)</option>
+                  <option value="beer_regular">{alcoholTypes.beer_regular.name} (5% ABV)</option>
+                  <option value="beer_craft">{alcoholTypes.beer_craft.name} (7% ABV)</option>
+                </optgroup>
+                <optgroup label="Wine">
+                  <option value="wine_red">{alcoholTypes.wine_red.name} (13% ABV)</option>
+                  <option value="wine_white">{alcoholTypes.wine_white.name} (12% ABV)</option>
+                  <option value="wine_sparkling">{alcoholTypes.wine_sparkling.name} (12% ABV)</option>
+                </optgroup>
+                <optgroup label="Spirits">
+                  <option value="vodka">{alcoholTypes.vodka.name} (40% ABV)</option>
+                  <option value="whiskey">{alcoholTypes.whiskey.name} (40% ABV)</option>
+                  <option value="rum">{alcoholTypes.rum.name} (40% ABV)</option>
+                  <option value="gin">{alcoholTypes.gin.name} (40% ABV)</option>
+                  <option value="tequila">{alcoholTypes.tequila.name} (40% ABV)</option>
+                </optgroup>
+                <optgroup label="Cocktails">
+                  <option value="cocktail_light">{alcoholTypes.cocktail_light.name} (10% ABV)</option>
+                  <option value="cocktail_strong">{alcoholTypes.cocktail_strong.name} (20% ABV)</option>
+                </optgroup>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Number of Drinks: {numberOfDrinks}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                step="1"
+                value={numberOfDrinks}
+                onChange={(e) => setNumberOfDrinks(Number(e.target.value))}
+                className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer"
+                disabled={alcoholType === 'none'}
+              />
+              <p className="text-[15px] text-gray-500 mt-1">
+                {alcoholType === 'none' ? 'No alcohol selected' : `${numberOfDrinks} drink${numberOfDrinks !== 1 ? 's' : ''}`}
+              </p>
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Volume per Drink: {drinkVolume}ml
+              </label>
+              <input
+                type="range"
+                min="50"
+                max="500"
+                step="50"
+                value={drinkVolume}
+                onChange={(e) => setDrinkVolume(Number(e.target.value))}
+                className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer"
+                disabled={alcoholType === 'none'}
+              />
+              <p className="text-[15px] text-gray-500 mt-1">
+                {alcoholType === 'none' ? 'No alcohol selected' : `Total: ${(numberOfDrinks * drinkVolume)}ml`}
+              </p>
+            </div>
+            
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={drankYesterday}
+                  onChange={(e) => setDrankYesterday(e.target.checked)}
+                  className="w-5 h-5 text-orange-600 cursor-pointer rounded"
+                />
+                <span className="text-[17px] text-gray-700">I drank alcohol yesterday</span>
+              </label>
+              <p className="text-[15px] text-gray-500 mt-1">Adds recovery penalty (+15mg)</p>
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Caffeine Intake
+              </label>
+              <select
+                value={caffeineIntake}
+                onChange={(e) => setCaffeineIntake(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 text-[17px] focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="none">None</option>
+                <option value="low">Low (1 cup coffee/day)</option>
+                <option value="moderate">Moderate (2-3 cups/day)</option>
+                <option value="high">High (4+ cups/day)</option>
+              </select>
+              <p className="text-[15px] text-gray-500 mt-1">Increases urinary loss</p>
+            </div>
+          </div>
+          
+          <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+            <p className="text-[17px] text-gray-700">
+              <strong>Absorption efficiency:</strong> {(absorptionModifier * 100).toFixed(0)}% of baseline
+              {absorptionModifier < 0.9 && (
+                <span className="text-orange-600 text-[17px]"> ⚠️ Reduced due to lifestyle factors</span>
+              )}
+              {absorptionModifier > 1.0 && (
+                <span className="text-green-600 text-[17px]"> ✓ Enhanced by favorable conditions</span>
+              )}
+            </p>
+            {exerciseMgLoss > 0 && (
+              <p className="text-[17px] text-gray-700 mt-2">
+                <strong>Exercise magnesium loss:</strong> {exerciseMgLoss.toFixed(1)}mg 
+                <span className="text-orange-600 text-[17px]"> (from sweat and increased metabolism)</span>
+              </p>
+            )}
+            {alcoholMgLoss > 0 && (
+              <p className="text-[17px] text-gray-700 mt-2">
+                <strong>Alcohol magnesium loss:</strong> {alcoholMgLoss.toFixed(1)}mg 
+                <span className="text-orange-600 text-[17px]"> 
+                  ({alcoholType !== 'none' && numberOfDrinks > 0 ? `${(numberOfDrinks * drinkVolume * alcoholTypes[alcoholType].abv * 0.789).toFixed(0)}g ethanol today` : ''}
+                  {drankYesterday && alcoholType !== 'none' && numberOfDrinks > 0 ? ' + ' : ''}
+                  {drankYesterday ? 'recovery from yesterday' : ''})
+                </span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Symptom Checker */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <User className="w-5 h-5 text-purple-600" />
+            <h2 className="text-xl font-semibold text-gray-700">Magnesium Deficiency Symptom Checker</h2>
+          </div>
+          
+          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <p className="text-[17px] text-gray-700 mb-4">
+              Check symptoms you're currently experiencing:
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={symptoms.muscleCramps}
+                  onChange={() => toggleSymptom('muscleCramps')}
+                  className="w-5 h-5 text-purple-600 cursor-pointer rounded"
+                />
+                <span className="text-[17px] text-gray-700">Muscle spasms / cramps</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={symptoms.anxiety}
+                  onChange={() => toggleSymptom('anxiety')}
+                  className="w-5 h-5 text-purple-600 cursor-pointer rounded"
+                />
+                <span className="text-[17px] text-gray-700">Anxiety / irritability</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={symptoms.fatigue}
+                  onChange={() => toggleSymptom('fatigue')}
+                  className="w-5 h-5 text-purple-600 cursor-pointer rounded"
+                />
+                <span className="text-[17px] text-gray-700">Fatigue / low energy</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={symptoms.headaches}
+                  onChange={() => toggleSymptom('headaches')}
+                  className="w-5 h-5 text-purple-600 cursor-pointer rounded"
+                />
+                <span className="text-[17px] text-gray-700">Frequent headaches</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={symptoms.sleepIssues}
+                  onChange={() => toggleSymptom('sleepIssues')}
+                  className="w-5 h-5 text-purple-600 cursor-pointer rounded"
+                />
+                <span className="text-[17px] text-gray-700">Difficulty sleeping</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={symptoms.heartPalpitations}
+                  onChange={() => toggleSymptom('heartPalpitations')}
+                  className="w-5 h-5 text-purple-600 cursor-pointer rounded"
+                />
+                <span className="text-[17px] text-gray-700">Heart palpitations</span>
+              </label>
+              
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={symptoms.eyeTwitches}
+                  onChange={() => toggleSymptom('eyeTwitches')}
+                  className="w-5 h-5 text-purple-600 cursor-pointer rounded"
+                />
+                <span className="text-[17px] text-gray-700">Eye / muscle twitches</span>
+              </label>
+            </div>
+            
+            <div className={`p-3 rounded-lg border ${symptomFeedback.bgColor} ${symptomFeedback.borderColor} mb-4`}>
+              <p className={`text-[17px] font-semibold ${symptomFeedback.color}`}>
+                Symptoms checked: {symptomCount} of 7
+              </p>
+              <p className={`text-[17px] ${symptomFeedback.color} mt-1`}>
+                {symptomFeedback.message}
+              </p>
+            </div>
+            
+            <div className="pt-3 border-t border-purple-300">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={hasGIUpset}
+                  onChange={(e) => setHasGIUpset(e.target.checked)}
+                  className="w-5 h-5 text-purple-600 cursor-pointer rounded mt-0.5"
+                />
+                <div>
+                  <span className="text-[17px] text-gray-700 font-medium">
+                    Experiencing diarrhea / GI upset from magnesium supplements
+                  </span>
+                  {hasGIUpset && (
+                    <p className="text-[15px] text-orange-600 mt-1">
+                      ⚠️ You may be taking too much. Try reducing your dose or splitting it into smaller amounts throughout the day.
+                    </p>
+                  )}
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Food Selection */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Utensils className="w-5 h-5 text-green-600" />
+            <h2 className="text-xl font-semibold text-gray-700">Magnesium-Rich Food Intake</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                Select Food
+              </label>
+              <select
+                value={selectedFood}
+                onChange={(e) => setSelectedFood(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 text-[17px] focus:ring-green-500 focus:border-transparent"
+              >
+                <optgroup label="General Food Intake">
+                  <option value="none_fasting">{foods.none_fasting.name}</option>
+                  <option value="regular_diet">{foods.regular_diet.name} ({foods.regular_diet.mg}mg/100g)</option>
+                </optgroup>
+                <optgroup label="Magnesium-Rich Foods">
+                  {Object.entries(foods)
+                    .filter(([key]) => key !== 'none_fasting' && key !== 'regular_diet')
+                    .map(([key, food]) => (
+                      <option key={key} value={key}>
+                        {food.name} ({food.mg}mg/100g)
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-[17px] font-medium text-gray-700 mb-2">
+                {selectedFood === 'none_fasting' 
+                  ? 'Amount: 0g (fasting)' 
+                  : selectedFood === 'regular_diet'
+                  ? `Amount of regular food: ${foodAmount}g`
+                  : `Amount: ${foodAmount}g`}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max={selectedFood === 'regular_diet' ? "2000" : "200"}
+                step={selectedFood === 'regular_diet' ? "100" : "1"}
+                value={foodAmount}
+                onChange={(e) => setFoodAmount(Number(e.target.value))}
+                className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
+                disabled={selectedFood === 'none_fasting'}
+              />
+              {selectedFood === 'regular_diet' && (
+                <p className="text-[15px] text-gray-500 mt-1">
+                  Estimated portions from regular meals (bread, pasta, chicken, vegetables, etc.)
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div className="mt-4 p-4 bg-green-50 rounded-lg space-y-2">
+            {selectedFood === 'none_fasting' ? (
+              <p className="text-[17px] text-gray-700 font-semibold">
+                <strong>No food intake today (fasting):</strong> 0mg magnesium
+              </p>
+            ) : (
+              <>
+                <p className="text-[17px] text-gray-700">
+                  <strong>Total magnesium in food:</strong> {totalMgInFood.toFixed(1)}mg
+                </p>
+                <p className="text-[17px] text-gray-700">
+                  <strong>Base absorption rate:</strong> {(foodData.absorption * 100).toFixed(0)}%
+                </p>
+                <p className="text-[17px] text-gray-700">
+                  <strong>Adjusted absorption rate:</strong> {(adjustedAbsorption * 100).toFixed(1)}%
+                </p>
+                <p className="text-[17px] text-gray-700 font-semibold">
+                  <strong>Absorbed magnesium:</strong> {absorbedMgFromFood.toFixed(1)}mg
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Pill className="w-5 h-5 text-purple-600" />
+            <h2 className="text-xl font-semibold text-gray-700">Personalized Recommendations</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            <div className="p-4 bg-gradient-to-br from-green-100 to-green-50 rounded-lg border-2 border-green-200">
+              <h3 className="font-semibold text-green-900 mb-2 text-[18px]">From Food Intake</h3>
+              <p className="text-3xl font-bold text-green-700">{absorbedMgFromFood.toFixed(1)}mg</p>
+              <p className="text-[15px] text-gray-600 mt-1">
+                {percentRDA.toFixed(1)}% of your daily need ({totalMgNeeded.toFixed(0)}mg total)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Supplement Recommendation */}
+        <div className="p-6 bg-gradient-to-br from-purple-100 to-pink-50 rounded-lg border-2 border-purple-200">
+          <h3 className="text-xl font-semibold text-purple-900 mb-4">
+            Magnesium Glycinate Supplement Recommendation
+          </h3>
+          
+          {deficit > 0 ? (
+            <div className="space-y-3">
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-[17px] text-gray-600">Daily magnesium deficit</p>
+                <p className="text-2xl font-bold text-purple-700">{deficit.toFixed(1)}mg</p>
+              </div>
+              
+              <div className="p-4 bg-purple-900 text-white rounded-lg">
+                <p className="text-[17px] opacity-90 mb-1">Recommended Magnesium Glycinate</p>
+                <p className="text-3xl font-bold">{roundedGlycinate}mg per day</p>
+                <p className="text-[17px] opacity-90 mt-2">
+                  💊 Take as: {getCapsuleRecommendation(roundedGlycinate)}
+                </p>
+              </div>
+              
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-[15px] text-gray-700">
+                  ℹ️ <strong>Why {roundedGlycinate}mg?</strong> With 80% absorption, this provides ~{(roundedGlycinate * 0.80).toFixed(0)}mg of absorbable magnesium to cover your {deficit.toFixed(1)}mg deficit.
+                </p>
+              </div>
+              
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-[15px] text-gray-700">
+                  <strong>Note:</strong> Magnesium glycinate has ~80% absorption rate and is gentle on the stomach. 
+                  For best results, split larger doses throughout the day (e.g., morning and evening). 
+                  Always consult with a healthcare provider before starting supplementation.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 bg-green-100 rounded-lg text-center">
+              <p className="text-[19px] font-semibold text-green-800">
+                🎉 Excellent! You're meeting your magnesium needs through diet alone.
+              </p>
+              <p className="text-[17px] text-gray-700 mt-2">
+                No supplementation needed at this food intake level.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Educational Note */}
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <h4 className="font-semibold text-gray-800 mb-2 text-[18px]">Important Information</h4>
+          <ul className="text-[17px] text-gray-700 space-y-1 list-disc list-inside">
+            <li>"Regular diet" provides ~60mg magnesium per 100g from common foods (bread, pasta, chicken, mixed vegetables)</li>
+            <li>This calculator uses MET values and sweat rates to estimate exercise-based magnesium loss</li>
+            <li>Exercise increases magnesium loss through sweat (0.35mg/L) and increased urinary excretion</li>
+            <li>Alcohol depletes magnesium at approximately 2-3mg per 10g of ethanol consumed</li>
+            <li>Alcohol's diuretic effect continues for 24-48 hours after consumption</li>
+            <li>Vigorous exercise can increase daily magnesium needs by 10-20%</li>
+            <li>Lifestyle factors (stress, caffeine, digestive health) affect absorption and retention</li>
+            <li>Phytic acid in grains and legumes can reduce magnesium absorption</li>
+            <li>Vitamin D, B6, and adequate protein intake support magnesium absorption</li>
+            <li>Certain medications (PPIs, diuretics, antibiotics) can deplete magnesium</li>
+            <li>Spread magnesium intake throughout the day for optimal absorption</li>
+            <li>This calculator provides personalized estimates - consult healthcare providers for medical advice</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MagnesiumCalculator />);
+        
+        // Send height to parent window for auto-resizing iframe
+        function sendHeight() {
+            const height = document.documentElement.scrollHeight;
+            window.parent.postMessage({ type: 'resize', height: height }, '*');
+        }
+        
+        // Send height after render
+        setTimeout(sendHeight, 100);
+        setTimeout(sendHeight, 500);
+        setTimeout(sendHeight, 1000);
+        
+        // Send height on window resize
+        window.addEventListener('resize', sendHeight);
+        
+        // Observe DOM changes to detect when calculator updates
+        const observer = new MutationObserver(sendHeight);
+        observer.observe(document.body, { 
+            childList: true, 
+            subtree: true, 
+            attributes: true 
+        });
+    </script>
+</body>
+</html>

@@ -2,10 +2,11 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-const ThemeContext = createContext({ dark: false, toggle: () => {} })
+const ThemeContext = createContext({ dark: undefined, loading: true, toggle: () => {} })
 
 export function ThemeProvider({ children }) {
-  const [dark, setDark] = useState(false)
+  const [dark, setDark] = useState(undefined)
+  const [loading, setLoading] = useState(true)
 
   // On mount: read localStorage preference, fallback to OS preference
   useEffect(() => {
@@ -15,11 +16,14 @@ export function ThemeProvider({ children }) {
     } else {
       setDark(window.matchMedia('(prefers-color-scheme: dark)').matches)
     }
+    setLoading(false)
   }, [])
 
   // Apply / remove .dark class on <html> whenever dark changes
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
+    if (dark !== undefined) {
+      document.documentElement.classList.toggle('dark', dark)
+    }
   }, [dark])
 
   function toggle() {
@@ -31,7 +35,7 @@ export function ThemeProvider({ children }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ dark, toggle }}>
+    <ThemeContext.Provider value={{ dark, loading, toggle }}>
       {children}
     </ThemeContext.Provider>
   )

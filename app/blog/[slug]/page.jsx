@@ -2,30 +2,39 @@ import { createPublicClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import BlogContent from '@/components/blog/BlogContent'
 
 export const revalidate = 300
 
 async function getPost(slug) {
   const supabase = createPublicClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('blog_posts')
     .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
     .single()
+  if (error) {
+    console.error(`[Blog] Failed to load post "${slug}":`, error.message)
+    return null
+  }
   return data
 }
 
 async function getRelated(categories, currentSlug) {
   const supabase = createPublicClient()
   if (!categories?.length) return []
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('blog_posts')
-    .select('id, slug, title, excerpt, cover_url, published_at')
+    .select('id, slug, title, excerpt, image_url, published_at')
     .eq('status', 'published')
     .neq('slug', currentSlug)
     .contains('categories', categories.slice(0, 1))
     .limit(3)
+  if (error) {
+    console.error('[Blog] Failed to load related posts:', error.message)
+    return []
+  }
   return data || []
 }
 
@@ -39,10 +48,10 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: post.title,
       description: post.excerpt || post.title,
-      images: post.cover_url ? [{ url: post.cover_url }] : [],
+      images: post.image_url ? [{ url: post.image_url }] : [],
       type: 'article',
       publishedTime: post.published_at,
-      authors: [post.author_name || 'MintyFit'],
+      authors: ['MintyFit'],
     },
     alternates: {
       canonical: `/blog/${slug}`,
@@ -67,16 +76,18 @@ export default async function BlogPostPage({ params }) {
   const related = await getRelated(cats, slug)
   const cta = getCTA(cats)
   const date = post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
+  const imageUrl = post.image_url || post.cover_url
+  const authorName = post.author_name || 'MintyFit Team'
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.excerpt || post.title,
-    image: post.cover_url ? [post.cover_url] : [],
+    image: imageUrl ? [imageUrl] : [],
     datePublished: post.published_at,
     dateModified: post.updated_at || post.published_at,
-    author: { '@type': 'Person', name: post.author_name || 'MintyFit Team' },
+    author: { '@type': 'Person', name: authorName },
     publisher: {
       '@type': 'Organization',
       name: 'MintyFit',
@@ -114,23 +125,19 @@ export default async function BlogPostPage({ params }) {
         </h1>
 
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2rem', color: 'var(--text-secondary, #6b7280)', fontSize: '0.875rem' }}>
-          <span>By {post.author_name || 'MintyFit Team'}</span>
+          <span>By {authorName}</span>
           <span>·</span>
           <span>{date}</span>
         </div>
 
-        {post.cover_url && (
+        {imageUrl && (
           <div style={{ position: 'relative', height: 400, borderRadius: '0.75rem', overflow: 'hidden', marginBottom: '2.5rem' }}>
-            <Image src={post.cover_url} alt={post.title} fill style={{ objectFit: 'cover' }} priority />
+            <Image src={imageUrl} alt={post.title} fill style={{ objectFit: 'cover' }} priority />
           </div>
         )}
 
         {/* Content */}
-        <div style={{
-          fontSize: '1.05rem', lineHeight: 1.8, color: 'var(--text-primary, #374151)',
-        }}
-          dangerouslySetInnerHTML={{ __html: post.content || '<p>Content coming soon.</p>' }}
-        />
+        <BlogContent html={post.content || post.content_html || ''} />
 
         {/* CTA */}
         <div style={{ margin: '3rem 0', padding: '2rem', background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)', borderRadius: '1rem', textAlign: 'center' }}>
@@ -150,9 +157,9 @@ export default async function BlogPostPage({ params }) {
               {related.map(r => (
                 <Link key={r.id} href={`/blog/${r.slug}`}
                   style={{ textDecoration: 'none', color: 'inherit', background: 'var(--card-bg, #f9fafb)', borderRadius: '0.5rem', padding: '1rem', border: '1px solid var(--border-color, #e5e7eb)', display: 'block' }}>
-                  {r.cover_url && (
+                  {r.image_url && (
                     <div style={{ position: 'relative', height: 120, borderRadius: '0.375rem', overflow: 'hidden', marginBottom: '0.75rem' }}>
-                      <Image src={r.cover_url} alt={r.title} fill style={{ objectFit: 'cover' }} />
+                      <Image src={r.image_url} alt={r.title} fill style={{ objectFit: 'cover' }} />
                     </div>
                   )}
                   <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary, #111827)' }}>{r.title}</p>

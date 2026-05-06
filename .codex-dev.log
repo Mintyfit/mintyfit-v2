@@ -1,0 +1,116 @@
+
+> mintyfit-v2@2.0.0 dev
+> next dev
+
+   ▲ Next.js 15.5.14
+   - Local:        http://localhost:3000
+   - Network:      http://88.196.62.189:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1542ms
+ ✓ Compiled /middleware in 255ms (166 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 1064ms (809 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET / 200 in 1641ms
+ GET / 200 in 125ms
+ GET / 200 in 103ms
+ ○ Compiling /recipes ...
+ ✓ Compiled /recipes in 854ms (878 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET / 200 in 516ms
+ GET /recipes 200 in 15661ms
+ GET / 200 in 122ms
+ GET / 200 in 103ms
+ GET / 200 in 109ms
+ GET / 200 in 117ms
+ ✓ Compiled /_not-found in 387ms (879 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /manifest.json 404 in 921ms
+ GET /recipes 200 in 3961ms
+ ✓ Compiled /menus in 345ms (887 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /manifest.json 404 in 247ms
+ GET /menus 200 in 1018ms
+ ○ Compiling /plan ...
+ ✓ Compiled /plan in 526ms (919 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /manifest.json 404 in 282ms
+ GET /plan 200 in 1520ms
+ ✓ Compiled /statistics in 466ms (928 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /manifest.json 404 in 267ms
+ GET /statistics 200 in 2433ms
+ ✓ Compiled /blog in 445ms (936 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /manifest.json 404 in 223ms
+ GET /blog 200 in 1000ms
+ ○ Compiling /my-account ...
+ ✓ Compiled /my-account in 524ms (944 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /manifest.json 404 in 213ms
+ GET /my-account 200 in 1451ms
+ ○ Compiling /api/account/family ...
+ ✓ Compiled /api/account/family in 600ms (961 modules)
+ GET /api/account/family 200 in 1133ms
+ GET /api/account/family 200 in 246ms
+ GET /api/account/family 200 in 266ms
+ GET /api/account/family 200 in 216ms
+ ○ Compiling /my-family ...
+ ✓ Compiled /my-family in 509ms (969 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /manifest.json 404 in 324ms
+ GET /my-family 200 in 1711ms
+ GET /manifest.json 404 in 82ms
+ GET /statistics 200 in 771ms
+ GET /manifest.json 404 in 99ms
+ GET /recipes 200 in 5028ms
+ ○ Compiling /recipes/[slug] ...
+ ✓ Compiled /recipes/[slug] in 920ms (947 modules)
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /statistics 200 in 396ms
+ GET /recipes/spiced-ground-chicken-thigh-skillet-with-roasted-beets-and-melted-cheese-f7ea4d 200 in 2912ms
+ GET /manifest.json 404 in 98ms
+ GET /manifest.json 404 in 90ms
+ GET /statistics 200 in 987ms
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1823ms (1279 modules)
+ GET /blog 404 in 2496ms
+ GET /blog 200 in 359ms
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /blog 200 in 384ms
+ GET /statistics 200 in 1113ms
+ GET /statistics 200 in 729ms
+ GET /statistics 200 in 87ms
+ GET /statistics 200 in 781ms
+ ✓ Compiled in 383ms (665 modules)
+ ✓ Compiled in 511ms (1177 modules)
+ ✓ Compiled in 397ms (1177 modules)
+ ✓ Compiled / in 391ms (677 modules)
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 551ms (1284 modules)
+ GET / 500 in 2902ms
+ ✓ Compiled in 305ms (511 modules)

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
+import { computeMemberNutrition } from '@/lib/nutrition/portionCalc'
 import WeekOverview from './WeekOverview'
 import DayAgenda from './DayAgenda'
 
@@ -73,19 +74,19 @@ export default function PlannerClient({ userId, profile, members }) {
     supabase
       .from('calendar_entries')
       .select(`
-        id, date, meal_type, member_id, order_index,
+        id, date_str, meal_type, member_id,
         recipes(id, title, slug, image_url, nutrition, servings),
         journal_entries(id, food_name, amount, unit, nutrition, member_id)
       `)
       .eq('profile_id', userId)
-      .gte('date', startKey)
-      .lte('date', endKey)
+      .gte('date_str', startKey)
+      .lte('date_str', endKey)
       .then(({ data }) => {
         const map = {}
         for (const entry of data || []) {
-          if (!map[entry.date]) map[entry.date] = {}
-          if (!map[entry.date][entry.meal_type]) map[entry.date][entry.meal_type] = []
-          map[entry.date][entry.meal_type].push(entry)
+          if (!map[entry.date_str]) map[entry.date_str] = {}
+          if (!map[entry.date_str][entry.meal_type]) map[entry.date_str][entry.meal_type] = []
+          map[entry.date_str][entry.meal_type].push(entry)
         }
         setEntries(map)
         setLoading(false)
@@ -96,14 +97,14 @@ export default function PlannerClient({ userId, profile, members }) {
       .from('daily_activities')
       .select('*')
       .eq('profile_id', userId)
-      .gte('date', startKey)
-      .lte('date', endKey)
+      .gte('date_str', startKey)
+      .lte('date_str', endKey)
       .then(({ data }) => {
         const actMap = {}
         for (const act of data || []) {
-          if (!actMap[act.date]) actMap[act.date] = {}
-          if (!actMap[act.date][act.member_id]) actMap[act.date][act.member_id] = []
-          actMap[act.date][act.member_id].push(act)
+          if (!actMap[act.date_str]) actMap[act.date_str] = {}
+          if (!actMap[act.date_str][act.member_id]) actMap[act.date_str][act.member_id] = []
+          actMap[act.date_str][act.member_id].push(act)
         }
         setActivities(actMap)
       })
@@ -143,13 +144,32 @@ export default function PlannerClient({ userId, profile, members }) {
     const supabase = createClient()
     if (supabase) {
       const { dateKey } = dropTarget
-      const currentSlotLen = (entries[dateKey]?.[mealType] || []).length
-      await supabase.from('calendar_entries').insert({
-        profile_id: userId,
-        date: dateKey,
-        meal_type: mealType,
-        recipe_id: draggedRecipe.current.id,
-        order_index: currentSlotLen,
+      const recipe = draggedRecipe.current
+      const recipeTotals = recipe.nutrition?.totals || null
+
+      let rows
+      if (members.length > 0 && recipeTotals) {
+        rows = members.map(member => ({
+          profile_id: userId,
+          date_str: dateKey,
+          meal_type: mealType,
+          recipe_id: recipe.id,
+          member_id: member.id,
+          personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
+        }))
+      } else {
+        rows = [{
+          profile_id: userId,
+          date_str: dateKey,
+          meal_type: mealType,
+          recipe_id: recipe.id,
+          member_id: null,
+          personal_nutrition: recipe.nutrition?.perServing || null,
+        }]
+      }
+
+      await supabase.from('calendar_entries').upsert(rows, {
+        onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
       })
       await refreshDay(dateKey)
     }
@@ -189,12 +209,12 @@ export default function PlannerClient({ userId, profile, members }) {
     const { data } = await supabase
       .from('calendar_entries')
       .select(`
-        id, date, meal_type, member_id, order_index,
+        id, date_str, meal_type, member_id,
         recipes(id, title, slug, image_url, nutrition, servings),
         journal_entries(id, food_name, amount, unit, nutrition, member_id)
       `)
       .eq('profile_id', userId)
-      .eq('date', dateKey)
+      .eq('date_str', dateKey)
     const mealMap = {}
     for (const entry of data || []) {
       if (!mealMap[entry.meal_type]) mealMap[entry.meal_type] = []

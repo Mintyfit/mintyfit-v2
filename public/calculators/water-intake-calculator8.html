@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; font-src 'self' data:;">
+    <title>Water Intake Calculator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        #root {
+            width: 100%;
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+const { useState, useEffect } = React;
+
+const DropIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>
+  </svg>
+);
+
+const WaterCalculator = () => {
+  const [unit, setUnit] = useState('metric');
+  const [weight, setWeight] = useState(70);
+  const [activity, setActivity] = useState('moderate');
+  const [climate, setClimate] = useState('temperate');
+  const [condition, setCondition] = useState('none');
+  const [result, setResult] = useState(null);
+
+  const activityOptions = [
+    { value: 'sedentary', label: 'Sedentary (desk job, little exercise)' },
+    { value: 'light', label: 'Light (light exercise 1–3 days/week)' },
+    { value: 'moderate', label: 'Moderate (exercise 3–5 days/week)' },
+    { value: 'active', label: 'Active (intense exercise 6–7 days/week)' },
+    { value: 'very_active', label: 'Very Active (physical job + daily training)' },
+  ];
+
+  const climateOptions = [
+    { value: 'cold', label: 'Cold (below 10°C / 50°F)' },
+    { value: 'temperate', label: 'Temperate (10–25°C / 50–77°F)' },
+    { value: 'hot', label: 'Hot (25–35°C / 77–95°F)' },
+    { value: 'very_hot', label: 'Very Hot / Humid (above 35°C / 95°F)' },
+  ];
+
+  const conditionOptions = [
+    { value: 'none', label: 'None' },
+    { value: 'pregnant', label: 'Pregnant' },
+    { value: 'breastfeeding', label: 'Breastfeeding' },
+    { value: 'athlete', label: 'Competitive athlete' },
+    { value: 'illness', label: 'Illness / fever / diarrhoea' },
+  ];
+
+  const calculate = () => {
+    const weightKg = unit === 'metric' ? parseFloat(weight) : parseFloat(weight) * 0.453592;
+    if (!weightKg || weightKg <= 0) return;
+
+    // Base: 35 ml per kg body weight
+    let base = weightKg * 35;
+
+    // Activity multiplier
+    const activityAdd = { sedentary: 0, light: 350, moderate: 600, active: 950, very_active: 1300 };
+    base += activityAdd[activity] || 0;
+
+    // Climate adjustment
+    const climateAdd = { cold: -200, temperate: 0, hot: 400, very_hot: 750 };
+    base += climateAdd[climate] || 0;
+
+    // Special condition
+    const conditionAdd = { none: 0, pregnant: 300, breastfeeding: 500, athlete: 800, illness: 500 };
+    base += conditionAdd[condition] || 0;
+
+    const litres = base / 1000;
+    const ml = Math.round(base);
+    const oz = Math.round(base * 0.033814);
+    const glasses = Math.round(base / 240); // 8 oz glass = ~240 ml
+
+    setResult({ litres: litres.toFixed(1), ml, oz, glasses });
+  };
+
+  const handleWeightChange = (e) => {
+    const v = e.target.value;
+    setWeight(v);
+    setResult(null);
+  };
+
+  // Notify parent of height for iframe resize
+  useEffect(() => {
+    const notify = () => {
+      const h = document.documentElement.scrollHeight;
+      window.parent.postMessage({ type: 'resize', height: h }, '*');
+    };
+    setTimeout(notify, 100);
+    setTimeout(notify, 500);
+    setTimeout(notify, 1000);
+    const observer = new MutationObserver(notify);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+    return () => observer.disconnect();
+  }, [result]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-4 sm:p-6">
+      <div className="max-w-xl mx-auto">
+
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-100 mb-3">
+            <span className="text-blue-600"><DropIcon /></span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800">Daily Water Intake Calculator</h1>
+          <p className="text-gray-500 text-sm mt-1">Find your personalised hydration target</p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-2xl shadow-md p-6 space-y-5">
+
+          {/* Unit toggle */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Unit System</label>
+            <div className="flex rounded-lg overflow-hidden border border-gray-200">
+              {['metric', 'imperial'].map(u => (
+                <button
+                  key={u}
+                  onClick={() => { setUnit(u); setResult(null); }}
+                  className={`flex-1 py-2 text-sm font-medium transition-colors ${unit === u ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {u === 'metric' ? 'Metric (kg)' : 'Imperial (lbs)'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Weight */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Body Weight ({unit === 'metric' ? 'kg' : 'lbs'})
+            </label>
+            <input
+              type="number"
+              min="20"
+              max={unit === 'metric' ? 250 : 550}
+              value={weight}
+              onChange={handleWeightChange}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder={unit === 'metric' ? 'e.g. 70' : 'e.g. 154'}
+            />
+          </div>
+
+          {/* Activity */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Activity Level</label>
+            <select
+              value={activity}
+              onChange={e => { setActivity(e.target.value); setResult(null); }}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              {activityOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Climate */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Climate / Environment</label>
+            <select
+              value={climate}
+              onChange={e => { setClimate(e.target.value); setResult(null); }}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              {climateOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Special condition */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Special Condition</label>
+            <select
+              value={condition}
+              onChange={e => { setCondition(e.target.value); setResult(null); }}
+              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              {conditionOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Button */}
+          <button
+            onClick={calculate}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors text-base"
+          >
+            Calculate My Water Intake
+          </button>
+
+          {/* Results */}
+          {result && (
+            <div className="mt-2 bg-blue-50 rounded-xl p-5 space-y-4">
+              <h2 className="text-center text-lg font-bold text-blue-800">Your Daily Hydration Target</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                  <div className="text-3xl font-extrabold text-blue-600">{result.litres}</div>
+                  <div className="text-xs text-gray-500 mt-1 font-medium">Litres / day</div>
+                </div>
+                <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                  <div className="text-3xl font-extrabold text-cyan-600">{result.glasses}</div>
+                  <div className="text-xs text-gray-500 mt-1 font-medium">Glasses (8 oz)</div>
+                </div>
+                <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                  <div className="text-3xl font-extrabold text-indigo-600">{result.oz}</div>
+                  <div className="text-xs text-gray-500 mt-1 font-medium">Fluid ounces</div>
+                </div>
+                <div className="bg-white rounded-xl p-4 text-center shadow-sm">
+                  <div className="text-3xl font-extrabold text-teal-600">{result.ml}</div>
+                  <div className="text-xs text-gray-500 mt-1 font-medium">Millilitres</div>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 text-center leading-relaxed">
+                This estimate is based on body weight, activity, climate and health status.
+                Individual needs vary — listen to your body and drink when thirsty.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Tips */}
+        <div className="mt-5 bg-white rounded-2xl shadow-sm p-5">
+          <h3 className="font-bold text-gray-700 mb-3 text-sm uppercase tracking-wide">Hydration Tips</h3>
+          <ul className="space-y-2 text-sm text-gray-600">
+            <li className="flex gap-2"><span className="text-blue-500 font-bold">•</span> Start the day with a large glass of water before coffee or tea.</li>
+            <li className="flex gap-2"><span className="text-blue-500 font-bold">•</span> Set hourly reminders until hydration becomes automatic.</li>
+            <li className="flex gap-2"><span className="text-blue-500 font-bold">•</span> Pale yellow urine = well hydrated. Dark yellow = drink more.</li>
+            <li className="flex gap-2"><span className="text-blue-500 font-bold">•</span> Fruits and vegetables count — they supply ~20% of daily water.</li>
+            <li className="flex gap-2"><span className="text-blue-500 font-bold">•</span> Increase intake during illness, hot weather or intense exercise.</li>
+          </ul>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-4">
+          Powered by <span className="font-semibold text-blue-400">MintyFit</span> · For informational purposes only
+        </p>
+      </div>
+    </div>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<WaterCalculator />);
+    </script>
+</body>
+</html>

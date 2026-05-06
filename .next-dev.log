@@ -1,0 +1,1317 @@
+   ▲ Next.js 15.5.14
+   - Local:        http://localhost:3000
+   - Network:      http://195.250.160.91:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1925ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 926ms (166 modules)
+ ○ Compiling /recipes/[slug] ...
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (215kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ✓ Compiled /recipes/[slug] in 6.4s (901 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 200 in 6976ms
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 200 in 1864ms
+ ✓ Compiled in 708ms (877 modules)
+ ✓ Compiled in 335ms (877 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\3.pack.gz_' -> 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\3.pack.gz'
+ ✓ Compiled in 543ms (877 modules)
+ ✓ Compiled in 348ms (877 modules)
+ ✓ Compiled in 653ms (1043 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\app\\recipes\\[slug]\\page.js',
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 2.7s (1223 modules)
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\app\\recipes\\[slug]\\page.js',
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 7122ms
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 317ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json',
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ Failed to generate static paths for /recipes/[slug]:
+[Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json',
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 1741ms
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 299ms
+ ⨯ [Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 1101ms
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 330ms
+ ⨯ [Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 1051ms
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 303ms
+ ⨯ [Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\routes-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\routes-manifest.json'
+}
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 1061ms
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 312ms
+ ✓ Compiled in 741ms (1293 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz_' -> 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'
+[Supabase Client] URL: https://gqpdgopvzgtpupymx...
+[Supabase Client] Key exists: true Length: 208
+[Supabase Client] Client created successfully
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 200 in 713ms
+ ○ Compiling /plan ...
+ ✓ Compiled /plan in 1662ms (1196 modules)
+ ⨯ Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\page.js:518:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\page.js:521:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/recipes'
+}
+ ⨯ Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\statistics\page.js:507:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\statistics\page.js:510:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/statistics'
+}
+ ⨯ Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\menus\page.js:485:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\menus\page.js:488:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/menus'
+}
+ ⨯ Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\plan\page.js:573:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\plan\page.js:576:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/plan'
+}
+ ⨯ Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\page.js:529:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\page.js:532:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/'
+}
+ ✓ Compiled /_error in 443ms (1292 modules)
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\page.js:518:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\page.js:521:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/recipes'
+}
+Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\statistics\page.js:507:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\statistics\page.js:510:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/statistics'
+}
+Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\menus\page.js:485:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\menus\page.js:488:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/menus'
+}
+Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\plan\page.js:573:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\plan\page.js:576:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/plan'
+}
+Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\page.js:529:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\page.js:532:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ GET /recipes 500 in 3212ms
+ GET /recipes 500 in 237ms
+ GET /statistics 500 in 3117ms
+ GET /statistics 500 in 237ms
+ GET /menus 500 in 3098ms
+ GET /menus 500 in 237ms
+ GET /plan 500 in 2996ms
+ GET /plan 500 in 237ms
+ GET / 500 in 3215ms
+ GET / 500 in 237ms
+ ○ Compiling /blog ...
+ ✓ Compiled /blog in 1073ms (1310 modules)
+ GET /blog 200 in 1474ms
+ GET /shopping-list 200 in 1488ms
+ ⨯ [Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\blog\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\blog\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 558ms
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 61ms
+ ⨯ [Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\blog\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[Error: Cannot find module './vendor-chunks/@supabase.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\recipes\[slug]\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\dev\static-paths-worker.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\compiled\jest-worker\processChild.js] {
+  type: 'Error',
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\blog\page.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ ⨯ [TypeError: Cannot read properties of undefined (reading '/_app')]
+[TypeError: Cannot read properties of undefined (reading '/_app')]
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 516ms
+ GET /recipes/savory-egg-scramble-with-melon-milk-smoothie-bowl-f20c09 500 in 53ms
+ ✓ Compiled in 1187ms (1322 modules)
+ ✓ Compiled in 475ms (1156 modules)
+ ✓ Compiled in 500ms (1156 modules)
+ ✓ Compiled in 483ms (1156 modules)
+ ✓ Compiled in 394ms (1156 modules)
+ ⨯ ./components/recipes/RecipeDetailClient.jsx
+Error:   [31mx[0m Expected '</', got 'onClick'
+     ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:832:1]
+ [2m829[0m |           📅 Add to Plan
+ [2m830[0m |         </button>
+ [2m831[0m |         <button
+ [2m832[0m |           onClick={async () => {
+     : [35;1m          ^^^^^^^[0m
+ [2m833[0m |             if (shoppingState === 'loading') return
+ [2m834[0m |             setShoppingState('loading')
+ [2m834[0m |             try {
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/recipes/RecipeDetailClient.jsx
+./app/recipes/[slug]/page.jsx
+ ✓ Compiled in 582ms (1156 modules)
+ ✓ Compiled in 393ms (1156 modules)
+ ✓ Compiled in 416ms (1156 modules)
+ ✓ Compiled in 768ms (1156 modules)
+ ⨯ ./components/recipes/RecipeDetailClient.jsx
+Module parse failed: Identifier 'isOwner' has already been declared (1301:10)
+|         color: '#374151'
+|     };
+>     const isOwner = !!currentUserId && currentUserId === recipe.profile_id;
+|     function startEditing() {
+|         setEditedRecipe(JSON.parse(JSON.stringify(recipe)));
+
+Import trace for requested module:
+./components/recipes/RecipeDetailClient.jsx
+ ✓ Compiled in 731ms (1156 modules)
+ ✓ Compiled in 291ms (643 modules)
+ ✓ Compiled in 162ms (643 modules)
+ ✓ Compiled in 177ms (643 modules)
+ ✓ Compiled in 160ms (643 modules)
+ ✓ Compiled in 175ms (643 modules)
+ ✓ Compiled in 512ms (1156 modules)
+ ⨯ ./components/recipes/RecipeDetailClient.jsx
+Error:   [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1205:1]
+ [2m1202[0m |       />
+ [2m1203[0m |     </div>
+ [2m1204[0m |   )
+ [2m1205[0m | }
+      : [35;1m^[0m
+      `----
+  [31mx[0m Unexpected eof
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1205:4]
+ [2m1203[0m |     </div>
+ [2m1204[0m |   )
+ [2m1205[0m | }
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/recipes/RecipeDetailClient.jsx
+./app/recipes/[slug]/page.jsx
+ ⨯ ./components/recipes/RecipeDetailClient.jsx
+Error:   [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1209:1]
+ [2m1206[0m |       />
+ [2m1207[0m |     </div>
+ [2m1208[0m |   )
+ [2m1209[0m | }
+      : [35;1m^[0m
+      `----
+  [31mx[0m Unexpected eof
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1209:4]
+ [2m1207[0m |     </div>
+ [2m1208[0m |   )
+ [2m1209[0m | }
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/recipes/RecipeDetailClient.jsx
+./app/recipes/[slug]/page.jsx
+ ⨯ ./components/recipes/RecipeDetailClient.jsx
+Error:   [31mx[0m Expression expected
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1295:1]
+ [2m1292[0m |         onSelect={handleSelectAlternative}
+ [2m1293[0m |         onClose={() => setShowAlternativesFor(null)}
+ [2m1294[0m |       />
+ [2m1295[0m |     </>
+      : [35;1m      ^[0m
+ [2m1296[0m |   )
+ [2m1297[0m | }
+      `----
+  [31mx[0m Expression expected
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1296:1]
+ [2m1293[0m |         onClose={() => setShowAlternativesFor(null)}
+ [2m1294[0m |       />
+ [2m1295[0m |     </>
+ [2m1296[0m |   )
+      : [35;1m  ^[0m
+ [2m1297[0m | }
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/recipes/RecipeDetailClient.jsx
+./app/recipes/[slug]/page.jsx
+ ⨯ ./components/recipes/RecipeDetailClient.jsx
+Error:   [31mx[0m Expression expected
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1295:1]
+ [2m1292[0m |         onSelect={handleSelectAlternative}
+ [2m1293[0m |         onClose={() => setShowAlternativesFor(null)}
+ [2m1294[0m |       />
+ [2m1295[0m |     </>
+      : [35;1m      ^[0m
+ [2m1296[0m |   )
+ [2m1297[0m | }
+      `----
+  [31mx[0m Expression expected
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1296:1]
+ [2m1293[0m |         onClose={() => setShowAlternativesFor(null)}
+ [2m1294[0m |       />
+ [2m1295[0m |     </>
+ [2m1296[0m |   )
+      : [35;1m  ^[0m
+ [2m1297[0m | }
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/recipes/RecipeDetailClient.jsx
+./app/recipes/[slug]/page.jsx
+ ⨯ ./components/recipes/RecipeDetailClient.jsx
+Error:   [31mx[0m Expression expected
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1254:1]
+ [2m1251[0m |         onSelect={handleSelectAlternative}
+ [2m1252[0m |         onClose={() => setShowAlternativesFor(null)}
+ [2m1253[0m |       />
+ [2m1254[0m |     </>
+      : [35;1m      ^[0m
+ [2m1255[0m |   )
+ [2m1256[0m | }
+      `----
+  [31mx[0m Expression expected
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1255:1]
+ [2m1252[0m |         onClose={() => setShowAlternativesFor(null)}
+ [2m1253[0m |       />
+ [2m1254[0m |     </>
+ [2m1255[0m |   )
+      : [35;1m  ^[0m
+ [2m1256[0m | }
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/recipes/RecipeDetailClient.jsx
+./app/recipes/[slug]/page.jsx
+ ⨯ ./components/recipes/RecipeDetailClient.jsx
+Error:   [31mx[0m Expression expected
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1363:1]
+ [2m1360[0m |         onSelect={handleSelectAlternative}
+ [2m1361[0m |         onClose={() => setShowAlternativesFor(null)}
+ [2m1362[0m |       />
+ [2m1363[0m |     </>
+      : [35;1m      ^[0m
+ [2m1364[0m |   )
+ [2m1365[0m | }
+      `----
+  [31mx[0m Expression expected
+      ,-[[36;1;4mD:\WORKS\Minty\NewMintyAprill2026\AprillBuild\components\recipes\RecipeDetailClient.jsx[0m:1364:1]
+ [2m1361[0m |         onClose={() => setShowAlternativesFor(null)}
+ [2m1362[0m |       />
+ [2m1363[0m |     </>
+ [2m1364[0m |   )
+      : [35;1m  ^[0m
+ [2m1365[0m | }
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./components/recipes/RecipeDetailClient.jsx
+./app/recipes/[slug]/page.jsx
+ ✓ Compiled in 731ms (1156 modules)
+ ✓ Compiled in 482ms (1156 modules)
+ ✓ Compiled / in 369ms (654 modules)
+ ⨯ Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\page.js:529:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\page.js:532:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 697ms (1263 modules)
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\vendor-chunks\next.js'
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\page.js:529:47)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\app\page.js:532:3) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\server\\vendor-chunks\\next.js',
+  page: '/'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\prerender-manifest.json'
+}
+ GET / 500 in 1321ms
+ GET / 500 in 49ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\prerender-manifest.json',
+  page: '/'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\prerender-manifest.json',
+  page: '/'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\prerender-manifest.json'
+}
+ GET / 500 in 989ms
+ GET / 500 in 50ms
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\prerender-manifest.json',
+  page: '/'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\prerender-manifest.json',
+  page: '/'
+}
+ ⨯ Error: Cannot find module './5611.js'
+Require stack:
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\webpack-runtime.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\require.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\load-components.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\utils.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\options.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\swc\index.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\parse-module.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\router-server.js
+- D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:327)
+    at Object.<anonymous> (D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\server\pages\_document.js:1:374) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+[Error: ENOENT: no such file or directory, open 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\prerender-manifest.json'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\prerender-manifest.json'
+}
+ GET / 500 in 639ms
+ GET / 500 in 75ms
+ ⨯ ./lib/nutrition/usdaNutrition.js:206:44
+Module not found: Can't resolve './ingredientDatabase.js'
+  204 |  */
+  205 | export async function lookupNutrition(steps, servings) {
+> 206 |   const { batchLookupIngredients } = await import('./ingredientDatabase.js');
+      |                                            ^
+  207 |
+  208 |   // Flatten all ingredients with their cooking method
+  209 |   const items = steps.flatMap(step =>
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+ ⨯ ./lib/nutrition/usdaNutrition.js:206:44
+Module not found: Can't resolve './ingredientDatabase.js'
+  204 |  */
+  205 | export async function lookupNutrition(steps, servings) {
+> 206 |   const { batchLookupIngredients } = await import('./ingredientDatabase.js');
+      |                                            ^
+  207 |
+  208 |   // Flatten all ingredients with their cooking method
+  209 |   const items = steps.flatMap(step =>
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+ ⨯ ./lib/nutrition/usdaNutrition.js:206:44
+Module not found: Can't resolve './ingredientDatabase.js'
+  204 |  */
+  205 | export async function lookupNutrition(steps, servings) {
+> 206 |   const { batchLookupIngredients } = await import('./ingredientDatabase.js');
+      |                                            ^
+  207 |
+  208 |   // Flatten all ingredients with their cooking method
+  209 |   const items = steps.flatMap(step =>
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+ ⨯ ./lib/nutrition/usdaNutrition.js:206:44
+Module not found: Can't resolve './ingredientDatabase.js'
+  204 |  */
+  205 | export async function lookupNutrition(steps, servings) {
+> 206 |   const { batchLookupIngredients } = await import('./ingredientDatabase.js');
+      |                                            ^
+  207 |
+  208 |   // Flatten all ingredients with their cooking method
+  209 |   const items = steps.flatMap(step =>
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+ ⨯ ./lib/nutrition/usdaNutrition.js:206:44
+Module not found: Can't resolve './ingredientDatabase.js'
+  204 |  */
+  205 | export async function lookupNutrition(steps, servings) {
+> 206 |   const { batchLookupIngredients } = await import('./ingredientDatabase.js');
+      |                                            ^
+  207 |
+  208 |   // Flatten all ingredients with their cooking method
+  209 |   const items = steps.flatMap(step =>
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+ ⨯ ./lib/nutrition/usdaNutrition.js:206:44
+Module not found: Can't resolve './ingredientDatabase.js'
+  204 |  */
+  205 | export async function lookupNutrition(steps, servings) {
+> 206 |   const { batchLookupIngredients } = await import('./ingredientDatabase.js');
+      |                                            ^
+  207 |
+  208 |   // Flatten all ingredients with their cooking method
+  209 |   const items = steps.flatMap(step =>
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+ ⨯ ./lib/recipe/ingredientDatabase.js
+Module parse failed: Identifier 'getIngredientNutrition' has already been declared (345:26)
+|  * @param {string} unit - unit of measurement
+|  * @returns {Promise<object|null>} nutrition object scaled to the given amount, or null
+>  */ export async function getIngredientNutrition(name, amount, unit) {
+|     const per100g = await getIngredientPer100g(name);
+|     if (!per100g) return null;
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+ ⨯ ./lib/recipe/ingredientDatabase.js
+Module parse failed: Identifier 'getIngredientNutrition' has already been declared (345:26)
+|  * @param {string} unit - unit of measurement
+|  * @returns {Promise<object|null>} nutrition object scaled to the given amount, or null
+>  */ export async function getIngredientNutrition(name, amount, unit) {
+|     const per100g = await getIngredientPer100g(name);
+|     if (!per100g) return null;
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+[Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\server-development\\0.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\server-development\\0.pack.gz'
+}
+ ⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\server-development\\0.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\server-development\0.pack.gz'
+[Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\client-development\\0.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\client-development\\0.pack.gz'
+}
+ ⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\client-development\\0.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'
+ ⨯ ./lib/nutrition/usdaNutrition.js:206:44
+Module not found: Can't resolve './ingredientDatabase.js'
+  204 |  */
+  205 | export async function lookupNutrition(steps, servings) {
+> 206 |   const { batchLookupIngredients } = await import('./ingredientDatabase.js');
+      |                                            ^
+  207 |
+  208 |   // Flatten all ingredients with their cooking method
+  209 |   const items = steps.flatMap(step =>
+
+https://nextjs.org/docs/messages/module-not-found
+
+Import trace for requested module:
+./lib/recipe/ingredientDatabase.js
+./components/recipes/RecipeDetailClient.jsx
+ ✓ Compiled in 469ms (1162 modules)
+[Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\client-development\\0.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\client-development\\0.pack.gz'
+}
+ ⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\client-development\\0.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\client-development\0.pack.gz'
+[Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\server-development\\0.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\server-development\\0.pack.gz'
+}
+ ⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\server-development\0.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\WORKS\\Minty\\NewMintyAprill2026\\AprillBuild\\.next\\cache\\webpack\\server-development\\0.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'D:\WORKS\Minty\NewMintyAprill2026\AprillBuild\.next\cache\webpack\server-development\0.pack.gz'

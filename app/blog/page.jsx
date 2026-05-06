@@ -16,12 +16,16 @@ export const revalidate = 300
 
 async function getPosts() {
   const supabase = createPublicClient()
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('blog_posts')
-    .select('id, slug, title, excerpt, cover_url, categories, published_at, author_name')
+    .select('id, slug, title, excerpt, content, image_url, categories, published_at')
     .eq('status', 'published')
     .order('published_at', { ascending: false })
     .limit(100)
+  if (error) {
+    console.error('[Blog] Failed to load posts:', error.message)
+    return []
+  }
   return data || []
 }
 
