@@ -26,7 +26,7 @@ async function getProfileData(userId, supabase) {
     // Check if user has a nutritionist linked
     const { data: nutritionistLink } = await supabase
       .from('nutritionist_client_links')
-      .select('id, status, nutritionist_id, profiles(name, id)')
+      .select('id, status, nutritionist_id, profiles(full_name, id)')
       .eq('client_id', userId)
       .eq('status', 'active')
       .single()

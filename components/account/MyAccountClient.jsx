@@ -91,11 +91,11 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: profile.name,
+          name: profile.full_name,
           dietary_type: profile.dietary_type,
           allergies: profile.allergies,
           primary_goal: profile.primary_goal,
-          units: profile.units,
+          units: profile.units_preference,
           date_of_birth: profile.date_of_birth,
           gender: profile.gender,
           height: profile.height,
@@ -198,7 +198,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
               {currentWeight ? `${currentWeight}` : '—'}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-              {profile.units === 'imperial' ? 'lbs' : 'kg'} · current weight
+              {profile.units_preference === 'imperial' ? 'lbs' : 'kg'} · current weight
             </div>
           </div>
           {weightLogs.length > 1 && <WeightSparkline logs={weightLogs} />}
@@ -284,8 +284,8 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
             <label style={labelStyle}>Name</label>
             <input
               type="text"
-              value={profile.name || ''}
-              onChange={e => setProfile(prev => ({ ...prev, name: e.target.value }))}
+              value={profile.full_name || ''}
+              onChange={e => setProfile(prev => ({ ...prev, full_name: e.target.value }))}
               style={inputStyle}
             />
           </div>
@@ -386,12 +386,12 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
             {['metric', 'imperial'].map(u => (
               <button
                 key={u}
-                onClick={() => setProfile(prev => ({ ...prev, units: u }))}
+                onClick={() => setProfile(prev => ({ ...prev, units_preference: u }))}
                 style={{
                   padding: '8px 20px', borderRadius: '20px', border: '1px solid',
-                  borderColor: profile.units === u ? 'var(--primary)' : 'var(--border)',
-                  background: profile.units === u ? 'var(--primary)' : 'transparent',
-                  color: profile.units === u ? '#fff' : 'var(--text-2)',
+                  borderColor: profile.units_preference === u ? 'var(--primary)' : 'var(--border)',
+                  background: profile.units_preference === u ? 'var(--primary)' : 'transparent',
+                  color: profile.units_preference === u ? '#fff' : 'var(--text-2)',
                   cursor: 'pointer', fontSize: '14px', textTransform: 'capitalize',
                 }}
               >
@@ -444,7 +444,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ fontWeight: '600', color: 'var(--text-1)' }}>
-                {nutritionistLink.profiles?.name || 'Your nutritionist'}
+                {nutritionistLink.profiles?.full_name || 'Your nutritionist'}
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>
                 Status: Active · Can view your meal plans, nutrition stats

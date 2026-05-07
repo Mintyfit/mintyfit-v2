@@ -8,10 +8,19 @@ export async function PATCH(request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
-    const allowed = ['name', 'dietary_type', 'allergies', 'primary_goal', 'units', 'date_of_birth', 'gender', 'height']
+    const fieldMap = {
+      name: 'full_name',
+      dietary_type: 'dietary_type',
+      allergies: 'allergies',
+      primary_goal: 'primary_goal',
+      units: 'units_preference',
+      date_of_birth: 'date_of_birth',
+      gender: 'gender',
+      height: 'height',
+    }
     const updates = {}
-    for (const key of allowed) {
-      if (body[key] !== undefined) updates[key] = body[key]
+    for (const [key, col] of Object.entries(fieldMap)) {
+      if (body[key] !== undefined) updates[col] = body[key]
     }
 
     const { data, error } = await supabase
