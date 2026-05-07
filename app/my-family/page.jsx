@@ -23,10 +23,20 @@ async function getFamilyData(userId, supabase) {
       .eq('id', membership.family_id)
       .single()
 
-    const { data: memberships } = await supabase
+    const { data: membershipsRaw } = await supabase
       .from('family_memberships')
-      .select('id, role, profile_id, joined_at, profiles(id, full_name, subscription_tier)')
+      .select('id, role, profile_id, joined_at')
       .eq('family_id', membership.family_id)
+
+    const profileIds = (membershipsRaw || []).map(m => m.profile_id).filter(Boolean)
+    const { data: profilesData } = profileIds.length
+      ? await supabase.from('profiles').select('id, full_name, subscription_tier').in('id', profileIds)
+      : { data: [] }
+
+    const memberships = (membershipsRaw || []).map(m => ({
+      ...m,
+      profiles: (profilesData || []).find(p => p.id === m.profile_id) || null,
+    }))
 
     const { data: managedMembers } = await supabase
       .from('managed_members')
