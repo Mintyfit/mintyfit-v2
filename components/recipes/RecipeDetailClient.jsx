@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
-import { computeBMR, SEDENTARY_MULTIPLIER, getMemberBMIFraction, computeMemberNutrition } from '@/lib/nutrition/portionCalc'
+import { computeBMR, SEDENTARY_MULTIPLIER, computeMemberNutrition } from '@/lib/nutrition/portionCalc'
+import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 import { createClient } from '@/lib/supabase/client'
 
 // ── NutritionDelta (small inline nutrition preview per alternative) ──────────
@@ -361,7 +362,7 @@ function NutritionSection({ nutrition, memberMultiplier, memberGoal }) {
 }
 
 // ── SidebarNutrition (sidebar-friendly, no accordion) ─────────────────────────
-function SidebarNutrition({ nutrition, memberMultiplier, memberGoal }) {
+function SidebarNutrition({ nutrition, memberMultiplier, memberGoal, memberDailyNeeds }) {
   const [showAll, setShowAll] = useState(false)
 
   if (!nutrition?.perServing) {
@@ -372,27 +373,35 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal }) {
     )
   }
 
-  // Scale per-serving data by member multiplier
+  // Scale per-serving data by member multiplier (calorie-need based)
   const ps = {}
   for (const [k, v] of Object.entries(nutrition.perServing)) {
     ps[k] = typeof v === 'number' ? v * (memberMultiplier || 1) : v
   }
 
+  // Use personal daily needs for RDA denominator when available
+  function getRda(f) {
+    return (memberDailyNeeds && memberDailyNeeds[f.key] != null)
+      ? memberDailyNeeds[f.key]
+      : f.rda
+  }
+
   const keyKeys = getKeyNutrients(memberGoal)
   const keyFields = NUTRITION_FIELDS.filter(f => keyKeys.includes(f.key) && ps[f.key] != null)
-  const allFields = NUTRITION_FIELDS.filter(f => f.rda && f.key !== 'energy_kj' && ps[f.key] != null)
+  const allFields = NUTRITION_FIELDS.filter(f => getRda(f) && f.key !== 'energy_kj' && ps[f.key] != null)
 
   return (
     <div className="rd-card">
       <div style={{ fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
-        Nutrition Information
+        {memberDailyNeeds ? 'Your portion & % of daily needs' : 'Nutrition Information'}
       </div>
 
-      {/* Key nutrients with RDA bars */}
+      {/* Key nutrients with personal RDA bars */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: showAll ? 12 : 0 }}>
         {keyFields.map(f => {
           const val = ps[f.key]
-          const pct = f.rda ? Math.min(100, (val / f.rda) * 100) : null
+          const rda = getRda(f)
+          const pct = rda ? Math.min(100, (val / rda) * 100) : null
           const barColor = pct == null ? '#9ca3af'
             : pct >= 80 ? '#10B981'
             : pct >= 50 ? '#f59e0b'
@@ -403,9 +412,9 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal }) {
                 <span style={{ color: 'var(--text-3, #666)' }}>{f.label}</span>
                 <span style={{ fontWeight: 600, color: 'var(--text-1, #111)', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {val < 1 && val > 0 ? val.toFixed(2) : Math.round(val * 10) / 10}{' '}{f.unit}
-                  {f.rda && (
+                  {rda && (
                     <span style={{ color: '#bbb', fontWeight: 400, fontSize: 11 }}>
-                      {' '}· {Math.round((val / f.rda) * 100)}%
+                      {' '}· {Math.round((val / rda) * 100)}%
                     </span>
                   )}
                 </span>
@@ -429,7 +438,7 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal }) {
           fontSize: '0.8125rem', fontWeight: 600, color: 'var(--primary)',
         }}
       >
-        {showAll ? '▲ Show less' : `▼ All ${NUTRITION_FIELDS.filter(f => f.rda && ps[f.key] != null).length} nutrients`}
+        {showAll ? '▲ Show less' : `▼ All ${allFields.length} nutrients`}
       </button>
 
       {showAll && (
@@ -437,7 +446,8 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal }) {
           {allFields.map(f => {
             const val = ps[f.key]
             if (val == null) return null
-            const pct = f.rda ? Math.min(100, (val / f.rda) * 100) : null
+            const rda = getRda(f)
+            const pct = rda ? Math.min(100, (val / rda) * 100) : null
             const barColor = pct == null ? '#9ca3af'
               : pct >= 80 ? '#10B981'
               : pct >= 50 ? '#f59e0b'
@@ -448,9 +458,9 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal }) {
                   <span style={{ color: 'var(--text-3, #666)' }}>{f.label}</span>
                   <span style={{ fontWeight: 600, color: 'var(--text-1, #111)', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {val < 1 && val > 0 ? val.toFixed(2) : Math.round(val * 10) / 10}{' '}{f.unit}
-                    {f.rda && (
+                    {rda && (
                       <span style={{ color: '#bbb', fontWeight: 400, fontSize: 10 }}>
-                        {' '}· {Math.round((val / f.rda) * 100)}%
+                        {' '}· {Math.round((val / rda) * 100)}%
                       </span>
                     )}
                   </span>
@@ -473,6 +483,7 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal }) {
 export default function RecipeDetailClient({ recipe, members: initialMembers }) {
   const [members, setMembers] = useState(initialMembers || [])
   const [selectedMemberId, setSelectedMemberId] = useState(initialMembers?.[0]?.id || null)
+  const [activeEaters, setActiveEaters] = useState(new Set()) // member IDs who are eating this meal
   const [addingToPlan, setAddingToPlan] = useState(false)
   const [addPlanMsg, setAddPlanMsg] = useState(null) // null | 'success' | 'error'
   const [shoppingState, setShoppingState] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
@@ -570,12 +581,13 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           age,
           gender: m.gender || 'female',
           baseDailyCalories: bmr ? Math.round(bmr * SEDENTARY_MULTIPLIER) : null,
-          display_name: m.display_name || m.first_name || m.name || 'Member',
+          display_name: m.display_name || m.first_name || (m.full_name?.split(' ')[0]) || m.name || 'Member',
         }
       })
       if (loaded.length) {
         setMembers(loaded)
         setSelectedMemberId(loaded[0]?.id || null)
+        setActiveEaters(new Set(loaded.map(m => m.id)))
       }
     })
   }, [])
@@ -671,12 +683,37 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
     setShowAlternativesFor(null)
   }, [recipe.id])
 
+  function toggleEater(memberId) {
+    setActiveEaters(prev => {
+      const next = new Set(prev)
+      if (next.has(memberId)) {
+        next.delete(memberId)
+        if (selectedMemberId === memberId) {
+          const remaining = [...next]
+          setSelectedMemberId(remaining[0] || null)
+        }
+      } else {
+        next.add(memberId)
+        setSelectedMemberId(memberId)
+      }
+      return next
+    })
+  }
+
   const selectedMember = members.find(m => m.id === selectedMemberId) || null
 
-  // BMI fraction for portion scaling (1.0 = base serving)
-  const memberMultiplier = selectedMember && members.length > 0
-    ? getMemberBMIFraction(selectedMember, members) * members.length
+  // Calorie-need based portion scaling
+  // Member's target kcal for this meal ÷ recipe kcal per serving = how many servings they need
+  const MEAL_KCAL_FRACTIONS = { breakfast: 0.25, lunch: 0.30, dinner: 0.35, snack: 0.05, snack2: 0.05 }
+  const mealFraction = MEAL_KCAL_FRACTIONS[recipe.meal_type] || 0.30
+  const recipeKcalPerServing = recipe.nutrition?.perServing?.energy_kcal || 0
+  const memberMealKcal = (selectedMember?.baseDailyCalories || 2000) * mealFraction
+  const memberMultiplier = selectedMember && recipeKcalPerServing > 0
+    ? memberMealKcal / recipeKcalPerServing
     : 1
+
+  // Personal daily nutrient needs for RDA bars
+  const memberDailyNeeds = selectedMember ? computeMemberDailyNeeds(selectedMember) : null
 
   const memberGoal = selectedMember?.goals?.[0] || 'default'
   const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0)
@@ -697,15 +734,16 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       const mealType = recipe.meal_type || 'dinner'
       const recipeTotals = recipe.nutrition?.totals || null
 
+      const eatingMembers = members.filter(m => activeEaters.has(m.id))
       let rows
-      if (members.length > 0) {
-        rows = members.map(member => ({
+      if (eatingMembers.length > 0) {
+        rows = eatingMembers.map(member => ({
           profile_id: user.id,
           date_str: dateStr,
           meal_type: mealType,
           recipe_id: recipe.id,
           member_id: member.id,
-          personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
+          personal_nutrition: computeMemberNutrition(member, eatingMembers, recipeTotals, {}),
         }))
       } else {
         rows = [{
@@ -1413,7 +1451,12 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           {/* Member selector */}
           {members.length > 0 && (
             <div className="rd-card">
-              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', marginBottom: '0.5rem' }}>Portions for</h3>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Who&apos;s eating?</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-4)' }}>
+                  {activeEaters.size}/{members.length} eating
+                </span>
+              </div>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => setSelectedMemberId(null)}
@@ -1427,25 +1470,70 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
                 >
                   Base recipe
                 </button>
-                {members.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => setSelectedMemberId(m.id)}
-                    style={{
-                      padding: '0.35rem 0.875rem', borderRadius: '20px',
-                      border: `1px solid ${selectedMemberId === m.id ? 'var(--primary)' : 'var(--border)'}`,
-                      background: selectedMemberId === m.id ? 'var(--primary)' : 'transparent',
-                      color: selectedMemberId === m.id ? '#fff' : 'var(--text-2)',
-                      fontSize: '0.8125rem', cursor: 'pointer',
-                    }}
-                  >
-                    {m.display_name || m.first_name || 'Member'}
-                  </button>
-                ))}
+                {members.map(m => {
+                  const isEating = activeEaters.has(m.id)
+                  const isViewing = selectedMemberId === m.id
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        if (isEating && !isViewing) {
+                          // eating but not viewed: switch view to them
+                          setSelectedMemberId(m.id)
+                        } else {
+                          // toggle eating on/off (also switches view on add, or to next on remove)
+                          toggleEater(m.id)
+                        }
+                      }}
+                      title={isEating ? `${m.display_name} is eating — click to remove` : `${m.display_name} is not eating — click to add`}
+                      style={{
+                        padding: '0.35rem 0.875rem', borderRadius: '20px',
+                        border: `1.5px solid ${isEating ? 'var(--primary)' : 'var(--border)'}`,
+                        background: isViewing && isEating ? 'var(--primary)' : isEating ? 'rgba(61,138,62,0.12)' : 'transparent',
+                        color: isViewing && isEating ? '#fff' : isEating ? 'var(--primary)' : 'var(--text-4)',
+                        fontSize: '0.8125rem', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        opacity: isEating ? 1 : 0.55,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {m.display_name}
+                      {isEating && (
+                        <span
+                          onClick={e => { e.stopPropagation(); toggleEater(m.id) }}
+                          title="Remove from meal"
+                          style={{
+                            width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                            background: isViewing ? 'rgba(255,255,255,0.25)' : 'rgba(61,138,62,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.55rem', lineHeight: 1,
+                            color: isViewing ? '#fff' : 'var(--primary)',
+                          }}
+                        >
+                          ✕
+                        </span>
+                      )}
+                      {!isEating && (
+                        <span style={{ fontSize: '0.65rem' }}>＋</span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
               {selectedMember && (
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.5rem' }}>
-                  Amounts scaled {memberMultiplier > 1 ? 'up' : 'down'} {Math.abs(Math.round((memberMultiplier - 1) * 100))}% for {selectedMember.display_name || 'this member'}
+                  {selectedMember.display_name}&apos;s portion
+                  {recipeKcalPerServing > 0
+                    ? ` · ${Math.round(memberMealKcal)} kcal target → ${memberMultiplier.toFixed(2)}× serving`
+                    : memberMultiplier !== 1
+                      ? ` · scaled ${memberMultiplier > 1 ? 'up' : 'down'} ${Math.abs(Math.round((memberMultiplier - 1) * 100))}%`
+                      : ''
+                  }
+                </p>
+              )}
+              {activeEaters.size === 0 && (
+                <p style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.5rem' }}>
+                  No one selected — &quot;Add to Plan&quot; will not add any entries.
                 </p>
               )}
             </div>
@@ -1590,6 +1678,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             nutrition={activeNutrition}
             memberMultiplier={memberMultiplier}
             memberGoal={memberGoal}
+            memberDailyNeeds={memberDailyNeeds}
           />
 
         </div>{/* end rd-right */}
