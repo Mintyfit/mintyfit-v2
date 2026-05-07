@@ -25,7 +25,7 @@ async function getFamilyData(userId, supabase) {
 
     const { data: memberships } = await supabase
       .from('family_memberships')
-      .select('id, role, profile_id, joined_at, profiles(id, name, subscription_tier)')
+      .select('id, role, profile_id, joined_at, profiles(id, full_name, subscription_tier)')
       .eq('family_id', membership.family_id)
 
     const { data: managedMembers } = await supabase
