@@ -101,7 +101,10 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
           height: profile.height,
         }),
       })
-      if (!res.ok) throw new Error('Save failed')
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || 'Save failed')
+      }
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err) {

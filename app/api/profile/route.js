@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function PATCH(request) {
   try {
@@ -23,14 +23,17 @@ export async function PATCH(request) {
       if (body[key] !== undefined) updates[col] = body[key]
     }
 
-    const { data, error } = await supabase
+    const admin = createAdminClient()
+    const { data, error } = await admin
       .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', user.id)
+      .upsert({ id: user.id, email: user.email, ...updates, updated_at: new Date().toISOString() })
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error('[profile PATCH] Supabase error:', error)
+      throw error
+    }
     return NextResponse.json({ profile: data })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })

@@ -33,7 +33,7 @@ function Avatar({ name, size = 40 }) {
 }
 
 function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove }) {
-  const profile = member.profiles || {}
+  const profile = Array.isArray(member.profiles) ? (member.profiles[0] || {}) : (member.profiles || {})
   const isAdmin = member.role === 'admin'
   const canManage = ['admin', 'co-admin'].includes(userRole) && !isCurrentUser
 
@@ -310,6 +310,7 @@ export default function MyFamilyClient({ userId, initialData }) {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [inviteResult, setInviteResult] = useState(null)
+  const [inviteNote, setInviteNote] = useState(null)
   const [showAddChild, setShowAddChild] = useState(false)
   const [error, setError] = useState(null)
 
@@ -320,6 +321,7 @@ export default function MyFamilyClient({ userId, initialData }) {
     if (!inviteEmail) return
     setInviting(true)
     setError(null)
+    setInviteNote(null)
     try {
       const res = await fetch('/api/family/invite', {
         method: 'POST',
@@ -329,12 +331,49 @@ export default function MyFamilyClient({ userId, initialData }) {
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
       setInviteResult(d.inviteUrl)
+      if (d.emailNote) setInviteNote(d.emailNote)
       setInviteEmail('')
-      setData(prev => ({ ...prev, invites: [d.invite, ...prev.invites] }))
+      setData(prev => ({ ...prev, invites: [d.invite, ...prev.invites.filter(i => i.email !== d.invite.email || i.status !== 'pending')] }))
     } catch (err) {
       setError(err.message)
     } finally {
       setInviting(false)
+    }
+  }
+
+  async function resendInvite(invite) {
+    setError(null)
+    setInviteNote(null)
+    try {
+      const res = await fetch('/api/family/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: invite.email }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error)
+      if (d.emailNote) setInviteNote(d.emailNote)
+      else setInviteNote('Invite resent.')
+      setData(prev => ({
+        ...prev,
+        invites: [d.invite, ...prev.invites.filter(i => i.id !== invite.id && i.status !== 'pending' || i.email !== invite.email)],
+      }))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function deleteInvite(inviteId) {
+    setError(null)
+    try {
+      const res = await fetch(`/api/family/invite?id=${inviteId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error)
+      }
+      setData(prev => ({ ...prev, invites: prev.invites.filter(i => i.id !== inviteId) }))
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -466,6 +505,11 @@ export default function MyFamilyClient({ userId, initialData }) {
                   {inviting ? 'Sending…' : 'Invite'}
                 </button>
               </div>
+              {inviteNote && (
+                <div style={{ marginTop: '8px', padding: '10px', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '12px', color: '#92400e' }}>
+                  {inviteNote}
+                </div>
+              )}
               {inviteResult && (
                 <div style={{ marginTop: '8px', padding: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '12px', color: '#15803d' }}>
                   Invite link: <span style={{ fontWeight: '600', wordBreak: 'break-all' }}>{inviteResult}</span>
@@ -506,12 +550,13 @@ export default function MyFamilyClient({ userId, initialData }) {
       </Section>
 
       {/* Pending invites */}
-      {invites.length > 0 && (
+      {invites.filter(i => i.status === 'pending').length > 0 && (
         <Section title="Pending invites">
           {invites.filter(i => i.status === 'pending').map(invite => (
             <div key={invite.id} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: '14px',
+              gap: '8px', flexWrap: 'wrap',
             }}>
               <div>
                 <span style={{ color: 'var(--text-1)', fontWeight: '500' }}>{invite.email}</span>
@@ -519,12 +564,38 @@ export default function MyFamilyClient({ userId, initialData }) {
                   Sent {new Date(invite.created_at).toLocaleDateString()}
                 </span>
               </div>
-              <span style={{
-                padding: '2px 8px', borderRadius: '10px',
-                background: '#fef9c3', color: '#a16207', fontSize: '12px',
-              }}>
-                Pending
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{
+                  padding: '2px 8px', borderRadius: '10px',
+                  background: '#fef9c3', color: '#a16207', fontSize: '12px',
+                }}>
+                  Pending
+                </span>
+                {canManage && (
+                  <>
+                    <button
+                      onClick={() => resendInvite(invite)}
+                      style={{
+                        background: 'none', border: '1px solid var(--border)',
+                        borderRadius: '6px', padding: '3px 10px', cursor: 'pointer',
+                        fontSize: '12px', color: 'var(--primary)',
+                      }}
+                    >
+                      Resend
+                    </button>
+                    <button
+                      onClick={() => deleteInvite(invite.id)}
+                      style={{
+                        background: 'none', border: '1px solid #fecaca',
+                        borderRadius: '6px', padding: '3px 10px', cursor: 'pointer',
+                        fontSize: '12px', color: '#ef4444',
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </Section>

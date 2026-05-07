@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import MyFamilyClient from '@/components/family/MyFamilyClient'
 
 export const metadata = {
@@ -56,7 +56,8 @@ export default async function MyFamilyPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/?auth=login')
 
-  const data = await getFamilyData(user.id, supabase)
+  const adminSupabase = createAdminClient()
+  const data = await getFamilyData(user.id, adminSupabase)
 
   return (
     <MyFamilyClient
