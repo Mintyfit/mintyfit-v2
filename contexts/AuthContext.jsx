@@ -83,7 +83,7 @@ export function AuthProvider({ children }) {
   async function resetPassword(email) {
     if (!supabase) return { data: null, error: new Error('Supabase not configured') }
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/reset-callback`,
     })
     return { data, error }
   }

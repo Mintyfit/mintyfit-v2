@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import FamilyInviteClient from '@/components/family/FamilyInviteClient'
 
 export const metadata = {
@@ -37,11 +37,11 @@ export default async function FamilyInvitePage({ params }) {
   // If user is logged in and invite is valid, auto-join check
   let alreadyInFamily = false
   if (user && invite) {
-    const { data: existing } = await supabase
+    const admin = createAdminClient()
+    const { data: existing } = await admin
       .from('family_memberships')
       .select('id')
       .eq('profile_id', user.id)
-      .eq('status', 'active')
       .maybeSingle()
     alreadyInFamily = !!existing
   }

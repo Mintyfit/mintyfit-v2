@@ -43,25 +43,20 @@ export default function ResetPasswordPage() {
     if (initialized.current) return
     initialized.current = true
 
-    console.log('[reset-password] full href:', window.location.href)
-    console.log('[reset-password] hash:', window.location.hash)
-    console.log('[reset-password] search:', window.location.search)
+    const supabase = createClient()
+    if (!supabase) {
+      setError('Failed to initialize Supabase client. Please try again.')
+      return
+    }
 
     const hash = window.location.hash.substring(1)
     const hashParams = new URLSearchParams(hash)
-
     const accessToken = hashParams.get('access_token')
     const refreshToken = hashParams.get('refresh_token')
     const type = hashParams.get('type')
 
-    console.log('[reset-password] hash type:', type, 'accessToken:', !!accessToken)
-
+    // Legacy implicit flow: tokens in URL hash
     if (type === 'recovery' && accessToken) {
-      const supabase = createClient()
-      if (!supabase) {
-        setError('Failed to initialize Supabase client. Please try again.')
-        return
-      }
       window.history.replaceState(null, '', window.location.pathname)
       ;(async () => {
         const { error: sessionError } = await supabase.auth.setSession({
@@ -77,22 +72,22 @@ export default function ResetPasswordPage() {
       return
     }
 
+    // Handle errors forwarded from /auth/reset-callback
     const queryError = searchParams.get('error')
-    const queryDesc = searchParams.get('error_description')
-    if (queryError && queryDesc) {
-      const desc = decodeURIComponent(queryDesc.replace(/\+/g, ' '))
-      setError(desc)
+    if (queryError) {
+      setError(decodeURIComponent(queryError.replace(/\+/g, ' ')))
       return
     }
 
-    if (queryError === 'access_denied') {
-      setError('This reset link is invalid or already used. Email security scanners sometimes trigger links before you click them — request a new one below.')
-      return
-    }
-
-    if (!type && !accessToken && !queryError) {
-      setError('Invalid or expired reset link. Please request a new password reset.')
-    }
+    // PKCE flow: /auth/reset-callback already exchanged the code, check for active session
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setReady(true)
+      } else {
+        setError('Invalid or expired reset link. Please request a new password reset.')
+      }
+    })()
   }, [searchParams])
 
   async function handleResend(e) {
@@ -105,7 +100,7 @@ export default function ResetPasswordPage() {
     setError(null)
     const supabase = createClient()
     const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/reset-callback`,
     })
     setLoading(false)
     if (err) {
@@ -125,9 +120,7 @@ export default function ResetPasswordPage() {
     setError(null)
 
     const supabase = createClient()
-    const { error: updateError } = await supabase.auth.updateUser({
-      password,
-    })
+    const { error: updateError } = await supabase.auth.updateUser({ password })
 
     setLoading(false)
 
@@ -189,7 +182,7 @@ export default function ResetPasswordPage() {
             padding: '1rem', borderRadius: '10px', background: '#f0fdf4',
             color: '#15803d', border: '1px solid #bbf7d0', fontSize: '0.9375rem',
           }}>
-            Reset link sent to <strong>{email.trim()}</strong>. Check your inbox and click the link quickly — email scanners may trigger it if you delay.
+            Reset link sent to <strong>{email.trim()}</strong>. Check your inbox and click the link.
           </div>
         ) : error ? (
           <div>

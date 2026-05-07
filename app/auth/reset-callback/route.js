@@ -7,14 +7,10 @@ export async function GET(request) {
   const code = requestUrl.searchParams.get('code')
   const error = requestUrl.searchParams.get('error')
   const errorDescription = requestUrl.searchParams.get('error_description')
-  let next = requestUrl.searchParams.get('next') ?? '/'
 
-  // Handle auth errors from Supabase
   if (error) {
-    console.error('Auth callback error:', error, errorDescription)
-    // Redirect to login with error message
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(errorDescription || error)}`, requestUrl.origin)
+      new URL(`/reset-password?error=${encodeURIComponent(errorDescription || error)}`, requestUrl.origin)
     )
   }
 
@@ -36,34 +32,18 @@ export async function GET(request) {
         }
       )
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-      
+
       if (exchangeError) {
-        console.error('Failed to exchange code for session:', exchangeError)
         return NextResponse.redirect(
-          new URL(`/login?error=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
+          new URL(`/reset-password?error=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
         )
       }
-
-      // Only redirect to onboarding when no explicit destination was requested
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user && next === '/') {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_pending')
-          .eq('id', user.id)
-          .single()
-
-        if (profile?.onboarding_pending || user.user_metadata?.onboarding_pending) {
-          next = '/onboarding'
-        }
-      }
     } catch (err) {
-      console.error('Callback error:', err)
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent(err.message || 'Authentication failed')}`, requestUrl.origin)
+        new URL(`/reset-password?error=${encodeURIComponent(err.message || 'Authentication failed')}`, requestUrl.origin)
       )
     }
   }
 
-  return NextResponse.redirect(new URL(next, requestUrl.origin))
+  return NextResponse.redirect(new URL('/reset-password', requestUrl.origin))
 }

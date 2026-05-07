@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(request) {
   try {
+    // Use user client only for auth — DB writes use admin to bypass RLS
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -10,8 +11,10 @@ export async function POST(request) {
     const { token } = await request.json()
     if (!token) return NextResponse.json({ error: 'Token required' }, { status: 400 })
 
+    const admin = createAdminClient()
+
     // Validate invite
-    const { data: invite } = await supabase
+    const { data: invite } = await admin
       .from('family_invites')
       .select('id, family_id, email, status, expires_at')
       .eq('token', token)
@@ -24,29 +27,27 @@ export async function POST(request) {
     }
 
     // Check not already in a family
-    const { data: existing } = await supabase
+    const { data: existing } = await admin
       .from('family_memberships')
       .select('id')
       .eq('profile_id', user.id)
-      .eq('status', 'active')
       .maybeSingle()
 
     if (existing) return NextResponse.json({ error: 'You are already in a family' }, { status: 400 })
 
-    // Join family
-    const { error: joinError } = await supabase
+    // Join family — admin client bypasses RLS so the invitee can insert their own row
+    const { error: joinError } = await admin
       .from('family_memberships')
       .insert({
         family_id: invite.family_id,
         profile_id: user.id,
         role: 'member',
-        status: 'active',
       })
 
     if (joinError) throw joinError
 
     // Mark invite as accepted
-    await supabase
+    await admin
       .from('family_invites')
       .update({ status: 'accepted' })
       .eq('id', invite.id)

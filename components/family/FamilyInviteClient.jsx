@@ -111,7 +111,7 @@ export default function FamilyInviteClient({ token, invite, error, user, already
                 </p>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
                   <Link
-                    href={`/?auth=login&redirect=/family-invite/${token}`}
+                    href={`/login?tab=signin&redirect=/family-invite/${token}`}
                     style={{
                       padding: '12px 24px', borderRadius: '10px',
                       background: 'var(--primary)', color: '#fff',
@@ -121,7 +121,7 @@ export default function FamilyInviteClient({ token, invite, error, user, already
                     Sign in
                   </Link>
                   <Link
-                    href={`/?auth=register&redirect=/family-invite/${token}`}
+                    href={`/login?tab=signup&redirect=/family-invite/${token}`}
                     style={{
                       padding: '12px 24px', borderRadius: '10px',
                       border: '1px solid var(--border)', color: 'var(--text-1)',

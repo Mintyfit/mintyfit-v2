@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import AuthModal from '@/components/landing/AuthModal'
 
 const DESKTOP_TABS = [
   { id: 'recipes',    path: '/recipes',    label: 'Recipes',  icon: BookOpen,     auth: false },
@@ -47,6 +48,8 @@ export default function Navbar() {
 
   const [dropdownOpen,   setDropdownOpen]   = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [authOpen,       setAuthOpen]       = useState(false)
+  const [authTab,        setAuthTab]        = useState('signin')
   const dropdownRef = useRef(null)
 
   const initials    = getInitials(profile, user)
@@ -98,7 +101,7 @@ export default function Navbar() {
         </button>
         <Link href="/"><img src={logoSrc} alt="MintyFit" width="120" height="36" style={{ height: 36, objectFit: 'contain' }} /></Link>
         {loading ? <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--bg-subtle)' }} />
-        : !user ? <button onClick={() => router.push('/onboarding')} style={{ height: 38, padding: '0 14px', borderRadius: 10, background: 'var(--primary)', color: '#fff', fontWeight: 600, border: 'none' }}>Start</button>
+        : !user ? <button onClick={() => { setAuthTab('signin'); setAuthOpen(true) }} style={{ height: 38, padding: '0 14px', borderRadius: 10, background: 'var(--primary)', color: '#fff', fontWeight: 600, border: 'none', cursor: 'pointer' }}>Sign In</button>
         : <button onClick={() => setMobileMenuOpen(o => !o)} style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--primary)', color: '#fff', fontWeight: 700, border: 'none' }}>{initials}</button>}
       </div>
 
@@ -112,11 +115,19 @@ export default function Navbar() {
             display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border-light)',
             color: isTabActive(t, pathname) ? 'var(--primary)' : 'var(--text-2)', fontSize: 16, fontWeight: isTabActive(t, pathname) ? 700 : 500, textDecoration: 'none',
           }}><t.icon size={20} />{t.label}</Link>)}
-          <div style={{ marginTop: 8, padding: '0 16px', display: 'flex', gap: 10 }}>
-            <button onClick={toggle} style={{ flex: 1, height: 44, borderRadius: 10, border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--bg-subtle)', color: 'var(--text-2)', fontSize: 16, fontWeight: 500, cursor: 'pointer' }}>
-              {dark ? <><Sun size={16} />Light</> : <><Moon size={16} />Dark</>}
-            </button>
-            {user && <button onClick={handleSignOut} style={{ flex: 1, height: 44, borderRadius: 10, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#FEE2E2', color: '#E53E3E', fontSize: 16, fontWeight: 600, cursor: 'pointer' }}><LogOut size={16} />Out</button>}
+          <div style={{ marginTop: 8, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {!user && (
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => { setAuthTab('signin'); setAuthOpen(true); setMobileMenuOpen(false) }} style={{ flex: 1, height: 44, borderRadius: 10, border: '1px solid var(--border-light)', background: 'transparent', color: 'var(--text-1)', fontSize: 16, fontWeight: 600, cursor: 'pointer' }}>Sign In</button>
+                <button onClick={() => { setAuthTab('signup'); setAuthOpen(true); setMobileMenuOpen(false) }} style={{ flex: 1, height: 44, borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 16, fontWeight: 600, cursor: 'pointer' }}>Get Started</button>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={toggle} style={{ flex: 1, height: 44, borderRadius: 10, border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--bg-subtle)', color: 'var(--text-2)', fontSize: 16, fontWeight: 500, cursor: 'pointer' }}>
+                {dark ? <><Sun size={16} />Light</> : <><Moon size={16} />Dark</>}
+              </button>
+              {user && <button onClick={handleSignOut} style={{ flex: 1, height: 44, borderRadius: 10, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#FEE2E2', color: '#E53E3E', fontSize: 16, fontWeight: 600, cursor: 'pointer' }}><LogOut size={16} />Out</button>}
+            </div>
           </div>
         </div>
       )}
@@ -134,6 +145,13 @@ export default function Navbar() {
         </div>
       </nav>
 
+      <AuthModal
+        isOpen={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSuccess={() => { setAuthOpen(false); router.refresh() }}
+        defaultTab={authTab}
+      />
+
       {/* Desktop Nav */}
       <nav className="desktop-nav" style={{
         position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'var(--bg-nav)', borderBottom: '1px solid var(--border-light)', boxShadow: '0 2px 8px var(--shadow)',
@@ -149,7 +167,7 @@ export default function Navbar() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {loading ? <div style={{ width: 88, height: 36, borderRadius: 10, backgroundColor: '#dcfce7' }} />
-            : !user ? <button onClick={() => router.push('/onboarding')} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, backgroundColor: 'var(--primary)', color: '#fff', fontWeight: 600, fontSize: 16, border: 'none', cursor: 'pointer' }}><LogIn size={17} />Get Started</button>
+            : !user ? <><button onClick={() => { setAuthTab('signin'); setAuthOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, backgroundColor: 'transparent', color: 'var(--text-2)', fontWeight: 600, fontSize: 16, border: '1px solid var(--border-light)', cursor: 'pointer' }}>Sign In</button><button onClick={() => { setAuthTab('signup'); setAuthOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, backgroundColor: 'var(--primary)', color: '#fff', fontWeight: 600, fontSize: 16, border: 'none', cursor: 'pointer' }}><LogIn size={17} />Get Started</button></>
             : <div ref={dropdownRef} style={{ position: 'relative' }}>
                 <button onClick={() => setDropdownOpen(d => !d)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 10, backgroundColor: 'var(--bg-subtle)', color: 'var(--text-2)', fontWeight: 500, fontSize: 16, border: 'none', cursor: 'pointer' }}>
                   <div style={{ width: 30, height: 30, borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700 }}>{initials}</div><span>{displayName}</span><ChevronDown size={15} />

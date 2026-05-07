@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'signup' }) {
+export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'signup', redirectAfter }) {
   const [tab, setTab] = useState(defaultTab)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -80,7 +80,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/auth/callback${redirectAfter ? `?next=${encodeURIComponent(redirectAfter)}` : ''}`,
             data: { onboarding_pending: true },
           },
         })
@@ -125,7 +125,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
     setLoading(true)
     setError(null)
     const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/reset-callback`,
     })
     setLoading(false)
     if (err) {

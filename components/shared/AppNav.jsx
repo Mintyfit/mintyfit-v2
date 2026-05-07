@@ -17,7 +17,7 @@ const NAV_LINKS = [
 
 export default function AppNav() {
   const pathname = usePathname()
-  const { user, loading, signOut } = useAuth()
+  const { user, profile, loading, signOut } = useAuth()
   const { dark, toggle: toggleTheme } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -123,7 +123,7 @@ export default function AppNav() {
                     fontSize: '0.875rem',
                     fontWeight: 700,
                   }}>
-                    {user.email?.[0]?.toUpperCase() || '?'}
+                    {profile?.name?.split(' ')[0]?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || '?'}
                   </Link>
                 </>
               ) : (

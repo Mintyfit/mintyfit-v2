@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import Navbar from './Navbar'
 import HeroCTA from './HeroCTA'
 import PricingToggle from './PricingToggle'
 import FAQAccordion from './FAQAccordion'
@@ -65,16 +65,20 @@ const FEATURES = [
 export default function LandingClient() {
   const [authOpen, setAuthOpen] = useState(false)
   const [authTab, setAuthTab] = useState('signup')
+  const router = useRouter()
 
   function openAuth(tab = 'signup') {
     setAuthTab(tab)
     setAuthOpen(true)
   }
 
+  function handleAuthSuccess() {
+    setAuthOpen(false)
+    router.refresh()
+  }
+
   return (
     <>
-      <Navbar onOpenAuth={() => openAuth('signin')} />
-
       <main>
         {/* ===== 1. HERO ===== */}
         <section style={{
@@ -338,7 +342,7 @@ export default function LandingClient() {
       <AuthModal
         isOpen={authOpen}
         onClose={() => setAuthOpen(false)}
-        onSuccess={() => setAuthOpen(false)}
+        onSuccess={handleAuthSuccess}
         defaultTab={authTab}
       />
     </>

@@ -1,6 +1,41 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+async function sendInviteEmail({ to, inviteUrl, familyName, inviterName }) {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) return { ok: false, reason: 'no_api_key' }
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM || 'MintyFit <noreply@mintyfit.com>',
+      to,
+      subject: `${inviterName} invited you to join ${familyName} on MintyFit`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
+          <h2 style="margin:0 0 8px">You've been invited! 👨‍👩‍👧‍👦</h2>
+          <p style="color:#555;margin:0 0 24px">
+            <strong>${inviterName}</strong> has invited you to join
+            <strong>${familyName}</strong> on MintyFit — a family nutrition and meal planning platform.
+          </p>
+          <a href="${inviteUrl}" style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:16px">
+            Accept invite
+          </a>
+          <p style="color:#999;font-size:13px;margin-top:24px">
+            This link expires in 7 days. If you don't have an account yet, you'll be able to create one after clicking the link.
+          </p>
+        </div>
+      `,
+    }),
+  })
+
+  return { ok: res.ok, status: res.status }
+}
+
 export async function POST(request) {
   try {
     const supabase = await createClient()
@@ -10,7 +45,6 @@ export async function POST(request) {
     const { email } = await request.json()
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 })
 
-    // Get user's family (must be admin/co-admin)
     const { data: membership } = await supabase
       .from('family_memberships')
       .select('family_id, role')
@@ -27,7 +61,7 @@ export async function POST(request) {
       .from('profiles')
       .select('id')
       .eq('email', email)
-      .single()
+      .maybeSingle()
 
     if (existingProfile) {
       const { data: alreadyMember } = await supabase
@@ -35,12 +69,24 @@ export async function POST(request) {
         .select('id')
         .eq('family_id', membership.family_id)
         .eq('profile_id', existingProfile.id)
-        .single()
+        .maybeSingle()
 
       if (alreadyMember) return NextResponse.json({ error: 'Already a family member' }, { status: 400 })
     }
 
-    // Create invite
+    const [{ data: family }, { data: inviterProfile }] = await Promise.all([
+      supabase.from('families').select('name').eq('id', membership.family_id).single(),
+      supabase.from('profiles').select('name').eq('id', user.id).single(),
+    ])
+
+    // Remove any existing pending invites for this email so we start fresh
+    await supabase
+      .from('family_invites')
+      .delete()
+      .eq('family_id', membership.family_id)
+      .eq('email', email.toLowerCase().trim())
+      .eq('status', 'pending')
+
     const { data: invite, error } = await supabase
       .from('family_invites')
       .insert({
@@ -53,11 +99,54 @@ export async function POST(request) {
 
     if (error) throw error
 
-    // In production: send email via Supabase edge function or email service
-    // For now: return the invite token so it can be shared manually
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/family-invite/${invite.token}`
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'}/family-invite/${invite.token}`
 
-    return NextResponse.json({ invite, inviteUrl })
+    const emailResult = await sendInviteEmail({
+      to: email,
+      inviteUrl,
+      familyName: family?.name || 'the family',
+      inviterName: inviterProfile?.name || 'Someone',
+    })
+
+    return NextResponse.json({
+      invite,
+      inviteUrl,
+      emailSent: emailResult.ok,
+      emailNote: emailResult.reason === 'no_api_key' ? 'No RESEND_API_KEY configured — share the link manually.' : null,
+    })
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { searchParams } = new URL(request.url)
+    const inviteId = searchParams.get('id')
+    if (!inviteId) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+    const { data: membership } = await supabase
+      .from('family_memberships')
+      .select('family_id, role')
+      .eq('profile_id', user.id)
+      .single()
+
+    if (!membership || !['admin', 'co-admin'].includes(membership.role)) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+    }
+
+    const { error } = await supabase
+      .from('family_invites')
+      .delete()
+      .eq('id', inviteId)
+      .eq('family_id', membership.family_id)
+
+    if (error) throw error
+    return NextResponse.json({ ok: true })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

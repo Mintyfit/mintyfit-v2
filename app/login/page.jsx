@@ -8,22 +8,16 @@ function LoginContent() {
   const router = useRouter()
   const params = useSearchParams()
   const tab = params.get('tab') === 'signup' ? 'signup' : 'signin'
+  const redirectTo = params.get('redirect') || '/recipes'
 
-  console.log('[LoginPage] Rendering with tab:', tab)
-  
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-page)' }}>
       <AuthModal
         isOpen={true}
-        onClose={() => {
-          console.log('[LoginPage] onClose called - redirecting to home')
-          router.push('/')
-        }}
-        onSuccess={() => {
-          console.log('[LoginPage] onSuccess called - redirecting to /recipes')
-          router.push('/recipes')
-        }}
+        onClose={() => router.push('/')}
+        onSuccess={() => router.push(redirectTo)}
         defaultTab={tab}
+        redirectAfter={redirectTo}
       />
     </div>
   )
