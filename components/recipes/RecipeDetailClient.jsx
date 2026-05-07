@@ -557,12 +557,17 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             .eq('family_id', familyId),
           supabase
             .from('managed_members')
-            .select('id, name, date_of_birth, weight, height, age, gender, goals')
+            .select('id, name, date_of_birth, weight, height, gender')
             .eq('family_id', familyId),
         ])
         loaded = [
           ...(linked || []).map(l => ({ ...l.profiles, type: 'linked' })),
-          ...(managed || []).map(m => ({ ...m, display_name: m.name, type: 'managed' })),
+          ...(managed || []).map(m => {
+            const age = m.date_of_birth
+              ? Math.floor((Date.now() - new Date(m.date_of_birth)) / 31557600000)
+              : null
+            return { ...m, age, goals: [], display_name: m.name, type: 'managed' }
+          }),
         ].filter(Boolean)
       } else {
         const { data: profile } = await supabase
