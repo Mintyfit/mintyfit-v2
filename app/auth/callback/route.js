@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(request) {
   const requestUrl = new URL(request.url)
@@ -46,15 +47,25 @@ export async function GET(request) {
 
       // Only redirect to onboarding when no explicit destination was requested
       const { data: { user } } = await supabase.auth.getUser()
-      if (user && next === '/') {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('onboarding_pending')
-          .eq('id', user.id)
-          .single()
+      if (user) {
+        // Ensure profile row exists (no-op if already present, creates it for new users)
+        const admin = createAdminClient()
+        const fullName = user.user_metadata?.full_name || user.user_metadata?.name || null
+        await admin.from('profiles').upsert(
+          { id: user.id, email: user.email, ...(fullName ? { full_name: fullName } : {}) },
+          { onConflict: 'id', ignoreDuplicates: true }
+        )
 
-        if (profile?.onboarding_pending || user.user_metadata?.onboarding_pending) {
-          next = '/onboarding'
+        if (next === '/') {
+          const { data: profile } = await admin
+            .from('profiles')
+            .select('onboarding_pending')
+            .eq('id', user.id)
+            .single()
+
+          if (profile?.onboarding_pending || user.user_metadata?.onboarding_pending) {
+            next = '/onboarding'
+          }
         }
       }
     } catch (err) {

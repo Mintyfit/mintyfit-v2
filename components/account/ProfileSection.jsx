@@ -64,7 +64,8 @@ export default function ProfileSection({ userId, userEmail, profile: initialProf
 
   const saveProfile = async () => {
     setSaving(true)
-    const { error } = await supabase.from('profiles').update({
+    const { error } = await supabase.from('profiles').upsert({
+      id: userId,
       full_name: name,
       phone,
       units_preference: unitsPreference,
@@ -72,7 +73,7 @@ export default function ProfileSection({ userId, userEmail, profile: initialProf
       email_meal_reminders: emailPrefs.meal_reminders,
       email_tips: emailPrefs.tips,
       updated_at: new Date().toISOString(),
-    }).eq('id', userId)
+    }, { onConflict: 'id' })
     setMsg(error ? `Error: ${error.message}` : 'Profile saved!')
     setSaving(false)
     setTimeout(() => setMsg(''), 3000)
