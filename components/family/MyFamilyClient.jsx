@@ -42,10 +42,10 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove }) 
       display: 'flex', alignItems: 'center', gap: '12px',
       padding: '12px 0', borderBottom: '1px solid var(--border)',
     }}>
-      <Avatar name={profile.full_name} />
+      <Avatar name={profile.display_name || profile.full_name || profile.first_name} />
       <div style={{ flex: 1 }}>
         <div style={{ fontWeight: '600', color: 'var(--text-1)', fontSize: '14px' }}>
-          {profile.full_name || 'Unknown'} {isCurrentUser && <span style={{ color: 'var(--text-3)', fontWeight: '400' }}>(you)</span>}
+          {(profile.display_name || profile.full_name || profile.first_name || 'Unknown')} {isCurrentUser && <span style={{ color: 'var(--text-3)', fontWeight: '400' }}>(you)</span>}
         </div>
         <div style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'capitalize' }}>
           {member.role}
@@ -66,7 +66,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove }) 
             </button>
           )}
           <button
-            onClick={() => onRemove(profile.id, profile.full_name)}
+            onClick={() => onRemove(profile.id, profile.display_name || profile.full_name || profile.first_name)}
             style={{
               background: 'none', border: '1px solid #fecaca',
               borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
