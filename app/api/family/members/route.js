@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Update member role or remove member
+// Update member role and/or display_name; or remove member
 export async function PATCH(request) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { memberId, role } = await request.json()
+    const { memberId, role, display_name } = await request.json()
+    if (!memberId) return NextResponse.json({ error: 'memberId required' }, { status: 400 })
 
-    // Verify requester is admin
+    // Verify requester is admin/co-admin of the same family
     const { data: myMembership } = await supabase
       .from('family_memberships')
       .select('family_id, role')
@@ -21,16 +22,45 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 
-    const { data, error } = await supabase
+    // Verify target is in the same family
+    const { data: targetMembership } = await supabase
       .from('family_memberships')
-      .update({ role })
+      .select('id')
       .eq('family_id', myMembership.family_id)
       .eq('profile_id', memberId)
-      .select()
       .single()
 
-    if (error) throw error
-    return NextResponse.json({ membership: data })
+    if (!targetMembership) {
+      return NextResponse.json({ error: 'Member not in your family' }, { status: 404 })
+    }
+
+    let membership = null
+    if (role) {
+      const { data, error } = await supabase
+        .from('family_memberships')
+        .update({ role })
+        .eq('family_id', myMembership.family_id)
+        .eq('profile_id', memberId)
+        .select()
+        .single()
+      if (error) throw error
+      membership = data
+    }
+
+    let profile = null
+    if (typeof display_name === 'string') {
+      const trimmed = display_name.trim()
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({ display_name: trimmed || null })
+        .eq('id', memberId)
+        .select('id, display_name, full_name, first_name')
+        .single()
+      if (error) throw error
+      profile = data
+    }
+
+    return NextResponse.json({ membership, profile })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

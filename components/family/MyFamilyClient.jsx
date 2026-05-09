@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 function Section({ title, children }) {
   return (
@@ -32,26 +32,78 @@ function Avatar({ name, size = 40 }) {
   )
 }
 
-function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove }) {
+function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove, onRename }) {
   const profile = Array.isArray(member.profiles) ? (member.profiles[0] || {}) : (member.profiles || {})
   const isAdmin = member.role === 'admin'
   const canManage = ['admin', 'co-admin'].includes(userRole) && !isCurrentUser
+  // Anyone with admin/co-admin can rename anyone in the family (incl. self)
+  const canRename = ['admin', 'co-admin'].includes(userRole)
+
+  const displayName = profile.display_name || profile.full_name || profile.first_name || ''
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(displayName)
+  const [saving, setSaving] = useState(false)
+  const inputRef = useRef(null)
+
+  useEffect(() => { if (editing) inputRef.current?.focus() }, [editing])
+
+  async function commit() {
+    const next = draft.trim()
+    if (next === displayName) { setEditing(false); return }
+    setSaving(true)
+    try {
+      await onRename(profile.id, next)
+    } finally {
+      setSaving(false)
+      setEditing(false)
+    }
+  }
 
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '12px',
       padding: '12px 0', borderBottom: '1px solid var(--border)',
     }}>
-      <Avatar name={profile.display_name || profile.full_name || profile.first_name} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: '600', color: 'var(--text-1)', fontSize: '14px' }}>
-          {(profile.display_name || profile.full_name || profile.first_name || 'Unknown')} {isCurrentUser && <span style={{ color: 'var(--text-3)', fontWeight: '400' }}>(you)</span>}
-        </div>
+      <Avatar name={displayName} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') commit()
+              else if (e.key === 'Escape') { setDraft(displayName); setEditing(false) }
+            }}
+            placeholder="Member name"
+            disabled={saving}
+            style={{
+              width: '100%', padding: '6px 8px',
+              border: '1px solid var(--primary)', borderRadius: '6px',
+              background: 'var(--bg-page)', color: 'var(--text-1)',
+              fontSize: '14px', fontWeight: '600',
+            }}
+          />
+        ) : (
+          <div
+            onClick={() => canRename && setEditing(true)}
+            title={canRename ? 'Click to edit name' : ''}
+            style={{
+              fontWeight: '600', color: displayName ? 'var(--text-1)' : 'var(--text-4)',
+              fontSize: '14px', cursor: canRename ? 'pointer' : 'default',
+              fontStyle: displayName ? 'normal' : 'italic',
+            }}
+          >
+            {displayName || (canRename ? 'Click to set name…' : 'Unknown')}
+            {isCurrentUser && <span style={{ color: 'var(--text-3)', fontWeight: '400' }}> (you)</span>}
+          </div>
+        )}
         <div style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'capitalize' }}>
           {member.role}
         </div>
       </div>
-      {canManage && (
+      {canManage && !editing && (
         <div style={{ display: 'flex', gap: '6px' }}>
           {!isAdmin && (
             <button
@@ -66,7 +118,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove }) 
             </button>
           )}
           <button
-            onClick={() => onRemove(profile.id, profile.display_name || profile.full_name || profile.first_name)}
+            onClick={() => onRemove(profile.id, displayName)}
             style={{
               background: 'none', border: '1px solid #fecaca',
               borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
@@ -377,6 +429,32 @@ export default function MyFamilyClient({ userId, initialData }) {
     }
   }
 
+  async function handleRenameMember(memberId, displayName) {
+    setError(null)
+    try {
+      const res = await fetch('/api/family/members', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, display_name: displayName }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error || 'Failed to update name')
+      }
+      const { profile } = await res.json()
+      setData(prev => ({
+        ...prev,
+        memberships: prev.memberships.map(m => {
+          if (m.profile_id !== memberId) return m
+          const existing = Array.isArray(m.profiles) ? (m.profiles[0] || {}) : (m.profiles || {})
+          return { ...m, profiles: { ...existing, ...profile } }
+        }),
+      }))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
   async function handleRoleChange(memberId, newRole) {
     try {
       const res = await fetch('/api/family/members', {
@@ -465,6 +543,7 @@ export default function MyFamilyClient({ userId, initialData }) {
             userRole={userRole}
             onRoleChange={handleRoleChange}
             onRemove={handleRemoveMember}
+            onRename={handleRenameMember}
           />
         ))}
 
