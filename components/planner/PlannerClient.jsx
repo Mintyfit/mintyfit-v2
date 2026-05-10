@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { computeMemberNutrition } from '@/lib/nutrition/portionCalc'
 import WeekOverview from './WeekOverview'
 import DayAgenda from './DayAgenda'
 import DayStatsPanel from './DayStatsPanel'
@@ -63,6 +62,25 @@ export default function PlannerClient({ userId, profile, members }) {
   }, [members])
   const activeMembers = members.filter(m => selectedMemberIds.has(m.id))
 
+  // When the user opens a day that already has entries, reflect the union of
+  // consumer_member_ids across those entries — so the checkboxes match what's
+  // actually stored. Empty days fall back to everyone-checked.
+  useEffect(() => {
+    if (!selectedDate) return
+    const key = toDateKey(selectedDate)
+    const dayMeals = entries[key] || {}
+    const ids = new Set()
+    let anyEntry = false
+    for (const meal of MEAL_TYPES) {
+      for (const e of (dayMeals[meal] || [])) {
+        anyEntry = true
+        const list = e.consumer_member_ids || (e.member_id ? [e.member_id] : members.map(m => m.id))
+        for (const id of list) ids.add(id)
+      }
+    }
+    setSelectedMemberIds(anyEntry ? ids : new Set(members.map(m => m.id)))
+  }, [selectedDate, entries, members])
+
   const anchorDate = new Date(today)
   anchorDate.setDate(today.getDate() + weekOffset * 7)
   const weekDates = getWeekDates(anchorDate)
@@ -94,8 +112,8 @@ export default function PlannerClient({ userId, profile, members }) {
     supabase
       .from('calendar_entries')
       .select(`
-        id, date_str, meal_type, member_id,
-        recipes(id, title, slug, image_url, nutrition, servings)
+        id, date_str, meal_type, member_id, consumer_member_ids,
+        recipes(id, title, slug, image_url, nutrition, servings, base_servings)
       `)
       .eq('profile_id', userId)
       .gte('date_str', startKey)
@@ -165,30 +183,20 @@ export default function PlannerClient({ userId, profile, members }) {
     setAddingToMeal(true)
     const supabase = createClient()
     if (!supabase) { setAddingToMeal(false); return }
-    const recipeTotals = recipe.nutrition?.totals || null
-    let rows
-    if (activeMembers.length > 0 && recipeTotals) {
-      rows = activeMembers.map(member => ({
-        profile_id: userId,
-        date_str: dateKey,
-        meal_type: mealType,
-        recipe_id: recipe.id,
-        recipe_name: recipe.title || '',
-        member_id: member.id,
-        personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
-      }))
-    } else {
-      rows = [{
-        profile_id: userId,
-        date_str: dateKey,
-        meal_type: mealType,
-        recipe_id: recipe.id,
-        recipe_name: recipe.title || '',
-        member_id: null,
-        personal_nutrition: recipe.nutrition?.perServing || null,
-      }]
+    // ONE row per (day, meal, recipe). Eaters are tracked on the entry via
+    // `consumer_member_ids` (defaults to currently-checked members). The
+    // donut/per-member panel scales the recipe's totals at read time.
+    const row = {
+      profile_id: userId,
+      date_str: dateKey,
+      meal_type: mealType,
+      recipe_id: recipe.id,
+      recipe_name: recipe.title || '',
+      member_id: null,
+      consumer_member_ids: activeMembers.map(m => m.id),
+      personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
     }
-    const { error } = await supabase.from('calendar_entries').upsert(rows, {
+    const { error } = await supabase.from('calendar_entries').upsert([row], {
       onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
     })
     if (error) console.error('calendar upsert failed:', error)
@@ -255,8 +263,8 @@ export default function PlannerClient({ userId, profile, members }) {
     const { data } = await supabase
       .from('calendar_entries')
       .select(`
-        id, date_str, meal_type, member_id,
-        recipes(id, title, slug, image_url, nutrition, servings)
+        id, date_str, meal_type, member_id, consumer_member_ids,
+        recipes(id, title, slug, image_url, nutrition, servings, base_servings)
       `)
       .eq('profile_id', userId)
       .eq('date_str', dateKey)
@@ -443,12 +451,28 @@ export default function PlannerClient({ userId, profile, members }) {
                     activities={dayActivities}
                     members={members}
                     selectedMemberIds={selectedMemberIds}
-                    onToggleMember={(id) => {
+                    onToggleMember={async (id) => {
+                      // Optimistic UI: flip set, flip every entry's consumer list, persist.
+                      const willCheck = !selectedMemberIds.has(id)
                       setSelectedMemberIds(prev => {
                         const next = new Set(prev)
                         if (next.has(id)) next.delete(id); else next.add(id)
                         return next
                       })
+                      const supabase = createClient()
+                      if (!supabase || !selectedKey) return
+                      const updates = []
+                      for (const meal of MEAL_TYPES) {
+                        for (const e of (dayEntries[meal] || [])) {
+                          const current = new Set(e.consumer_member_ids || [])
+                          if (willCheck) current.add(id); else current.delete(id)
+                          updates.push(supabase.from('calendar_entries')
+                            .update({ consumer_member_ids: Array.from(current) })
+                            .eq('id', e.id))
+                        }
+                      }
+                      await Promise.all(updates)
+                      refreshDay(selectedKey)
                     }}
                   />
                 </div>
