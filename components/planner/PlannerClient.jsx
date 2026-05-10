@@ -116,13 +116,14 @@ export default function PlannerClient({ userId, profile, members }) {
 
   // Sidebar recipes — load on mount and on search change
   useEffect(() => {
+    if (!userId) return
     setSidebarLoading(true)
     const supabase = createClient()
     if (!supabase) { setSidebarLoading(false); return }
     const query = supabase
       .from('recipes')
       .select('id, title, slug, image_url, nutrition')
-      .eq('is_published', true)
+      .or(`is_public.eq.true,profile_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .limit(40)
     if (sidebarSearch.trim()) query.ilike('title', `%${sidebarSearch.trim()}%`)
@@ -130,7 +131,7 @@ export default function PlannerClient({ userId, profile, members }) {
       setSidebarRecipes(data || [])
       setSidebarLoading(false)
     })
-  }, [sidebarSearch])
+  }, [sidebarSearch, userId])
 
   // Drag-and-drop helpers
   function handleDropRecipe(date, dateKey) {
