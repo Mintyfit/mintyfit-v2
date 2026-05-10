@@ -30,7 +30,7 @@ async function getFamilyData(userId, supabase) {
 
     const profileIds = (membershipsRaw || []).map(m => m.profile_id).filter(Boolean)
     const { data: profilesData } = profileIds.length
-      ? await supabase.from('profiles').select('id, full_name, display_name, first_name, subscription_tier').in('id', profileIds)
+      ? await supabase.from('profiles').select('id, full_name, display_name, first_name, email, subscription_tier').in('id', profileIds)
       : { data: [] }
 
     const memberships = (membershipsRaw || []).map(m => ({
