@@ -36,7 +36,7 @@ function toDateKey(date) {
 export default function PlannerClient({ userId, profile, members }) {
   const [today] = useState(() => new Date())
   const [weekOffset, setWeekOffset] = useState(0)
-  const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [entries, setEntries] = useState({})
   const [activities, setActivities] = useState({})
   const [loading, setLoading] = useState(false)
