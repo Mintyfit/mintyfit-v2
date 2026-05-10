@@ -27,10 +27,26 @@ const MET_VALUES = {
   'Other': 3.5,
 }
 
+// Estimate a sensible body weight when the member has none on file, so
+// kids/teens still get personalized numbers instead of the 70 kg default.
+function estimateWeightKg(member) {
+  const w = Number(member?.weight)
+  if (w && w > 2) return w
+  const age = Number(member?.age) || 30
+  const male = String(member?.gender || '').toLowerCase() === 'male'
+  if (age < 1) return 7
+  if (age < 3) return 12
+  if (age < 6) return 18
+  if (age < 10) return 28
+  if (age < 14) return 45
+  if (age < 18) return male ? 62 : 55
+  return male ? 75 : 62
+}
+
 // Personalized calorie burn using the member's own BMR (which encodes
 // weight, height, age and sex via Mifflin–St Jeor). 1 MET ≈ resting energy,
-// so kcal/min ≈ MET × (BMR / 1440). Falls back to MET × weight formula
-// when BMR can't be computed (missing body params).
+// so kcal/min ≈ MET × (BMR / 1440). Falls back to weight-scaled MET formula
+// when BMR can't be computed (e.g. adult with no height on file).
 function estimateCalories(activityType, durationMinutes, member) {
   const met = MET_VALUES[activityType] ?? 3.5
   const minutes = Number(durationMinutes) || 0
@@ -41,7 +57,7 @@ function estimateCalories(activityType, durationMinutes, member) {
     return Math.round((met * bmr / 1440) * minutes)
   }
 
-  const weightKg = member?.weight || 70
+  const weightKg = estimateWeightKg(member)
   return Math.round((met * 3.5 * weightKg / 200) * minutes)
 }
 
