@@ -39,7 +39,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove, on
   // Anyone with admin/co-admin can rename anyone in the family (incl. self)
   const canRename = ['admin', 'co-admin'].includes(userRole)
 
-  const displayName = profile.display_name || profile.full_name || profile.first_name || ''
+  const displayName = profile.display_name || profile.full_name || profile.first_name || profile.name || (profile.email ? profile.email.split('@')[0] : '')
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(displayName)
   const [saving, setSaving] = useState(false)
@@ -95,7 +95,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove, on
               fontStyle: displayName ? 'normal' : 'italic',
             }}
           >
-            {displayName || (canRename ? 'Click to set name…' : 'Unknown')}
+            {displayName || (canRename ? 'Click to set name…' : 'Family member')}
             {isCurrentUser && <span style={{ color: 'var(--text-3)', fontWeight: '400' }}> (you)</span>}
           </div>
         )}

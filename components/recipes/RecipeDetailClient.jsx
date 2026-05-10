@@ -165,7 +165,20 @@ function IngredientAlternativesSheet({ ingredient, alternatives, loading, onSele
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const GL_LABELS = { low: '🟢 Low GL', medium: '🟡 Medium GL', high: '🔴 High GL' }
+// Glycemic Index estimates per category (0–100 scale, food vs glucose).
+// Used when the recipe stores only a low/medium/high category and we need a number.
+const GI_BY_LABEL = { low: 35, medium: 55, high: 75 }
+// Estimate Glycemic Load = GI × carbs(g) / 100 — scales with the displayed portion.
+function estimateGI(recipe) {
+  if (typeof recipe.glycemic_index === 'number') return Math.round(recipe.glycemic_index)
+  return GI_BY_LABEL[recipe.glycemic_load] ?? null
+}
+function estimateGL(recipe, carbsGrams) {
+  if (typeof recipe.glycemic_load_value === 'number') return Math.round(recipe.glycemic_load_value)
+  const gi = estimateGI(recipe)
+  if (gi == null || !carbsGrams) return null
+  return Math.round((gi * carbsGrams) / 100)
+}
 const MEAL_COLORS = {
   breakfast: { bg: '#fef3c7', color: '#92400e' },
   lunch:     { bg: '#d1fae5', color: '#065f46' },
@@ -747,52 +760,22 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
   const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0)
   const mealStyle = MEAL_COLORS[recipe.meal_type] || { bg: '#f3f4f6', color: '#374151' }
 
-  async function handleAddToPlan() {
-    const supabase = createClient()
-    if (!supabase) return
+  function handleAddToPlan() {
+    // Hand the recipe off to the planner so the user can choose a day.
+    // PlannerClient reads sessionStorage on mount and opens its picker.
     setAddingToPlan(true)
-    setAddPlanMsg(null)
-
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setAddPlanMsg('error'); setAddingToPlan(false); return }
-
-      const now = new Date()
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-      const mealType = recipe.meal_type || 'dinner'
-      const recipeTotals = recipe.nutrition?.totals || null
-
-      let rows
-      if (eatingMembers.length > 0) {
-        rows = eatingMembers.map(member => ({
-          profile_id: user.id,
-          date_str: dateStr,
-          meal_type: mealType,
-          recipe_id: recipe.id,
-          member_id: member.id,
-          personal_nutrition: computeMemberNutrition(member, eatingMembers, recipeTotals, {}),
-        }))
-      } else {
-        rows = [{
-          profile_id: user.id,
-          date_str: dateStr,
-          meal_type: mealType,
-          recipe_id: recipe.id,
-          member_id: null,
-          personal_nutrition: recipe.nutrition?.perServing || null,
-        }]
+      const payload = {
+        recipe_id: recipe.id,
+        title: recipe.title,
+        slug: recipe.slug,
+        image: recipe.image_thumb || recipe.image || null,
+        meal_type: recipe.meal_type || 'dinner',
+        eater_ids: Array.from(activeEaters),
       }
-
-      await supabase.from('calendar_entries').upsert(rows, {
-        onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
-      })
-
-      setAddPlanMsg('success')
-    } catch {
-      setAddPlanMsg('error')
-    } finally {
-      setAddingToPlan(false)
-    }
+      sessionStorage.setItem('mintyfit:pendingPlanRecipe', JSON.stringify(payload))
+    } catch {}
+    window.location.href = '/plan?addRecipe=' + encodeURIComponent(recipe.id)
   }
 
   function startEditing() {
@@ -1027,13 +1010,6 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
         <span style={{ color: 'var(--text-2)' }}>{recipe.title}</span>
       </div>
 
-      {/* Hero image */}
-      {recipe.image && (
-        <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', marginBottom: '1.5rem', background: '#f3f4f6' }}>
-          <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="800px" priority />
-        </div>
-      )}
-
       {/* Title & meta */}
       {isEditing ? (
         <input
@@ -1102,11 +1078,16 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             🌍 {recipe.cuisine_type}
           </span>
         )}
-        {recipe.glycemic_load && (
-          <span style={{ padding: '0.2rem 0.7rem', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
-            {GL_LABELS[recipe.glycemic_load]}
-          </span>
-        )}
+        {(() => {
+          const gi = estimateGI(recipe)
+          const gl = estimateGL(recipe, recipe.nutrition?.perServing?.carbs_total)
+          if (gi == null && gl == null) return null
+          return (
+            <span style={{ padding: '0.2rem 0.7rem', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
+              GI {gi ?? '—'}{gl != null && <> · GL {gl}</>}
+            </span>
+          )
+        })()}
       </div>
 
       {/* Edit meta fields row — only shown in edit mode */}
@@ -1265,6 +1246,13 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       <div className="rd-grid">
         {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
         <div className="rd-left">
+
+          {/* Hero image — sits at top of left column so right column starts beside it */}
+          {recipe.image && (
+            <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', marginBottom: '1.25rem', background: '#f3f4f6' }}>
+              <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 780px) 100vw, 640px" priority />
+            </div>
+          )}
 
           {/* Intro */}
           {recipe.intro && (
@@ -1580,14 +1568,28 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
                 {showRawNutrition ? 'Raw Ingredients' : isScaled ? `For ${eatingMembers.map(m => m.display_name).join(' & ')}` : 'Per Serving'}
               </div>
               <DonutChart ps={ps} />
-              {recipe.glycemic_load && (
-                <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 13, color: '#999' }}>Glycemic Load</div>
-                  <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)' }}>
-                    {GL_LABELS[recipe.glycemic_load] || recipe.glycemic_load}
+              {(() => {
+                const gi = estimateGI(recipe)
+                // GL scales with the displayed (per-member) carbs, so it tracks the donut.
+                const gl = estimateGL(recipe, ps.carbs_total)
+                if (gi == null && gl == null) return null
+                return (
+                  <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 24 }}>
+                    {gi != null && (
+                      <div>
+                        <div style={{ fontSize: 12, color: '#999' }}>Glycemic Index</div>
+                        <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)' }}>{gi}</div>
+                      </div>
+                    )}
+                    {gl != null && (
+                      <div>
+                        <div style={{ fontSize: 12, color: '#999' }}>Glycemic Load</div>
+                        <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)' }}>{gl}</div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )
+              })()}
             </div>
             )
           })()}

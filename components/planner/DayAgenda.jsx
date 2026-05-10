@@ -225,6 +225,7 @@ export default function DayAgenda({
         )
       })}
 
+      {!embedded && (
       <section style={{ marginTop: '1.5rem' }}>
         <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', marginBottom: '0.875rem' }}>Day Summary</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
@@ -258,6 +259,7 @@ export default function DayAgenda({
           ))}
         </div>
       </section>
+      )}
 
       {openMeal ? (
         <RecipePickerModal
