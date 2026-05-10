@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { computeBMR } from '@/lib/nutrition/portionCalc'
 
 const ACTIVITY_TYPES = [
   'Walking', 'Running', 'Cycling', 'Swimming', 'Yoga',
@@ -9,27 +10,39 @@ const ACTIVITY_TYPES = [
   'Hiking', 'Stretching', 'Other',
 ]
 
-// Rough MET-based calorie estimates per minute at 70kg
-const MET_KCAL_PER_MIN = {
-  'Walking': 4,
-  'Running': 10,
-  'Cycling': 8,
-  'Swimming': 7,
-  'Yoga': 3,
-  'Weight Training': 5,
-  'HIIT': 12,
-  'Pilates': 4,
-  'Dancing': 5,
-  'Sports': 7,
-  'Hiking': 6,
-  'Stretching': 2,
-  'Other': 4,
+// Standard MET values (Compendium of Physical Activities, moderate intensity)
+const MET_VALUES = {
+  'Walking': 3.5,
+  'Running': 9.8,
+  'Cycling': 7.5,
+  'Swimming': 6.0,
+  'Yoga': 2.5,
+  'Weight Training': 5.0,
+  'HIIT': 10.0,
+  'Pilates': 3.0,
+  'Dancing': 4.8,
+  'Sports': 7.0,
+  'Hiking': 6.0,
+  'Stretching': 2.3,
+  'Other': 3.5,
 }
 
-function estimateCalories(activityType, durationMinutes, weightKg) {
-  const base = MET_KCAL_PER_MIN[activityType] || 4
-  const weightFactor = (weightKg || 70) / 70
-  return Math.round(base * durationMinutes * weightFactor)
+// Personalized calorie burn using the member's own BMR (which encodes
+// weight, height, age and sex via Mifflin–St Jeor). 1 MET ≈ resting energy,
+// so kcal/min ≈ MET × (BMR / 1440). Falls back to MET × weight formula
+// when BMR can't be computed (missing body params).
+function estimateCalories(activityType, durationMinutes, member) {
+  const met = MET_VALUES[activityType] ?? 3.5
+  const minutes = Number(durationMinutes) || 0
+  if (!minutes) return 0
+
+  const bmr = member ? computeBMR(member.weight, member.height, member.age, member.gender) : null
+  if (bmr && bmr > 0) {
+    return Math.round((met * bmr / 1440) * minutes)
+  }
+
+  const weightKg = member?.weight || 70
+  return Math.round((met * 3.5 * weightKg / 200) * minutes)
 }
 
 export default function ActivityForm({ dateKey, userId, members, onSave, onClose }) {
@@ -53,24 +66,21 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
     const dur = String(tpl.duration_minutes || 30)
     setDuration(dur)
     if (tpl.activity_type && tpl.duration_minutes) {
-      const weight = selectedMember?.weight || 70
-      setCaloriesBurned(String(estimateCalories(tpl.activity_type, tpl.duration_minutes, weight)))
+      setCaloriesBurned(String(estimateCalories(tpl.activity_type, tpl.duration_minutes, selectedMember)))
     }
   }
 
   function handleDurationChange(val) {
     setDuration(val)
     if (val && activityType) {
-      const weight = selectedMember?.weight || 70
-      setCaloriesBurned(String(estimateCalories(activityType, parseFloat(val), weight)))
+      setCaloriesBurned(String(estimateCalories(activityType, parseFloat(val), selectedMember)))
     }
   }
 
   function handleActivityTypeChange(val) {
     setActivityType(val)
     if (duration && val) {
-      const weight = selectedMember?.weight || 70
-      setCaloriesBurned(String(estimateCalories(val, parseFloat(duration), weight)))
+      setCaloriesBurned(String(estimateCalories(val, parseFloat(duration), selectedMember)))
     }
   }
 
