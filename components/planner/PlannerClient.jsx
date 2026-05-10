@@ -7,10 +7,16 @@ import { computeMemberNutrition } from '@/lib/nutrition/portionCalc'
 import WeekOverview from './WeekOverview'
 import DayAgenda from './DayAgenda'
 import DayStatsPanel from './DayStatsPanel'
-import AppNav from '@/components/shared/AppNav'
 
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
-const MEAL_LABELS = { breakfast: '🌅 Breakfast', snack: '🍎 Morning Snack', lunch: '☀️ Lunch', snack2: '🍊 Afternoon Snack', dinner: '🌙 Dinner' }
+const MEAL_LABELS = { breakfast: 'Breakfast', snack: 'Morning Snack', lunch: 'Lunch', snack2: 'Afternoon Snack', dinner: 'Dinner' }
+const MEAL_ICONS = {
+  breakfast: '/icons/meals/morning.svg',
+  snack: '/icons/meals/snack.svg',
+  lunch: '/icons/meals/lunch.svg',
+  snack2: '/icons/meals/snack.svg',
+  dinner: '/icons/meals/evening.svg',
+}
 
 function getWeekDates(anchorDate) {
   const d = new Date(anchorDate)
@@ -122,7 +128,7 @@ export default function PlannerClient({ userId, profile, members }) {
     if (!supabase) { setSidebarLoading(false); return }
     const query = supabase
       .from('recipes')
-      .select('id, title, slug, image_url, nutrition')
+      .select('id, title, slug, image_url, nutrition, meal_type')
       .or(`is_public.eq.true,profile_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .limit(40)
@@ -136,68 +142,87 @@ export default function PlannerClient({ userId, profile, members }) {
   // Drag-and-drop helpers
   function handleDropRecipe(date, dateKey) {
     if (!draggedRecipe.current) return
+    const recipe = draggedRecipe.current
+    // If the recipe knows its meal type, save directly — no picker.
+    if (MEAL_TYPES.includes(recipe.meal_type)) {
+      saveRecipeToDay(recipe, dateKey, recipe.meal_type).then(() => {
+        draggedRecipe.current = null
+        setDragActive(false)
+      })
+      return
+    }
     setDropTarget({ date, dateKey })
+  }
+
+  async function saveRecipeToDay(recipe, dateKey, mealType) {
+    setAddingToMeal(true)
+    const supabase = createClient()
+    if (!supabase) { setAddingToMeal(false); return }
+    const recipeTotals = recipe.nutrition?.totals || null
+    let rows
+    if (members.length > 0 && recipeTotals) {
+      rows = members.map(member => ({
+        profile_id: userId,
+        date_str: dateKey,
+        meal_type: mealType,
+        recipe_id: recipe.id,
+        recipe_name: recipe.title || '',
+        member_id: member.id,
+        personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
+      }))
+    } else {
+      rows = [{
+        profile_id: userId,
+        date_str: dateKey,
+        meal_type: mealType,
+        recipe_id: recipe.id,
+        recipe_name: recipe.title || '',
+        member_id: null,
+        personal_nutrition: recipe.nutrition?.perServing || null,
+      }]
+    }
+    const { error } = await supabase.from('calendar_entries').upsert(rows, {
+      onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
+    })
+    if (error) console.error('calendar upsert failed:', error)
+    await refreshDay(dateKey)
+    setAddingToMeal(false)
   }
 
   async function handleMealSlotPick(mealType) {
     if (!dropTarget || !draggedRecipe.current) return
-    setAddingToMeal(true)
-    const supabase = createClient()
-    if (supabase) {
-      const { dateKey } = dropTarget
-      const recipe = draggedRecipe.current
-      const recipeTotals = recipe.nutrition?.totals || null
-
-      let rows
-      if (members.length > 0 && recipeTotals) {
-        rows = members.map(member => ({
-          profile_id: userId,
-          date_str: dateKey,
-          meal_type: mealType,
-          recipe_id: recipe.id,
-          member_id: member.id,
-          personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
-        }))
-      } else {
-        rows = [{
-          profile_id: userId,
-          date_str: dateKey,
-          meal_type: mealType,
-          recipe_id: recipe.id,
-          member_id: null,
-          personal_nutrition: recipe.nutrition?.perServing || null,
-        }]
-      }
-      await supabase.from('calendar_entries').upsert(rows, {
-        onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
-      })
-      await refreshDay(dateKey)
-    }
+    await saveRecipeToDay(draggedRecipe.current, dropTarget.dateKey, mealType)
     setDropTarget(null)
     draggedRecipe.current = null
     setDragActive(false)
-    setAddingToMeal(false)
   }
 
   // Add the pendingRecipe (from recipe page "Add to plan") to the clicked day
   async function placePendingRecipeOnDay(date, dateKey) {
     if (!pendingRecipe) return
-    setDropTarget({ date, dateKey, fromPending: true })
-    draggedRecipe.current = {
+    let recipe = {
       id: pendingRecipe.recipe_id,
       title: pendingRecipe.title,
-      nutrition: null, // server-side fetch happens in upsert below; perServing falls through
+      meal_type: pendingRecipe.meal_type,
+      nutrition: null,
     }
-    // We need a recipe row for nutrition — fetch quickly
     const supabase = createClient()
     if (supabase) {
       const { data } = await supabase
         .from('recipes')
-        .select('id, title, slug, image_url, nutrition')
+        .select('id, title, slug, image_url, nutrition, meal_type')
         .eq('id', pendingRecipe.recipe_id)
         .maybeSingle()
-      if (data) draggedRecipe.current = data
+      if (data) recipe = data
     }
+    const mealType = MEAL_TYPES.includes(recipe.meal_type) ? recipe.meal_type : (pendingRecipe.meal_type || 'dinner')
+    if (MEAL_TYPES.includes(mealType)) {
+      await saveRecipeToDay(recipe, dateKey, mealType)
+      clearPendingRecipe()
+      return
+    }
+    draggedRecipe.current = recipe
+    setDropTarget({ date, dateKey, fromPending: true })
   }
 
   function clearPendingRecipe() {
@@ -263,7 +288,6 @@ export default function PlannerClient({ userId, profile, members }) {
 
   return (
     <>
-      <AppNav />
       <div
         className="plan-page"
         style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.25rem 1rem 5rem' }}
@@ -319,9 +343,17 @@ export default function PlannerClient({ userId, profile, members }) {
                       {r.image_url && (
                         <img src={r.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
                       )}
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                      <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                         {r.title}
                       </span>
+                      {MEAL_ICONS[r.meal_type] && (
+                        <img
+                          src={MEAL_ICONS[r.meal_type]}
+                          alt={MEAL_LABELS[r.meal_type] || r.meal_type}
+                          title={MEAL_LABELS[r.meal_type] || r.meal_type}
+                          style={{ width: 20, height: 20, flexShrink: 0, opacity: 0.8 }}
+                        />
+                      )}
                     </div>
                   ))
                 )}

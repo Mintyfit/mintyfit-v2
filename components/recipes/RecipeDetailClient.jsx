@@ -498,6 +498,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
   const [activeEaters, setActiveEaters] = useState(new Set()) // member IDs who are eating this meal
   const [addingToPlan, setAddingToPlan] = useState(false)
   const [addPlanMsg, setAddPlanMsg] = useState(null) // null | 'success' | 'error'
+  const [addPlanError, setAddPlanError] = useState(null)
   const [shoppingState, setShoppingState] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
   const [checkedIngredients, setCheckedIngredients] = useState(new Set())
   const [selectedShoppingState, setSelectedShoppingState] = useState('idle')
@@ -784,6 +785,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           date_str: dateKey,
           meal_type: mealType,
           recipe_id: recipe.id,
+          recipe_name: recipe.title || '',
           member_id: member.id,
           personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
         }))
@@ -793,6 +795,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           date_str: dateKey,
           meal_type: mealType,
           recipe_id: recipe.id,
+          recipe_name: recipe.title || '',
           member_id: null,
           personal_nutrition: recipe.nutrition?.perServing || null,
         }]
@@ -805,6 +808,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       setAddPlanMsg('success')
     } catch (e) {
       console.error('Add to plan failed:', e)
+      setAddPlanError(e?.message || String(e))
       setAddPlanMsg('error')
     } finally {
       setAddingToPlan(false)
@@ -1272,7 +1276,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       )}
       {addPlanMsg === 'error' && (
         <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', borderRadius: '10px', color: '#dc2626', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 500 }}>
-          ❌ Could not add to plan. Please try again.
+          ❌ Could not add to plan{addPlanError ? `: ${addPlanError}` : '. Please try again.'}
         </div>
       )}
 
