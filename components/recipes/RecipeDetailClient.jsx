@@ -760,22 +760,55 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
   const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0)
   const mealStyle = MEAL_COLORS[recipe.meal_type] || { bg: '#f3f4f6', color: '#374151' }
 
-  function handleAddToPlan() {
-    // Hand the recipe off to the planner so the user can choose a day.
-    // PlannerClient reads sessionStorage on mount and opens its picker.
+  async function handleAddToPlan() {
     setAddingToPlan(true)
+    setAddPlanMsg(null)
     try {
-      const payload = {
-        recipe_id: recipe.id,
-        title: recipe.title,
-        slug: recipe.slug,
-        image: recipe.image_thumb || recipe.image || null,
-        meal_type: recipe.meal_type || 'dinner',
-        eater_ids: Array.from(activeEaters),
+      const supabase = createClient()
+      if (!supabase) throw new Error('no client')
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        window.location.href = '/?auth=login'
+        return
       }
-      sessionStorage.setItem('mintyfit:pendingPlanRecipe', JSON.stringify(payload))
-    } catch {}
-    window.location.href = '/plan?addRecipe=' + encodeURIComponent(recipe.id)
+
+      const now = new Date()
+      const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const mealType = recipe.meal_type || 'dinner'
+      const recipeTotals = recipe.nutrition?.totals || null
+
+      let rows
+      if (members.length > 0 && recipeTotals) {
+        rows = members.map(member => ({
+          profile_id: user.id,
+          date_str: dateKey,
+          meal_type: mealType,
+          recipe_id: recipe.id,
+          member_id: member.id,
+          personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
+        }))
+      } else {
+        rows = [{
+          profile_id: user.id,
+          date_str: dateKey,
+          meal_type: mealType,
+          recipe_id: recipe.id,
+          member_id: null,
+          personal_nutrition: recipe.nutrition?.perServing || null,
+        }]
+      }
+
+      const { error } = await supabase.from('calendar_entries').upsert(rows, {
+        onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
+      })
+      if (error) throw error
+      setAddPlanMsg('success')
+    } catch (e) {
+      console.error('Add to plan failed:', e)
+      setAddPlanMsg('error')
+    } finally {
+      setAddingToPlan(false)
+    }
   }
 
   function startEditing() {
