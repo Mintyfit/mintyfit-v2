@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { computeBMR, explainBMR } from '@/lib/nutrition/portionCalc'
+import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 
 const DIETARY_TYPES = ['omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'pescatarian']
 const ALLERGENS = ['gluten', 'dairy', 'nuts', 'shellfish', 'soy', 'eggs', 'fish', 'peanuts']
@@ -59,6 +61,119 @@ function WeightSparkline({ logs }) {
         return <circle key={i} cx={x} cy={y} r="3" fill="var(--primary)" />
       })}
     </svg>
+  )
+}
+
+function age(profile) {
+  if (profile.age) return Number(profile.age)
+  if (profile.date_of_birth) {
+    const dob = new Date(profile.date_of_birth)
+    if (!isNaN(dob)) {
+      const diff = Date.now() - dob.getTime()
+      return Math.floor(diff / (365.25 * 24 * 3600 * 1000))
+    }
+  }
+  return null
+}
+
+function BMRBreakdown({ profile }) {
+  const a = age(profile)
+  const user = {
+    weight: profile.weight,
+    height: profile.height,
+    age: a,
+    gender: profile.gender,
+    body_fat_pct: profile.body_fat_pct,
+    pregnancy: profile.pregnancy,
+    lactation: profile.lactation,
+  }
+  const bmr = computeBMR(user)
+  const explained = bmr ? explainBMR(user) : null
+  const sedentaryTDEE = bmr ? Math.round(bmr * 1.2 / 10) * 10 : null
+  const needs = bmr ? computeMemberDailyNeeds({ ...user, baseDailyCalories: sedentaryTDEE }) : null
+
+  return (
+    <Section title="Energy Needs (BMR)">
+      <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 14px', lineHeight: 1.5 }}>
+        Your Basal Metabolic Rate is the foundation for every nutrition target on the
+        Plan and Statistics pages. It's recalculated whenever you update weight,
+        height, age, or gender.
+      </p>
+
+      {!bmr ? (
+        <div style={{ padding: '14px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px', fontSize: '13px', color: '#92400e' }}>
+          We can't calculate your BMR yet — please fill in your weight, height, age,
+          and gender above.
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+            <Stat label="BMR (at rest)" value={`${bmr} kcal`} accent />
+            <Stat label="Sedentary daily target" value={`${sedentaryTDEE} kcal`} />
+          </div>
+
+          <div style={{ background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>
+              Equation used
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>
+              {explained.branch}
+            </div>
+            <code style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'ui-monospace, monospace' }}>
+              {explained.formula} = {bmr} kcal/day
+            </code>
+            {explained.additions.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: '12px', color: 'var(--text-2)' }}>
+                {explained.additions.map((a, i) => (
+                  <div key={i}>+ {a.kcal} kcal — {a.label}</div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+              Inputs
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '13px', color: 'var(--text-2)' }}>
+              <span>Weight</span><strong style={{ color: 'var(--text-1)' }}>{user.weight ?? '—'} kg</strong>
+              <span>Height</span><strong style={{ color: 'var(--text-1)' }}>{user.height ?? '—'} cm</strong>
+              <span>Age</span><strong style={{ color: 'var(--text-1)' }}>{a ?? '—'}</strong>
+              <span>Sex</span><strong style={{ color: 'var(--text-1)' }}>{user.gender || '—'}</strong>
+              {user.body_fat_pct ? (<><span>Body fat</span><strong style={{ color: 'var(--text-1)' }}>{user.body_fat_pct}%</strong></>) : null}
+            </div>
+          </div>
+
+          {needs && (
+            <div style={{ marginTop: 14, fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.5 }}>
+              At {sedentaryTDEE} kcal/day your daily targets work out to roughly{' '}
+              <strong>{Math.round(needs.protein)}g protein</strong>,{' '}
+              <strong>{Math.round(needs.carbs_total)}g carbs</strong>,{' '}
+              <strong>{Math.round(needs.fat_total)}g fat</strong>, and{' '}
+              <strong>{Math.round(needs.fiber)}g fibre</strong>. Activity logged on the
+              Plan page increases this target proportionally.
+            </div>
+          )}
+        </>
+      )}
+    </Section>
+  )
+}
+
+function Stat({ label, value, accent }) {
+  return (
+    <div style={{
+      background: accent ? 'rgba(61,138,62,0.08)' : 'var(--bg-page)',
+      border: `1px solid ${accent ? 'var(--primary)' : 'var(--border)'}`,
+      borderRadius: '8px', padding: '12px 14px',
+    }}>
+      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: '20px', fontWeight: 700, color: accent ? 'var(--primary)' : 'var(--text-1)' }}>
+        {value}
+      </div>
+    </div>
   )
 }
 
@@ -279,6 +394,8 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
           </div>
         </div>
       </Section>
+
+      <BMRBreakdown profile={profile} />
 
       {/* Personal Info */}
       <Section title="Personal Info">
