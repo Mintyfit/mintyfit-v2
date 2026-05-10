@@ -25,6 +25,7 @@ export default function DayAgenda({
   entries,
   activities,
   members,
+  activeMembers,
   userId,
   onBack,
   onRefresh,
@@ -77,9 +78,10 @@ export default function DayAgenda({
     if (!supabase) return
     const recipeTotals = recipe.nutrition?.totals || null
 
+    const targetMembers = (activeMembers && activeMembers.length > 0) ? activeMembers : members
     let rows
-    if (members.length > 0 && recipeTotals) {
-      rows = members.map(member => ({
+    if (targetMembers.length > 0 && recipeTotals) {
+      rows = targetMembers.map(member => ({
         profile_id: userId,
         date_str: dateKey,
         meal_type: mealType,

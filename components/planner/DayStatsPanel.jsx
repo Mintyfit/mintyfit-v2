@@ -49,7 +49,7 @@ function MacroDonut({ protein, carbs, fat }) {
   )
 }
 
-export default function DayStatsPanel({ date, dateKey, entries, activities, members }) {
+export default function DayStatsPanel({ date, dateKey, entries, activities, members, selectedMemberIds, onToggleMember }) {
   const totals = calculateDailyTotals(entries, activities, members)
   const { protein, carbs, fat } = totals.macros
 
@@ -93,16 +93,33 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
 
       {memberSummaries.length > 0 && (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem' }}>
-          <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.75rem' }}>
+          <h3 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.5rem' }}>
             Per member
           </h3>
+          {onToggleMember && (
+            <p style={{ fontSize: '0.6875rem', color: 'var(--text-4)', margin: '0 0 0.625rem' }}>
+              Tick the members a new recipe should be planned for.
+            </p>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            {memberSummaries.map(({ member, target, consumed, activityKcal, ratio }) => (
+            {memberSummaries.map(({ member, target, consumed, activityKcal, ratio }) => {
+              const checked = selectedMemberIds ? selectedMemberIds.has(member.id) : true
+              return (
               <div key={member.id}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-1)' }}>
-                    {member.display_name || member.first_name || member.name || 'Member'}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem', gap: '0.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, minWidth: 0, cursor: onToggleMember ? 'pointer' : 'default' }}>
+                    {onToggleMember && (
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => onToggleMember(member.id)}
+                        style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}
+                      />
+                    )}
+                    <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {member.display_name || member.first_name || member.name || member.full_name || 'Member'}
+                    </span>
+                  </label>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
                     {consumed} / {Math.round(target)}
                   </span>
@@ -118,7 +135,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
                   <div style={{ fontSize: '0.6875rem', color: '#6366f1', marginTop: 2 }}>+{activityKcal} kcal active</div>
                 )}
               </div>
-            ))}
+            )})}
           </div>
         </div>
       )}
