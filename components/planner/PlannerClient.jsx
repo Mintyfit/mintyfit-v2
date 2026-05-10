@@ -55,6 +55,14 @@ export default function PlannerClient({ userId, profile, members }) {
   // Pending recipe from /recipes/[slug] "Add to Plan" button
   const [pendingRecipe, setPendingRecipe] = useState(null)
 
+  // Which family members the next added recipe should be planned for.
+  // Defaults to everyone; user can uncheck members in the right-column panel.
+  const [selectedMemberIds, setSelectedMemberIds] = useState(() => new Set(members.map(m => m.id)))
+  useEffect(() => {
+    setSelectedMemberIds(new Set(members.map(m => m.id)))
+  }, [members])
+  const activeMembers = members.filter(m => selectedMemberIds.has(m.id))
+
   const anchorDate = new Date(today)
   anchorDate.setDate(today.getDate() + weekOffset * 7)
   const weekDates = getWeekDates(anchorDate)
@@ -159,8 +167,8 @@ export default function PlannerClient({ userId, profile, members }) {
     if (!supabase) { setAddingToMeal(false); return }
     const recipeTotals = recipe.nutrition?.totals || null
     let rows
-    if (members.length > 0 && recipeTotals) {
-      rows = members.map(member => ({
+    if (activeMembers.length > 0 && recipeTotals) {
+      rows = activeMembers.map(member => ({
         profile_id: userId,
         date_str: dateKey,
         meal_type: mealType,
@@ -419,6 +427,7 @@ export default function PlannerClient({ userId, profile, members }) {
                     entries={dayEntries}
                     activities={dayActivities}
                     members={members}
+                    activeMembers={activeMembers}
                     userId={userId}
                     onBack={() => setSelectedDate(null)}
                     onRefresh={refreshDay}
@@ -433,6 +442,14 @@ export default function PlannerClient({ userId, profile, members }) {
                     entries={dayEntries}
                     activities={dayActivities}
                     members={members}
+                    selectedMemberIds={selectedMemberIds}
+                    onToggleMember={(id) => {
+                      setSelectedMemberIds(prev => {
+                        const next = new Set(prev)
+                        if (next.has(id)) next.delete(id); else next.add(id)
+                        return next
+                      })
+                    }}
                   />
                 </div>
               </div>

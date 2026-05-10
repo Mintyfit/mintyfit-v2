@@ -17,7 +17,7 @@ function enrichMember(m) {
     age,
     gender: m.gender || 'female',
     baseDailyCalories: bmr ? Math.round(bmr * SEDENTARY_MULTIPLIER) : null,
-    display_name: m.display_name || m.first_name || m.name || 'Member',
+    display_name: m.display_name || m.first_name || m.name || m.full_name || 'Member',
   }
 }
 

@@ -53,7 +53,7 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
     const dur = String(tpl.duration_minutes || 30)
     setDuration(dur)
     if (tpl.activity_type && tpl.duration_minutes) {
-      const weight = selectedMember?.weight_kg || 70
+      const weight = selectedMember?.weight || 70
       setCaloriesBurned(String(estimateCalories(tpl.activity_type, tpl.duration_minutes, weight)))
     }
   }
@@ -61,7 +61,7 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
   function handleDurationChange(val) {
     setDuration(val)
     if (val && activityType) {
-      const weight = selectedMember?.weight_kg || 70
+      const weight = selectedMember?.weight || 70
       setCaloriesBurned(String(estimateCalories(activityType, parseFloat(val), weight)))
     }
   }
@@ -69,7 +69,7 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
   function handleActivityTypeChange(val) {
     setActivityType(val)
     if (duration && val) {
-      const weight = selectedMember?.weight_kg || 70
+      const weight = selectedMember?.weight || 70
       setCaloriesBurned(String(estimateCalories(val, parseFloat(duration), weight)))
     }
   }
@@ -140,7 +140,7 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
                 style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.9375rem' }}
               >
                 {members.map(m => (
-                  <option key={m.id} value={m.id}>{m.display_name || m.first_name}</option>
+                  <option key={m.id} value={m.id}>{m.display_name || m.first_name || m.name || m.full_name || 'Member'}</option>
                 ))}
               </select>
             </div>
