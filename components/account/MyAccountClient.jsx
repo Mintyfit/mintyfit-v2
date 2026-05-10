@@ -76,13 +76,17 @@ function age(profile) {
   return null
 }
 
-function BMRBreakdown({ profile }) {
+function BMRBreakdown({ profile, weightLogs }) {
   const a = age(profile)
+  // Fall back to latest weight_log if profile.weight isn't set
+  const latestLogged = weightLogs && weightLogs.length ? Number(weightLogs[0].weight) : null
+  const weight = Number(profile.weight) || latestLogged || null
+  const gender = profile.gender || profile.sex || null
   const user = {
-    weight: profile.weight,
+    weight,
     height: profile.height,
     age: a,
-    gender: profile.gender,
+    gender,
     body_fat_pct: profile.body_fat_pct,
     pregnancy: profile.pregnancy,
     lactation: profile.lactation,
@@ -395,7 +399,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         </div>
       </Section>
 
-      <BMRBreakdown profile={profile} />
+      <BMRBreakdown profile={profile} weightLogs={weightLogs} />
 
       {/* Personal Info */}
       <Section title="Personal Info">
