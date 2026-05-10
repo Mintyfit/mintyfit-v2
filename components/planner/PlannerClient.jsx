@@ -113,7 +113,7 @@ export default function PlannerClient({ userId, profile, members }) {
       .from('calendar_entries')
       .select(`
         id, date_str, meal_type, member_id, consumer_member_ids,
-        recipes(id, title, slug, image_url, nutrition, servings, base_servings)
+        recipes(id, title, slug, image_url, nutrition, servings)
       `)
       .eq('profile_id', userId)
       .gte('date_str', startKey)
@@ -264,7 +264,7 @@ export default function PlannerClient({ userId, profile, members }) {
       .from('calendar_entries')
       .select(`
         id, date_str, meal_type, member_id, consumer_member_ids,
-        recipes(id, title, slug, image_url, nutrition, servings, base_servings)
+        recipes(id, title, slug, image_url, nutrition, servings)
       `)
       .eq('profile_id', userId)
       .eq('date_str', dateKey)
