@@ -146,7 +146,14 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
               <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.375rem' }}>For</label>
               <select
                 value={memberId}
-                onChange={e => setMemberId(e.target.value)}
+                onChange={e => {
+                  const newId = e.target.value
+                  setMemberId(newId)
+                  if (duration && activityType) {
+                    const newMember = members.find(m => m.id === newId) || members[0]
+                    setCaloriesBurned(String(estimateCalories(activityType, parseFloat(duration), newMember)))
+                  }
+                }}
                 style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.9375rem' }}
               >
                 {members.map(m => (
