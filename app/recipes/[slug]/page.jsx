@@ -1,30 +1,64 @@
 import { createPublicClient } from '@/lib/supabase/server'
 import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import RecipeDetailClient from '@/components/recipes/RecipeDetailClient'
 
 export const revalidate = 3600
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const UUID_RE       = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Legacy URLs like "butter-chicken-...-f11a6e" — trailing -<4..12 hex>
+const HEX_SUFFIX_RE = /-([0-9a-f]{4,12})$/i
 
-// Single query reused by both generateMetadata and the page — no double round-trip
+// Resolve a recipe by slug, with graceful fallbacks for legacy URLs.
+// Returns { row, canonicalSlug } where canonicalSlug !== requested slug if
+// we matched via a fallback and the caller should redirect to clean it up.
 async function fetchRecipeRow(slug) {
   const supabase = createPublicClient()
-  const filter = UUID_RE.test(slug)
+
+  // 1) Exact match on slug (or id if the input is a UUID).
+  const exactFilter = UUID_RE.test(slug)
     ? `slug.eq.${slug},id.eq.${slug}`
     : `slug.eq.${slug}`
-  const { data } = await supabase
+  const { data: exact } = await supabase
     .from('recipes')
     .select('*')
-    .or(filter)
+    .or(exactFilter)
     .maybeSingle()
-  return data || null
+  if (exact) return { row: exact, canonicalSlug: exact.slug || slug }
+
+  // 2) Legacy fallback: strip trailing -<hex> and try the clean prefix.
+  const m = slug.match(HEX_SUFFIX_RE)
+  if (m) {
+    const cleanSlug = slug.slice(0, -m[0].length)
+    if (cleanSlug) {
+      const { data: byClean } = await supabase
+        .from('recipes')
+        .select('*')
+        .eq('slug', cleanSlug)
+        .maybeSingle()
+      if (byClean) return { row: byClean, canonicalSlug: byClean.slug }
+
+      // 3) Last resort: the hex tail might be the first chars of the recipe id.
+      const idPrefix = m[1].toLowerCase()
+      const { data: byIdPrefix } = await supabase
+        .from('recipes')
+        .select('*')
+        .ilike('id', `${idPrefix}%`)
+        .limit(1)
+        .maybeSingle()
+      if (byIdPrefix) {
+        return { row: byIdPrefix, canonicalSlug: byIdPrefix.slug || byIdPrefix.id }
+      }
+    }
+  }
+
+  return { row: null, canonicalSlug: null }
 }
 
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
-  const row = await fetchRecipeRow(slug)
+  const { row } = await fetchRecipeRow(slug)
   if (!row) return { title: 'Recipe — MintyFit' }
   return {
     title: `${row.title} — MintyFit`,
@@ -39,9 +73,14 @@ export async function generateMetadata({ params }) {
 
 export default async function RecipeDetailPage({ params }) {
   const { slug } = await params
-  const row = await fetchRecipeRow(slug)
+  const { row, canonicalSlug } = await fetchRecipeRow(slug)
 
   if (!row) notFound()
+
+  // If we matched via legacy fallback, redirect to the clean URL.
+  if (canonicalSlug && canonicalSlug !== slug) {
+    permanentRedirect(`/recipes/${canonicalSlug}`)
+  }
 
   const recipe = normalizeRecipe(row)
 
