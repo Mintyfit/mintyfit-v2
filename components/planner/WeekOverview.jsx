@@ -55,17 +55,19 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
         }
         @media (max-width: 700px) {
           .week-overview-grid {
-            grid-template-columns: repeat(7, minmax(56px, 1fr));
-            gap: 0.35rem;
+            grid-template-columns: repeat(7, minmax(42px, 1fr));
+            gap: 0.25rem;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             padding-bottom: 0.25rem;
           }
           .week-overview-grid > button {
-            padding: 0.5rem 0.25rem !important;
+            padding: 0.4rem 0.2rem !important;
+            border-radius: 10px !important;
           }
           .week-overview-grid .wo-kcal,
-          .week-overview-grid .wo-active { font-size: 0.625rem !important; }
+          .week-overview-grid .wo-active { font-size: 0.5625rem !important; }
+          .week-overview-grid .wo-rings { display: none !important; }
         }
       `}</style>
       {weekDates.map((date, idx) => {
@@ -134,7 +136,7 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
 
             {/* Member nutrition rings */}
             {memberRatios.length > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginBottom: '0.5rem' }}>
+              <div className="wo-rings" style={{ display: 'flex', justifyContent: 'center', gap: '4px', marginBottom: '0.5rem' }}>
                 {memberRatios.map(({ member, ratio }) => (
                   <NutritionRing key={member.id} ratio={ratio} size={28} />
                 ))}
