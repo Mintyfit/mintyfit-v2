@@ -35,6 +35,10 @@ function RecipeRow({ mr }) {
   const { recipe } = mr
   if (!recipe) return null
   const kcal = recipe.nutrition?.perServing?.energy_kcal
+  const imgSrc = recipe.image_thumb || recipe.image
+  const title = recipe.title
+  const servings = recipe.base_servings
+  const prepTime = recipe.prep_time
   return (
     <Link href={`/recipes/${recipe.slug || recipe.id}`} style={{ textDecoration: 'none', display: 'block' }}>
       <div style={{
@@ -48,8 +52,8 @@ function RecipeRow({ mr }) {
       >
         {/* Thumbnail */}
         <div style={{ width: 56, height: 56, borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', position: 'relative' }}>
-          {recipe.image_url ? (
-            <Image src={recipe.image_url} alt={recipe.name} fill style={{ objectFit: 'cover' }} sizes="56px" />
+          {imgSrc ? (
+            <Image src={imgSrc} alt={title || 'recipe'} fill style={{ objectFit: 'cover' }} sizes="56px" />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>🍽️</div>
           )}
@@ -57,14 +61,14 @@ function RecipeRow({ mr }) {
         {/* Name + metadata */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-1)', fontSize: '0.9375rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {recipe.name}
+            {title}
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
-            {recipe.servings && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>👥 {recipe.servings} servings</span>
+            {servings && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>👥 {servings} servings</span>
             )}
-            {recipe.prep_time_minutes && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>⏱ {recipe.prep_time_minutes}min</span>
+            {prepTime && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>⏱ {prepTime}min</span>
             )}
             {kcal && (
               <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>🔥 {Math.round(kcal)} kcal</span>

@@ -1,13 +1,16 @@
 import { createPublicClient, createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
 import MenuDetailClient from '@/components/menus/MenuDetailClient'
 
 export const revalidate = 60
 
+// Legacy "name-ef0dc3" URLs: strip a trailing -<4..12 hex> if no exact match.
+const HEX_SUFFIX_RE = /-([0-9a-f]{4,12})$/i
+
 export async function generateMetadata({ params }) {
-  const menu = await getMenu(params.slug)
+  const { slug } = await params
+  const menu = await getMenu(slug)
   if (!menu) return { title: 'Menu not found — MintyFit' }
   return {
     title: `${menu.name} — MintyFit Meal Plans`,
@@ -18,64 +21,78 @@ export async function generateMetadata({ params }) {
 
 async function getMenu(slug) {
   try {
-    const cookieStore = cookies()
     const supabase = createPublicClient()
-    const authClient = createClient(cookieStore)
+    const authClient = await createClient()
 
-    // Try slug first, then id fallback
-    let query = supabase
-      .from('menus')
-      .select(`
-        *,
-        menu_recipes (
-          id, meal_type, sort_order,
-          recipes (*)
-        )
-      `)
-      .or(`is_public.eq.true`)
+    const selectFields = `*, menu_recipes (id, meal_type, sort_order, recipes (*))`
 
-    let { data } = await query.eq('slug', slug).single()
-    if (!data) {
-      // Try by id
-      const { data: byId } = await query.eq('id', slug).single()
-      data = byId
-    }
-    if (!data) {
-      // Try user's own private menus
+    async function fetchOne(value, column = 'slug') {
+      const { data: pub } = await supabase
+        .from('menus')
+        .select(selectFields)
+        .eq(column, value)
+        .eq('is_public', true)
+        .maybeSingle()
+      if (pub) return pub
+      // Authenticated user's private menus
       const { data: { user } } = await authClient.auth.getUser()
       if (user) {
         const { data: own } = await authClient
           .from('menus')
-          .select(`*, menu_recipes(id, meal_type, sort_order, recipes(*))`)
+          .select(selectFields)
+          .eq(column, value)
           .eq('profile_id', user.id)
-          .or(`slug.eq.${slug},id.eq.${slug}`)
-          .single()
-        data = own
+          .maybeSingle()
+        if (own) return own
+      }
+      return null
+    }
+
+    // 1) Exact slug match
+    let data = await fetchOne(slug, 'slug')
+
+    // 2) Try by id (if input looks like a UUID)
+    if (!data && /^[0-9a-f-]{36}$/i.test(slug)) {
+      data = await fetchOne(slug, 'id')
+    }
+
+    // 3) Legacy fallback: strip trailing -<hex> and try the clean prefix.
+    let canonicalSlug = data?.slug || null
+    if (!data) {
+      const m = slug.match(HEX_SUFFIX_RE)
+      if (m) {
+        const cleanSlug = slug.slice(0, -m[0].length)
+        if (cleanSlug) {
+          data = await fetchOne(cleanSlug, 'slug')
+          if (data) canonicalSlug = data.slug
+        }
       }
     }
+
     if (!data) return null
 
-    // Normalize recipes within menu_recipes
     const normalizedRecipes = (data.menu_recipes || [])
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-      .map(mr => ({
-        ...mr,
-        recipe: normalizeRecipe(mr.recipes),
-      }))
+      .map(mr => ({ ...mr, recipe: normalizeRecipe(mr.recipes) }))
       .filter(mr => mr.recipe)
 
-    return { ...data, normalizedRecipes }
+    return { ...data, normalizedRecipes, _canonicalSlug: canonicalSlug || data.slug }
   } catch {
     return null
   }
 }
 
 export default async function MenuDetailPage({ params }) {
-  const menu = await getMenu(params.slug)
+  const { slug } = await params
+  const menu = await getMenu(slug)
   if (!menu) notFound()
 
-  const cookieStore = cookies()
-  const authClient = createClient(cookieStore)
+  // Redirect legacy URLs (e.g. -mediterranean-meal-plan-ef0dc3) to clean slug
+  if (menu._canonicalSlug && menu._canonicalSlug !== slug) {
+    permanentRedirect(`/menus/${menu._canonicalSlug}`)
+  }
+
+  const authClient = await createClient()
   let userId = null
   try {
     const { data: { user } } = await authClient.auth.getUser()

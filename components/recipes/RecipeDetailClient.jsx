@@ -508,6 +508,8 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
   const [shoppingState, setShoppingState] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
   const [checkedIngredients, setCheckedIngredients] = useState(new Set())
   const [selectedShoppingState, setSelectedShoppingState] = useState('idle')
+  // 'steps' = ingredients inline with each step (default); 'list' = all ingredients first, then numbered steps
+  const [viewMode, setViewMode] = useState('steps')
 
   // Raw / cooked nutrition toggle
   const [showRawNutrition, setShowRawNutrition] = useState(false)
@@ -1213,20 +1215,12 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
         {isOwner && !isEditing && (
-          <>
-            <button
-              onClick={startEditing}
-              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
-            >
-              ✏️ Edit Recipe
-            </button>
-            <button
-              onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
-              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid #ef4444', color: '#ef4444', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
-            >
-              🗑️ Delete Recipe
-            </button>
-          </>
+          <button
+            onClick={startEditing}
+            style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+          >
+            ✏️ Edit Recipe
+          </button>
         )}
         {isEditing && (
           <>
@@ -1243,6 +1237,13 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
               style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
             >
               Cancel
+            </button>
+            <button
+              onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
+              disabled={isSavingEdit}
+              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid #ef4444', color: '#ef4444', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer', marginLeft: 'auto' }}
+            >
+              🗑️ Delete Recipe
             </button>
             {saveEditError && (
               <span style={{ alignSelf: 'center', color: '#ef4444', fontSize: '0.875rem' }}>{saveEditError}</span>
@@ -1404,6 +1405,22 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>
             {isEditing ? '✏️ Edit Steps' : 'Instructions'}
           </h2>
+          {!isEditing && (
+            <div style={{ display: 'inline-flex', border: '1.5px solid var(--border)', borderRadius: '8px', overflow: 'hidden', fontSize: '0.75rem', fontWeight: 600 }}>
+              <button
+                onClick={() => setViewMode('steps')}
+                style={{ padding: '0.35rem 0.7rem', background: viewMode === 'steps' ? 'var(--primary)' : 'transparent', color: viewMode === 'steps' ? '#fff' : 'var(--text-3)', border: 'none', cursor: 'pointer' }}
+              >
+                Inline
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                style={{ padding: '0.35rem 0.7rem', background: viewMode === 'list' ? 'var(--primary)' : 'transparent', color: viewMode === 'list' ? '#fff' : 'var(--text-3)', border: 'none', cursor: 'pointer', borderLeft: '1.5px solid var(--border)' }}
+              >
+                List
+              </button>
+            </div>
+          )}
           {!isEditing && checkedIngredients.size > 0 && (
             <button
               onClick={addSelectedToShoppingList}
@@ -1421,6 +1438,75 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             </button>
           )}
         </div>
+        {/* List view: aggregated ingredients (deduped by name) before the numbered steps */}
+        {!isEditing && viewMode === 'list' && (() => {
+          const seen = new Map()
+          for (const step of (recipe.steps || [])) {
+            for (const ing of (step.ingredients || [])) {
+              const key = ing.name?.toLowerCase()
+              if (!key) continue
+              const swap = swappedIngredients.get(key)
+              const displayName = swap ? swap.name : ing.name
+              const displayAmount = swap
+                ? scaleAmount((ing.amount || 1) * (swap.amount_factor ?? 1))
+                : scaleAmount(ing.amount)
+              if (!seen.has(key)) {
+                seen.set(key, { key, displayName, displayAmount, unit: ing.unit, originalKey: key, isSwapped: !!swap, original: ing })
+              }
+            }
+          }
+          const flat = [...seen.values()]
+          if (flat.length === 0) return null
+          return (
+            <div style={{ marginBottom: '1.5rem', padding: '1rem 1.125rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }}>
+              <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.75rem' }}>Ingredients</h3>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                {flat.map(item => {
+                  const checked = checkedIngredients.has(item.key)
+                  return (
+                    <li key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <button
+                        onClick={() => toggleIngredient(item.key)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.4rem',
+                          fontSize: '0.8125rem',
+                          background: checked ? 'var(--primary)' : item.isSwapped ? 'rgba(var(--primary-rgb, 61,138,62),0.08)' : 'var(--bg-page)',
+                          border: `1px solid ${checked ? 'var(--primary)' : item.isSwapped ? 'var(--primary)' : 'var(--border)'}`,
+                          borderRadius: item.isSwapped ? '20px 0 0 20px' : '20px',
+                          padding: '0.2rem 0.65rem 0.2rem 0.45rem',
+                          color: checked ? '#fff' : item.isSwapped ? 'var(--primary)' : 'var(--text-2)',
+                          cursor: 'pointer', userSelect: 'none',
+                        }}
+                      >
+                        <span style={{ width: 14, height: 14, borderRadius: '3px', flexShrink: 0, border: `1.5px solid ${checked ? '#fff' : 'var(--border)'}`, background: checked ? '#fff' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {checked && <span style={{ color: 'var(--primary)', fontSize: '0.625rem', lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                        </span>
+                        {item.displayAmount ? <strong style={{ color: checked ? '#fff' : item.isSwapped ? 'var(--primary)' : 'var(--text-1)' }}>{item.displayAmount}{item.unit ? ` ${item.unit}` : ''} </strong> : ''}
+                        <span style={{ textTransform: 'capitalize' }}>{item.displayName}</span>
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); setShowAlternativesFor(item.isSwapped ? { name: item.displayName, _isSwapped: true, _originalName: item.originalKey } : item.original) }}
+                        title={item.isSwapped ? `Swapped — tap to change` : 'Find alternatives'}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          width: 22, height: 22,
+                          borderRadius: item.isSwapped ? '0 20px 20px 0' : '50%',
+                          border: `1px solid ${item.isSwapped ? 'var(--primary)' : 'var(--border)'}`,
+                          borderLeft: item.isSwapped ? 'none' : undefined,
+                          background: item.isSwapped ? 'var(--primary)' : 'var(--bg-page)',
+                          color: item.isSwapped ? '#fff' : 'var(--text-4)',
+                          cursor: 'pointer', fontSize: '0.625rem', padding: 0, flexShrink: 0,
+                        }}
+                      >
+                        ⇄
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })()}
         {(isEditing ? editedRecipe.steps : recipe.steps || []).map((step, i) => {
           const isside = step.component === 'side'
           const stepIngredients = step.ingredients || []
@@ -1503,8 +1589,8 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
                   )}
                 </div>
 
-                {/* Ingredients for this step — with checkboxes + swap */}
-                {stepIngredients.length > 0 && (
+                {/* Ingredients for this step — with checkboxes + swap. Hidden in list view (ingredients shown above). */}
+                {stepIngredients.length > 0 && viewMode !== 'list' && (
                   <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.625rem', display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
                     {stepIngredients.map((ing, j) => {
                       const originalKey = ing.name?.toLowerCase()
