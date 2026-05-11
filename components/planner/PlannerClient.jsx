@@ -550,14 +550,21 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
               gap: 1rem;
             }
             .plan-col1 { position: static; order: 4; }
-            .plan-main { order: 1; display: flex; flex-direction: column; }
+            .plan-main { order: 1; display: flex; flex-direction: column; min-width: 0; }
             .plan-day {
               display: flex;
               flex-direction: column;
               gap: 1rem;
             }
-            .plan-col2 { order: 1; }
-            .plan-col3 { order: 2; }
+            .plan-col2 { order: 1; min-width: 0; }
+            .plan-col3 { order: 2; min-width: 0; }
+          }
+          @media (max-width: 600px) {
+            .plan-page {
+              padding-left: 0.5rem !important;
+              padding-right: 0.5rem !important;
+            }
+            .plan-page h1 { font-size: 1.25rem !important; }
           }
         `}</style>
       </div>

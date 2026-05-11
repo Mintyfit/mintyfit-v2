@@ -55,29 +55,17 @@ export default function AppNav() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }} className="hide-mobile">
             {NAV_LINKS.map(link => {
               const active = pathname?.startsWith(link.href)
-              const linkStyle = {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.5rem 0.875rem',
-                borderRadius: '8px',
-                textDecoration: 'none',
-                fontSize: '0.9375rem',
-                fontWeight: active ? 600 : 400,
-                color: active ? 'var(--primary)' : 'var(--text-2)',
-                background: active ? 'rgba(61,138,62,0.08)' : 'transparent',
-                transition: 'background 0.15s, color 0.15s',
-              }
+              const className = `app-nav-link${active ? ' app-nav-link--active' : ''}`
               if (link.href === '/shopping-list') {
                 return (
-                  <ShoppingCartLink key={link.href} active={active} style={linkStyle}>
+                  <ShoppingCartLink key={link.href} active={active} className={className}>
                     <span>{link.icon}</span>
                     {link.label}
                   </ShoppingCartLink>
                 )
               }
               return (
-                <Link key={link.href} href={link.href} style={linkStyle}>
+                <Link key={link.href} href={link.href} className={className}>
                   <span>{link.icon}</span>
                   {link.label}
                 </Link>
@@ -248,27 +236,17 @@ export default function AppNav() {
       }}>
         {NAV_LINKS.map(link => {
           const active = pathname?.startsWith(link.href)
-          const mobileStyle = {
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2px',
-            textDecoration: 'none',
-            color: active ? 'var(--primary)' : 'var(--text-3)',
-            fontSize: '0.625rem',
-            fontWeight: active ? 600 : 400,
-            padding: '0.5rem 0.75rem',
-          }
+          const className = `app-bottom-nav-link${active ? ' app-bottom-nav-link--active' : ''}`
           if (link.href === '/shopping-list') {
             return (
-              <ShoppingCartLink key={link.href} active={active} style={mobileStyle}>
+              <ShoppingCartLink key={link.href} active={active} className={className}>
                 <span style={{ fontSize: '1.25rem' }}>{link.icon}</span>
                 {link.label}
               </ShoppingCartLink>
             )
           }
           return (
-            <Link key={link.href} href={link.href} style={mobileStyle}>
+            <Link key={link.href} href={link.href} className={className}>
               <span style={{ fontSize: '1.25rem' }}>{link.icon}</span>
               {link.label}
             </Link>

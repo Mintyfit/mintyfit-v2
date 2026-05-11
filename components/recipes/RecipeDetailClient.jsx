@@ -497,6 +497,7 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal, memberDaily
 export default function RecipeDetailClient({ recipe, members: initialMembers }) {
   const router = useRouter()
   const [members, setMembers] = useState(initialMembers || [])
+  const [familyId, setFamilyId] = useState(null)
   const [activeEaters, setActiveEaters] = useState(new Set()) // member IDs who are eating this meal
   const [addingToPlan, setAddingToPlan] = useState(false)
   const [addPlanMsg, setAddPlanMsg] = useState(null) // null | 'success' | 'error'
@@ -568,6 +569,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       let loaded = []
       if (memberships?.length) {
         const familyId = memberships[0].family_id
+        setFamilyId(familyId)
         const [{ data: linked }, { data: managed }] = await Promise.all([
           supabase
             .from('family_memberships')
@@ -781,34 +783,27 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       const now = new Date()
       const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
       const mealType = recipe.meal_type || 'dinner'
-      const recipeTotals = recipe.nutrition?.totals || null
 
-      let rows
-      if (members.length > 0 && recipeTotals) {
-        rows = members.map(member => ({
-          profile_id: user.id,
-          date_str: dateKey,
-          meal_type: mealType,
-          recipe_id: recipe.id,
-          recipe_name: recipe.title || '',
-          member_id: member.id,
-          personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
-        }))
-      } else {
-        rows = [{
-          profile_id: user.id,
-          date_str: dateKey,
-          meal_type: mealType,
-          recipe_id: recipe.id,
-          recipe_name: recipe.title || '',
-          member_id: null,
-          personal_nutrition: recipe.nutrition?.perServing || null,
-        }]
+      const eaterIds = activeEaters.size > 0
+        ? members.filter(m => activeEaters.has(m.id)).map(m => m.id)
+        : members.map(m => m.id)
+
+      const row = {
+        profile_id: user.id,
+        family_id: familyId || null,
+        date_str: dateKey,
+        meal_type: mealType,
+        recipe_id: recipe.id,
+        recipe_name: recipe.title || '',
+        member_id: null,
+        consumer_member_ids: eaterIds,
+        personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
+        origin: 'planned',
       }
 
-      const { error } = await supabase.from('calendar_entries').upsert(rows, {
-        onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
-      })
+      const { error } = await supabase
+        .from('calendar_entries')
+        .upsert([row], { onConflict: 'family_id,date_str,meal_type,recipe_id,origin' })
       if (error) throw error
       setAddPlanMsg('success')
     } catch (e) {
@@ -1584,6 +1579,60 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
         {recipe.plating_note && (
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.875rem 1rem', fontSize: '0.9375rem', color: 'var(--text-2)', fontStyle: 'italic' }}>
             🍽️ {recipe.plating_note}
+          </div>
+        )}
+        {!isEditing && (
+          <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'center' }}>
+            <button
+              onClick={async () => {
+                if (shoppingState === 'loading') return
+                setShoppingState('loading')
+                try {
+                  let body
+                  if (checkedIngredients.size > 0) {
+                    const seen = new Set()
+                    const selected = []
+                    for (const step of (recipe.steps || [])) {
+                      for (const ing of (step.ingredients || [])) {
+                        const key = ing.name?.toLowerCase()
+                        if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
+                        seen.add(key)
+                        selected.push({
+                          ingredient_name: ing.name,
+                          amount: ing.amount || null,
+                          unit: ing.unit || null,
+                        })
+                      }
+                    }
+                    body = JSON.stringify({ recipe_id: recipe.id, ingredients: selected })
+                  } else {
+                    body = JSON.stringify({ recipe_id: recipe.id })
+                  }
+                  const res = await fetch('/api/shopping-list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body,
+                  })
+                  if (!res.ok) throw new Error('failed')
+                  setShoppingState('success')
+                  setTimeout(() => setShoppingState('idle'), 3000)
+                } catch {
+                  setShoppingState('error')
+                  setTimeout(() => setShoppingState('idle'), 3000)
+                }
+              }}
+              style={{
+                padding: '0.625rem 1.25rem', borderRadius: '10px',
+                background: shoppingState === 'success' ? 'rgba(61,138,62,0.1)' : 'transparent',
+                border: `2px solid ${shoppingState === 'error' ? '#ef4444' : 'var(--primary)'}`,
+                color: shoppingState === 'error' ? '#ef4444' : 'var(--primary)',
+                fontWeight: 600, fontSize: '0.9375rem',
+                cursor: shoppingState === 'loading' ? 'wait' : 'pointer',
+                opacity: shoppingState === 'loading' ? 0.7 : 1,
+              }}
+            >
+              {shoppingState === 'loading' ? '⏳ Adding…' : shoppingState === 'success' ? '✅ Added!' : shoppingState === 'error' ? '❌ Failed' : '🛒 Add to Shopping List'}
+            </button>
           </div>
         )}
       </section>

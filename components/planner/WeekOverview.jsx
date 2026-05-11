@@ -46,11 +46,28 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
   const todayKey = toDateKey(today)
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(7, 1fr)',
-      gap: '0.5rem',
-    }}>
+    <div className="week-overview-grid">
+      <style>{`
+        .week-overview-grid {
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 0.5rem;
+        }
+        @media (max-width: 700px) {
+          .week-overview-grid {
+            grid-template-columns: repeat(7, minmax(56px, 1fr));
+            gap: 0.35rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 0.25rem;
+          }
+          .week-overview-grid > button {
+            padding: 0.5rem 0.25rem !important;
+          }
+          .week-overview-grid .wo-kcal,
+          .week-overview-grid .wo-active { font-size: 0.625rem !important; }
+        }
+      `}</style>
       {weekDates.map((date, idx) => {
         const dk = toDateKey(date)
         const isToday = dk === todayKey
@@ -142,14 +159,14 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
 
             {/* Calorie badge */}
             {totalCal > 0 && (
-              <div style={{ textAlign: 'center', fontSize: '0.6875rem', color: 'var(--text-3)', marginBottom: '0.25rem' }}>
+              <div className="wo-kcal" style={{ textAlign: 'center', fontSize: '0.6875rem', color: 'var(--text-3)', marginBottom: '0.25rem' }}>
                 🔥 {totalCal} kcal
               </div>
             )}
 
             {/* Activity badge */}
             {hasActivity && (
-              <div style={{ textAlign: 'center', fontSize: '0.6875rem', color: '#6366f1' }}>⚡ Active</div>
+              <div className="wo-active" style={{ textAlign: 'center', fontSize: '0.6875rem', color: '#6366f1' }}>⚡ Active</div>
             )}
           </button>
         )

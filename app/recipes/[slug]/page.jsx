@@ -1,9 +1,12 @@
-import { createPublicClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
 import { notFound, permanentRedirect } from 'next/navigation'
 import RecipeDetailClient from '@/components/recipes/RecipeDetailClient'
 
-export const revalidate = 3600
+// Auth-aware: a private recipe must only be visible to its owner / family.
+// ISR would cache per-URL across users, leaking private rows — so we render
+// dynamically instead. Public recipes are still cheap (single indexed lookup).
+export const dynamic = 'force-dynamic'
 
 const UUID_RE       = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // Legacy URLs like "butter-chicken-...-f11a6e" — trailing -<4..12 hex>
@@ -17,7 +20,10 @@ const NUM_SUFFIX_RE = /-\d+$/
 // Returns { row, canonicalSlug } where canonicalSlug !== requested slug if
 // we matched via a fallback and the caller should redirect to clean it up.
 async function fetchRecipeRow(slug) {
-  const supabase = createPublicClient()
+  // Use the cookie-aware server client so RLS lets owners see their own
+  // private recipes (is_public=false). Anonymous visitors still get only
+  // public rows via the same RLS policy.
+  const supabase = await createClient()
 
   // 1) Exact match on slug (or id if the input is a UUID).
   const exactFilter = UUID_RE.test(slug)
