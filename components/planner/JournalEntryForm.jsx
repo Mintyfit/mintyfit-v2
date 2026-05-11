@@ -25,10 +25,10 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
       const supabase = createClient()
       if (!supabase) return
       const { data } = await supabase
-        .from('journal_entries')
+        .from('food_journal')
         .select('food_name, amount, unit')
         .eq('profile_id', userId)
-        .order('logged_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(200)
       if (!data) return
       // Count occurrences
@@ -147,21 +147,25 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
     setLoading(false)
   }
 
-  async function saveEntry({ food_name, amount, unit, nutrition, nutrition_source }) {
+  async function saveEntry({ food_name, amount, unit, nutrition }) {
     const supabase = createClient()
-    if (!supabase) return
-    await supabase.from('journal_entries').insert({
+    if (!supabase) { setError('No connection.'); return }
+    // Schema (migration 011): food_journal(profile_id, member_id, logged_date,
+    // meal_type, food_name, amount, unit, nutrition, created_at).
+    const { error: insertError } = await supabase.from('food_journal').insert({
       profile_id: userId,
       member_id: memberId || null,
-      date: dateKey,
+      logged_date: dateKey,
       meal_type: mealType,
       food_name,
       amount,
       unit,
       nutrition,
-      nutrition_source,
-      logged_at: new Date().toISOString(),
     })
+    if (insertError) {
+      setError(insertError.message || 'Could not save entry.')
+      return
+    }
     onSave()
   }
 
