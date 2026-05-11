@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -35,7 +36,7 @@ export async function POST(request) {
     // Verify ownership before doing anything destructive.
     const { data: existing, error: fetchError } = await supabase
       .from('recipes')
-      .select('id, profile_id')
+      .select('id, profile_id, slug')
       .eq('id', recipe_id)
       .maybeSingle()
 
@@ -65,6 +66,15 @@ export async function POST(request) {
       console.error('Recipe delete error:', deleteError)
       return NextResponse.json({ error: 'Failed to delete recipe' }, { status: 500 })
     }
+
+    // Bust the ISR cache for the archive and the detail page so the deleted
+    // recipe disappears immediately instead of after `revalidate = 3600`.
+    revalidatePath('/recipes')
+    if (existing.slug) revalidatePath(`/recipes/${existing.slug}`)
+    // Plan + statistics pages read calendar_entries; the rows are gone via
+    // cascade FK, but revalidate anyway so SSR caches refresh on next visit.
+    revalidatePath('/plan')
+    revalidatePath('/statistics')
 
     return NextResponse.json({ success: true })
   } catch (err) {
