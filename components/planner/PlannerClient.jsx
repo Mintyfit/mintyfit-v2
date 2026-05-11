@@ -43,9 +43,13 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   const touchStartX = useRef(null)
 
   // Recipe sidebar (column 1) — always rendered, always populated
+  const PAGE_SIZE = 20
   const [sidebarRecipes, setSidebarRecipes] = useState([])
   const [sidebarSearch, setSidebarSearch] = useState('')
   const [sidebarLoading, setSidebarLoading] = useState(true)
+  const [sidebarPage, setSidebarPage] = useState(0)
+  const [sidebarHasMore, setSidebarHasMore] = useState(true)
+  const [sidebarLoadingMore, setSidebarLoadingMore] = useState(false)
   const draggedRecipe = useRef(null)
   const [dragActive, setDragActive] = useState(false)
   const [dropTarget, setDropTarget] = useState(null)
@@ -150,10 +154,12 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       })
   }, [userId, weekOffset])
 
-  // Sidebar recipes — load on mount and on search change
+  // Sidebar recipes — first page; resets when search changes
   useEffect(() => {
     if (!userId) return
     setSidebarLoading(true)
+    setSidebarPage(0)
+    setSidebarHasMore(true)
     const supabase = createClient()
     if (!supabase) { setSidebarLoading(false); return }
     const query = supabase
@@ -161,13 +167,51 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       .select('id, title, slug, image_url, nutrition, meal_type')
       .or(`is_public.eq.true,profile_id.eq.${userId}`)
       .order('created_at', { ascending: false })
-      .limit(40)
+      .range(0, PAGE_SIZE - 1)
     if (sidebarSearch.trim()) query.ilike('title', `%${sidebarSearch.trim()}%`)
     query.then(({ data }) => {
-      setSidebarRecipes(data || [])
+      const list = data || []
+      setSidebarRecipes(list)
+      setSidebarHasMore(list.length === PAGE_SIZE)
       setSidebarLoading(false)
     })
   }, [sidebarSearch, userId])
+
+  async function loadMoreSidebar() {
+    if (sidebarLoadingMore || !sidebarHasMore) return
+    setSidebarLoadingMore(true)
+    const supabase = createClient()
+    if (!supabase) { setSidebarLoadingMore(false); return }
+    const nextPage = sidebarPage + 1
+    const from = nextPage * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+    const query = supabase
+      .from('recipes')
+      .select('id, title, slug, image_url, nutrition, meal_type')
+      .or(`is_public.eq.true,profile_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+      .range(from, to)
+    if (sidebarSearch.trim()) query.ilike('title', `%${sidebarSearch.trim()}%`)
+    const { data } = await query
+    const list = data || []
+    setSidebarRecipes(prev => [...prev, ...list])
+    setSidebarPage(nextPage)
+    setSidebarHasMore(list.length === PAGE_SIZE)
+    setSidebarLoadingMore(false)
+  }
+
+  // Tap "+" on a sidebar recipe — adds to selectedDate. If recipe has a
+  // meal_type, save directly; else open the meal-slot picker.
+  function handleTapAddRecipe(recipe) {
+    const targetDate = selectedDate || today
+    const dateKey = toDateKey(targetDate)
+    if (MEAL_TYPES.includes(recipe.meal_type)) {
+      saveRecipeToDay(recipe, dateKey, recipe.meal_type)
+      return
+    }
+    draggedRecipe.current = recipe
+    setDropTarget({ date: targetDate, dateKey })
+  }
 
   // Drag-and-drop helpers
   function handleDropRecipe(date, dateKey) {
@@ -358,30 +402,60 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                 ) : sidebarRecipes.length === 0 ? (
                   <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>No recipes</p>
                 ) : (
-                  sidebarRecipes.map(r => (
-                    <div
-                      key={r.id}
-                      draggable
-                      onDragStart={() => { draggedRecipe.current = r; setDragActive(true) }}
-                      onDragEnd={() => { if (!dropTarget) { draggedRecipe.current = null; setDragActive(false) } }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
-                    >
-                      {r.image_url && (
-                        <img src={r.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
-                      )}
-                      <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {r.title}
-                      </span>
-                      {MEAL_ICONS[r.meal_type] && (
-                        <img
-                          src={MEAL_ICONS[r.meal_type]}
-                          alt={MEAL_LABELS[r.meal_type] || r.meal_type}
-                          title={MEAL_LABELS[r.meal_type] || r.meal_type}
-                          style={{ width: 20, height: 20, flexShrink: 0, opacity: 0.8 }}
-                        />
-                      )}
-                    </div>
-                  ))
+                  <>
+                    {sidebarRecipes.map(r => (
+                      <div
+                        key={r.id}
+                        draggable
+                        onDragStart={() => { draggedRecipe.current = r; setDragActive(true) }}
+                        onDragEnd={() => { if (!dropTarget) { draggedRecipe.current = null; setDragActive(false) } }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
+                      >
+                        {r.image_url && (
+                          <img src={r.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                        )}
+                        <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          {r.title}
+                        </span>
+                        {MEAL_ICONS[r.meal_type] && (
+                          <img
+                            src={MEAL_ICONS[r.meal_type]}
+                            alt={MEAL_LABELS[r.meal_type] || r.meal_type}
+                            title={MEAL_LABELS[r.meal_type] || r.meal_type}
+                            style={{ width: 18, height: 18, flexShrink: 0, opacity: 0.8 }}
+                          />
+                        )}
+                        <button
+                          onClick={() => handleTapAddRecipe(r)}
+                          aria-label={`Add ${r.title} to plan`}
+                          title={selectedDate
+                            ? `Add to ${selectedDate.toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}`
+                            : 'Add to today'}
+                          style={{
+                            width: 28, height: 28, borderRadius: '50%',
+                            border: 'none', background: 'var(--primary)', color: '#fff',
+                            fontSize: '1rem', fontWeight: 700, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0, lineHeight: 1,
+                          }}
+                        >+</button>
+                      </div>
+                    ))}
+                    {sidebarHasMore && (
+                      <button
+                        onClick={loadMoreSidebar}
+                        disabled={sidebarLoadingMore}
+                        style={{
+                          width: '100%', marginTop: '0.5rem', padding: '0.5rem',
+                          borderRadius: '8px', border: '1px solid var(--border)',
+                          background: 'var(--bg-page)', color: 'var(--text-2)',
+                          fontSize: '0.8125rem', fontWeight: 500, cursor: 'pointer',
+                        }}
+                      >
+                        {sidebarLoadingMore ? 'Loading…' : 'Load more'}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
