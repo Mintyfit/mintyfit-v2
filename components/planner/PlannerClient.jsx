@@ -39,6 +39,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [entries, setEntries] = useState({})
   const [activities, setActivities] = useState({})
+  const [journals, setJournals] = useState({}) // { dateKey: { mealType: [foodJournalRow, ...] } }
   const [loading, setLoading] = useState(false)
   const touchStartX = useRef(null)
 
@@ -152,6 +153,24 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           actMap[act.date_str][act.member_id].push(act)
         }
         setActivities(actMap)
+      })
+    // food_journal is a separate table (no FK to calendar_entries); load
+    // independently and key by date_str + meal_type so DayAgenda can render.
+    supabase
+      .from('food_journal')
+      .select('*')
+      .eq('profile_id', userId)
+      .gte('logged_date', startKey)
+      .lte('logged_date', endKey)
+      .then(({ data }) => {
+        const jMap = {}
+        for (const j of data || []) {
+          const dk = j.logged_date
+          if (!jMap[dk]) jMap[dk] = {}
+          if (!jMap[dk][j.meal_type]) jMap[dk][j.meal_type] = []
+          jMap[dk][j.meal_type].push(j)
+        }
+        setJournals(jMap)
       })
   }, [userId, weekOffset])
 
@@ -352,6 +371,19 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       actMap[act.member_id].push(act)
     }
     setActivities(prev => ({ ...prev, [dateKey]: actMap }))
+
+    // refresh food_journal for the day
+    const { data: jData } = await supabase
+      .from('food_journal')
+      .select('*')
+      .eq('profile_id', userId)
+      .eq('logged_date', dateKey)
+    const jMap = {}
+    for (const j of jData || []) {
+      if (!jMap[j.meal_type]) jMap[j.meal_type] = []
+      jMap[j.meal_type].push(j)
+    }
+    setJournals(prev => ({ ...prev, [dateKey]: jMap }))
   }, [userId])
 
   const removeEntry = useCallback(async (entryId, dateKey) => {
@@ -364,6 +396,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   const selectedKey = selectedDate ? toDateKey(selectedDate) : null
   const dayEntries = selectedKey ? (entries[selectedKey] || {}) : {}
   const dayActivities = selectedKey ? (activities[selectedKey] || {}) : {}
+  const dayJournals = selectedKey ? (journals[selectedKey] || {}) : {}
 
   return (
     <>
@@ -557,6 +590,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                     dateKey={selectedKey}
                     entries={dayEntries}
                     activities={dayActivities}
+                    journals={dayJournals}
                     members={members}
                     activeMembers={activeMembers}
                     userId={userId}

@@ -54,7 +54,7 @@ export default function Navbar() {
 
   const initials    = getInitials(profile, user)
   const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Account'
-  const logoSrc     = '/images/Mintyfit.svg'
+  const logoSrc     = dark ? '/images/MintyfitWhite.svg' : '/images/Mintyfit.svg'
 
   useEffect(() => {
     function handler(e) {
@@ -111,7 +111,7 @@ export default function Navbar() {
           outline-offset: 2px;
         }
         .mf-nav-link--active {
-          background: #dcfce7;
+          background: var(--bg-active);
           color: var(--primary);
           font-weight: 700;
           border-bottom-color: var(--primary);
@@ -239,7 +239,7 @@ export default function Navbar() {
             ))}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {loading ? <div style={{ width: 88, height: 36, borderRadius: 10, backgroundColor: '#dcfce7' }} />
+            {loading ? <div style={{ width: 88, height: 36, borderRadius: 10, backgroundColor: 'var(--bg-subtle)' }} />
             : !user ? <><button onClick={() => { setAuthTab('signin'); setAuthOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, backgroundColor: 'transparent', color: 'var(--text-2)', fontWeight: 600, fontSize: 16, border: '1px solid var(--border)', cursor: 'pointer' }}>Sign In</button><button onClick={() => { setAuthTab('signup'); setAuthOpen(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, backgroundColor: 'var(--primary)', color: '#fff', fontWeight: 600, fontSize: 16, border: 'none', cursor: 'pointer' }}><LogIn size={17} />Get Started</button></>
             : <div ref={dropdownRef} style={{ position: 'relative' }}>
                 <button onClick={() => setDropdownOpen(d => !d)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 10, backgroundColor: 'var(--bg-subtle, #f3f4f6)', color: 'var(--text-2)', fontWeight: 500, fontSize: 16, border: 'none', cursor: 'pointer' }}>
