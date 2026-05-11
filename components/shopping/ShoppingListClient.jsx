@@ -249,6 +249,18 @@ export default function ShoppingListClient({ initialList, initialItems }) {
     } catch {}
   }
 
+  // ── Select all / Deselect all ───────────────────────────────────────────────
+  async function handleSetAll(checked) {
+    setItems(prev => prev.map(i => ({ ...i, checked })))
+    try {
+      await fetch('/api/shopping-list', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ set_all: checked }),
+      })
+    } catch {}
+  }
+
   // ── Clear all ───────────────────────────────────────────────────────────────
   async function handleClearAll() {
     if (!confirm('Remove every item from the shopping list?')) return
@@ -322,6 +334,19 @@ export default function ShoppingListClient({ initialList, initialItems }) {
           >
             {refreshing ? '⏳' : '🔄'} Refresh from plan
           </button>
+          {items.length > 0 && (
+            <button
+              onClick={() => handleSetAll(uncheckedCount > 0)}
+              title={uncheckedCount > 0 ? 'Mark every item checked' : 'Uncheck every item'}
+              style={{
+                padding: '0.5rem 0.875rem', borderRadius: '8px',
+                border: '1px solid var(--border)', background: 'transparent',
+                color: 'var(--text-3)', cursor: 'pointer', fontSize: '0.8125rem',
+              }}
+            >
+              {uncheckedCount > 0 ? '☑ Select all' : '☐ Deselect all'}
+            </button>
+          )}
           {checkedCount > 0 && (
             <button
               onClick={handleClearChecked}

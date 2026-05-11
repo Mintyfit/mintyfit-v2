@@ -246,8 +246,9 @@ export async function POST(request) {
 }
 
 // ── PATCH /api/shopping-list ──────────────────────────────────────────────────
-// Body: { item_id, checked }   — toggle a single item
+// Body: { item_id, checked }    — toggle a single item
 // Body: { clear_checked: true } — remove all checked items
+// Body: { set_all: true|false } — mark every item checked/unchecked
 
 export async function PATCH(request) {
   try {
@@ -268,6 +269,15 @@ export async function PATCH(request) {
 
       if (error) throw new Error(error.message)
       return NextResponse.json({ cleared: true })
+    }
+
+    if (typeof body.set_all === 'boolean') {
+      const { error } = await supabase
+        .from('shopping_list_items')
+        .update({ checked: body.set_all })
+        .eq('list_id', list.id)
+      if (error) throw new Error(error.message)
+      return NextResponse.json({ set_all: body.set_all })
     }
 
     if (body.item_id == null || body.checked == null) {
