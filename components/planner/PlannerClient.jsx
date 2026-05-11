@@ -561,8 +561,8 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           }
           @media (max-width: 600px) {
             .plan-page {
-              padding-left: 0.5rem !important;
-              padding-right: 0.5rem !important;
+              padding-left: 1rem !important;
+              padding-right: 1rem !important;
             }
             .plan-page h1 { font-size: 1.25rem !important; }
           }
