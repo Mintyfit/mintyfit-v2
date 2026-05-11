@@ -55,19 +55,23 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
         }
         @media (max-width: 700px) {
           .week-overview-grid {
-            grid-template-columns: repeat(7, minmax(42px, 1fr));
-            gap: 0.25rem;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 0.25rem;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
           }
           .week-overview-grid > button {
-            padding: 0.4rem 0.2rem !important;
-            border-radius: 10px !important;
+            padding: 6px 2px !important;
+            border-radius: 8px !important;
+            border-width: 1px !important;
+            min-width: 0;
           }
-          .week-overview-grid .wo-kcal,
-          .week-overview-grid .wo-active { font-size: 0.5625rem !important; }
+          .week-overview-grid .wo-day-name { font-size: 0.5625rem !important; }
+          .week-overview-grid .wo-day-num { font-size: 0.9375rem !important; }
+          .week-overview-grid .wo-today { display: none !important; }
           .week-overview-grid .wo-rings { display: none !important; }
+          .week-overview-grid .wo-kcal { display: none !important; }
+          .week-overview-grid .wo-active { font-size: 0.5rem !important; }
+          .week-overview-grid .wo-dots { gap: 2px !important; margin-bottom: 0 !important; }
+          .week-overview-grid .wo-dots > span { width: 5px !important; height: 5px !important; }
         }
       `}</style>
       {weekDates.map((date, idx) => {
@@ -125,13 +129,13 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
           >
             {/* Day header */}
             <div style={{ textAlign: 'center', marginBottom: '0.625rem' }}>
-              <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: isToday ? 'var(--primary)' : 'var(--text-3)', letterSpacing: '0.05em' }}>
+              <div className="wo-day-name" style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: isToday ? 'var(--primary)' : 'var(--text-3)', letterSpacing: '0.05em' }}>
                 {DAY_NAMES[idx]}
               </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 700, color: isToday ? 'var(--primary)' : 'var(--text-1)', lineHeight: 1.2 }}>
+              <div className="wo-day-num" style={{ fontSize: '1.25rem', fontWeight: 700, color: isToday ? 'var(--primary)' : 'var(--text-1)', lineHeight: 1.2 }}>
                 {date.getDate()}
               </div>
-              {isToday && <div style={{ fontSize: '0.625rem', color: 'var(--primary)', fontWeight: 600 }}>TODAY</div>}
+              {isToday && <div className="wo-today" style={{ fontSize: '0.625rem', color: 'var(--primary)', fontWeight: 600 }}>TODAY</div>}
             </div>
 
             {/* Member nutrition rings */}
@@ -144,7 +148,7 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
             )}
 
             {/* Meal slot dots */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '3px', marginBottom: '0.375rem' }}>
+            <div className="wo-dots" style={{ display: 'flex', justifyContent: 'center', gap: '3px', marginBottom: '0.375rem' }}>
               {MEAL_TYPES.map(m => (
                 <span
                   key={m}
