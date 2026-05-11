@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 // Renders the shopping list nav link with a live unchecked-item badge.
 // Fetches /api/shopping-list/count once on mount (and when user changes).
-export default function ShoppingCartLink({ active, style, children }) {
+export default function ShoppingCartLink({ active, style, className, children }) {
   const { user } = useAuth()
   const [count, setCount] = useState(0)
 
@@ -21,7 +21,7 @@ export default function ShoppingCartLink({ active, style, children }) {
   }, [user])
 
   return (
-    <Link href="/shopping-list" style={{ position: 'relative', ...style }}>
+    <Link href="/shopping-list" className={className} style={{ position: 'relative', ...style }}>
       {children}
       {count > 0 && (
         <span style={{

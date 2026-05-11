@@ -249,6 +249,19 @@ export default function ShoppingListClient({ initialList, initialItems }) {
     } catch {}
   }
 
+  // ── Clear all ───────────────────────────────────────────────────────────────
+  async function handleClearAll() {
+    if (!confirm('Remove every item from the shopping list?')) return
+    setItems([])
+    try {
+      await fetch('/api/shopping-list', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clear_all: true }),
+      })
+    } catch {}
+  }
+
   // ── Refresh from plan ───────────────────────────────────────────────────────
   const [refreshing, setRefreshing] = useState(false)
   async function handleRefreshFromPlan() {
@@ -320,6 +333,19 @@ export default function ShoppingListClient({ initialList, initialItems }) {
               }}
             >
               ✓ Clear checked
+            </button>
+          )}
+          {items.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              title="Remove every item from the list"
+              style={{
+                padding: '0.5rem 0.875rem', borderRadius: '8px',
+                border: '1px solid #ef4444', background: 'transparent',
+                color: '#ef4444', cursor: 'pointer', fontSize: '0.8125rem',
+              }}
+            >
+              🗑️ Clear all
             </button>
           )}
           {items.length > 0 && (
