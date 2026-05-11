@@ -8,6 +8,10 @@ export const revalidate = 3600
 const UUID_RE       = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 // Legacy URLs like "butter-chicken-...-f11a6e" — trailing -<4..12 hex>
 const HEX_SUFFIX_RE = /-([0-9a-f]{4,12})$/i
+// Collision URLs like "butter-chicken-...-2" — trailing -<digits>. Used as
+// a fallback when the numbered duplicate has been deleted but the bare
+// slug still exists (e.g. after deduping recipes).
+const NUM_SUFFIX_RE = /-\d+$/
 
 // Resolve a recipe by slug, with graceful fallbacks for legacy URLs.
 // Returns { row, canonicalSlug } where canonicalSlug !== requested slug if
@@ -49,6 +53,21 @@ async function fetchRecipeRow(slug) {
       if (byIdPrefix) {
         return { row: byIdPrefix, canonicalSlug: byIdPrefix.slug || byIdPrefix.id }
       }
+    }
+  }
+
+  // 4) Numeric collision fallback: "-2", "-3", ... If the numbered duplicate
+  //    has been deleted, fall back to the bare slug so old links still work.
+  const numMatch = slug.match(NUM_SUFFIX_RE)
+  if (numMatch) {
+    const bareSlug = slug.slice(0, -numMatch[0].length)
+    if (bareSlug) {
+      const { data: byBare } = await supabase
+        .from('recipes')
+        .select('*')
+        .eq('slug', bareSlug)
+        .maybeSingle()
+      if (byBare) return { row: byBare, canonicalSlug: byBare.slug }
     }
   }
 
