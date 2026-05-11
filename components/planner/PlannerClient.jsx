@@ -316,7 +316,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     <>
       <div
         className="plan-page"
-        style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.25rem 1rem 5rem' }}
+        style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.25rem 1.25rem 5rem' }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
