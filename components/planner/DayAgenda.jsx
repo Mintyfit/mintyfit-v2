@@ -74,6 +74,22 @@ export default function DayAgenda({
     setRemovingId(null)
   }
 
+  // Per-entry consumer toggle. Lets one card hold "Dad + kids" while a
+  // sibling card holds "Mom only" in the same meal slot. Writes directly
+  // to the entry row, then refreshes the day.
+  async function toggleConsumer(entryId, memberId, currentIds) {
+    const supabase = createClient()
+    if (!supabase) return
+    const next = new Set(currentIds || [])
+    if (next.has(memberId)) next.delete(memberId)
+    else next.add(memberId)
+    await supabase
+      .from('calendar_entries')
+      .update({ consumer_member_ids: Array.from(next) })
+      .eq('id', entryId)
+    onRefresh(dateKey)
+  }
+
   async function handleAddRecipe(recipe, mealType) {
     const supabase = createClient()
     if (!supabase) return
@@ -204,13 +220,36 @@ export default function DayAgenda({
                           </span>
                         ) : null}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.125rem' }}>
-                        {kcal != null ? <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{Math.round(kcal)} kcal/serving</span> : null}
-                        {consumers.length > 0 ? (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
-                            · {consumers.map(c => c.display_name || c.first_name || 'Member').join(', ')}
-                          </span>
-                        ) : null}
+                      {kcal != null ? (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.125rem' }}>
+                          {Math.round(kcal)} kcal/serving
+                        </div>
+                      ) : null}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.375rem' }}>
+                        {members.map(m => {
+                          const checked = (entry.consumer_member_ids || []).includes(m.id)
+                          return (
+                            <button
+                              key={m.id}
+                              onClick={() => toggleConsumer(entry.id, m.id, entry.consumer_member_ids)}
+                              title={checked ? `Remove ${m.display_name || m.first_name}` : `Add ${m.display_name || m.first_name}`}
+                              style={{
+                                fontSize: '0.6875rem',
+                                padding: '0.15rem 0.55rem',
+                                borderRadius: '999px',
+                                border: `1px solid ${checked ? 'var(--primary)' : 'var(--border)'}`,
+                                background: checked ? 'var(--primary)' : 'transparent',
+                                color: checked ? '#fff' : 'var(--text-3)',
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                                lineHeight: 1.4,
+                                userSelect: 'none',
+                              }}
+                            >
+                              {m.display_name || m.first_name || 'Member'}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                     <button
