@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
@@ -494,11 +495,15 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal, memberDaily
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function RecipeDetailClient({ recipe, members: initialMembers }) {
+  const router = useRouter()
   const [members, setMembers] = useState(initialMembers || [])
   const [activeEaters, setActiveEaters] = useState(new Set()) // member IDs who are eating this meal
   const [addingToPlan, setAddingToPlan] = useState(false)
   const [addPlanMsg, setAddPlanMsg] = useState(null) // null | 'success' | 'error'
   const [addPlanError, setAddPlanError] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
   const [shoppingState, setShoppingState] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
   const [checkedIngredients, setCheckedIngredients] = useState(new Set())
   const [selectedShoppingState, setSelectedShoppingState] = useState('idle')
@@ -882,6 +887,31 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
     }
   }
 
+  async function handleDelete() {
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch('/api/recipe/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_id: recipe.id }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setDeleteError(err.error || 'Failed to delete')
+        setIsDeleting(false)
+        return
+      }
+      // Recipe is gone from DB and all references (plan, statistics, shopping
+      // list, swaps, favourites, interactions). Navigate back to the archive.
+      router.replace('/recipes')
+      router.refresh()
+    } catch {
+      setDeleteError('Network error — please try again')
+      setIsDeleting(false)
+    }
+  }
+
   function toggleIngredient(name) {
     setCheckedIngredients(prev => {
       const next = new Set(prev)
@@ -1174,12 +1204,20 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
         {isOwner && !isEditing && (
-          <button
-            onClick={startEditing}
-            style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
-          >
-            ✏️ Edit Recipe
-          </button>
+          <>
+            <button
+              onClick={startEditing}
+              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+            >
+              ✏️ Edit Recipe
+            </button>
+            <button
+              onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
+              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid #ef4444', color: '#ef4444', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+            >
+              🗑️ Delete Recipe
+            </button>
+          </>
         )}
         {isEditing && (
           <>
@@ -1268,6 +1306,59 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           </button>
         </>)}
       </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div
+          onClick={() => !isDeleting && setShowDeleteConfirm(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)', borderRadius: '14px', maxWidth: '420px', width: '100%',
+              padding: '1.5rem', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            }}
+          >
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.5rem' }}>
+              Delete this recipe?
+            </h3>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--text-2)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+              <strong>{recipe.title}</strong> will be permanently removed — including every entry on your Plan and any
+              record in Statistics that references it. Shopping list items and ingredient swaps tied to this recipe
+              will also be deleted.
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', margin: '0 0 1.25rem' }}>
+              This can&apos;t be undone.
+            </p>
+            {deleteError && (
+              <div style={{ padding: '0.625rem 0.75rem', background: '#fef2f2', borderRadius: '8px', color: '#dc2626', fontSize: '0.8125rem', marginBottom: '0.875rem' }}>
+                {deleteError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, fontSize: '0.875rem', cursor: isDeleting ? 'wait' : 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: '#ef4444', border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.875rem', cursor: isDeleting ? 'wait' : 'pointer', opacity: isDeleting ? 0.7 : 1 }}
+              >
+                {isDeleting ? 'Deleting…' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {addPlanMsg === 'success' && (
         <div style={{ padding: '0.75rem 1rem', background: '#d1fae5', borderRadius: '10px', color: '#065f46', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 500 }}>
