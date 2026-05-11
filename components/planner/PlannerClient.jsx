@@ -33,7 +33,7 @@ function toDateKey(date) {
   return date.toISOString().split('T')[0]
 }
 
-export default function PlannerClient({ userId, profile, members }) {
+export default function PlannerClient({ userId, familyId, profile, members }) {
   const [today] = useState(() => new Date())
   const [weekOffset, setWeekOffset] = useState(0)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
@@ -109,13 +109,18 @@ export default function PlannerClient({ userId, profile, members }) {
     const startKey = toDateKey(weekStart)
     const endKey = toDateKey(weekEnd)
     setLoading(true)
-    supabase
-      .from('calendar_entries')
-      .select(`
+    // Family-scoped read (mig 049): if user is in a family, see the family's
+    // whole plan including siblings' variant rows. Solo users fall back to
+    // legacy per-profile rows (family_id IS NULL).
+    const baseSelect = `
         id, date_str, meal_type, member_id, consumer_member_ids,
+        family_id, origin,
         recipes(id, title, slug, image_url, nutrition, servings)
-      `)
-      .eq('profile_id', userId)
+      `
+    const weekQuery = familyId
+      ? supabase.from('calendar_entries').select(baseSelect).eq('family_id', familyId)
+      : supabase.from('calendar_entries').select(baseSelect).eq('profile_id', userId).is('family_id', null)
+    weekQuery
       .gte('date_str', startKey)
       .lte('date_str', endKey)
       .then(({ data }) => {
@@ -188,6 +193,7 @@ export default function PlannerClient({ userId, profile, members }) {
     // donut/per-member panel scales the recipe's totals at read time.
     const row = {
       profile_id: userId,
+      family_id: familyId || null,
       date_str: dateKey,
       meal_type: mealType,
       recipe_id: recipe.id,
@@ -195,10 +201,15 @@ export default function PlannerClient({ userId, profile, members }) {
       member_id: null,
       consumer_member_ids: activeMembers.map(m => m.id),
       personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
+      origin: 'planned',
     }
-    const { error } = await supabase.from('calendar_entries').upsert([row], {
-      onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
-    })
+    // Mig 049 reshaped uniqueness to family-scoped + origin-aware. The conflict
+    // target matches the partial unique index (family_id, date, meal, recipe,
+    // origin). For solo users with no family, fall back to per-profile target.
+    const onConflict = familyId
+      ? 'family_id,date_str,meal_type,recipe_id,origin'
+      : 'profile_id,date_str,meal_type,recipe_id,origin'
+    const { error } = await supabase.from('calendar_entries').upsert([row], { onConflict })
     if (error) console.error('calendar upsert failed:', error)
     await refreshDay(dateKey)
     setAddingToMeal(false)
@@ -260,14 +271,15 @@ export default function PlannerClient({ userId, profile, members }) {
   const refreshDay = useCallback(async (dateKey) => {
     const supabase = createClient()
     if (!supabase || !userId) return
-    const { data } = await supabase
-      .from('calendar_entries')
-      .select(`
+    const daySelect = `
         id, date_str, meal_type, member_id, consumer_member_ids,
+        family_id, origin,
         recipes(id, title, slug, image_url, nutrition, servings)
-      `)
-      .eq('profile_id', userId)
-      .eq('date_str', dateKey)
+      `
+    const dayQuery = familyId
+      ? supabase.from('calendar_entries').select(daySelect).eq('family_id', familyId)
+      : supabase.from('calendar_entries').select(daySelect).eq('profile_id', userId).is('family_id', null)
+    const { data } = await dayQuery.eq('date_str', dateKey)
     const mealMap = {}
     for (const entry of data || []) {
       if (!mealMap[entry.meal_type]) mealMap[entry.meal_type] = []
@@ -437,6 +449,7 @@ export default function PlannerClient({ userId, profile, members }) {
                     members={members}
                     activeMembers={activeMembers}
                     userId={userId}
+                    familyId={familyId}
                     onBack={() => setSelectedDate(null)}
                     onRefresh={refreshDay}
                     onRemoveEntry={removeEntry}
