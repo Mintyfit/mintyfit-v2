@@ -780,6 +780,20 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
         return
       }
 
+      // Re-query family at click time. The async useEffect that hydrates
+      // `familyId` may not have settled yet — without this, a click before
+      // hydration saved the row with family_id=NULL, which the family-scoped
+      // planner view never reads back.
+      let resolvedFamilyId = familyId
+      if (!resolvedFamilyId) {
+        const { data: memberships } = await supabase
+          .from('family_memberships')
+          .select('family_id')
+          .eq('profile_id', user.id)
+          .limit(1)
+        resolvedFamilyId = memberships?.[0]?.family_id || null
+      }
+
       const now = new Date()
       const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
       const mealType = recipe.meal_type || 'dinner'
@@ -790,7 +804,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
 
       const row = {
         profile_id: user.id,
-        family_id: familyId || null,
+        family_id: resolvedFamilyId,
         date_str: dateKey,
         meal_type: mealType,
         recipe_id: recipe.id,
@@ -1582,7 +1596,14 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           </div>
         )}
         {!isEditing && (
-          <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.625rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleAddToPlan}
+              disabled={addingToPlan}
+              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: addingToPlan ? 'wait' : 'pointer', opacity: addingToPlan ? 0.7 : 1 }}
+            >
+              {addingToPlan ? '⏳ Adding…' : '📅 Add to Plan'}
+            </button>
             <button
               onClick={async () => {
                 if (shoppingState === 'loading') return

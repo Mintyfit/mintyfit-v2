@@ -24,6 +24,7 @@ export default function DayAgenda({
   dateKey,
   entries,
   activities,
+  journals = {},
   members,
   activeMembers,
   userId,
@@ -54,12 +55,10 @@ export default function DayAgenda({
         if (!entry.member_id || entry.member_id === member.id) {
           consumed += kcal / Math.max(1, members.length)
         }
-        if (entry.journal_entries) {
-          for (const je of entry.journal_entries) {
-            if (!je.member_id || je.member_id === member.id) {
-              consumed += je.nutrition?.energy_kcal || 0
-            }
-          }
+      }
+      for (const je of journals[mealType] || []) {
+        if (!je.member_id || je.member_id === member.id) {
+          consumed += je.nutrition?.energy_kcal || 0
         }
       }
     }
@@ -264,7 +263,7 @@ export default function DayAgenda({
               })
             })()}
 
-            {slotEntries.filter(e => e.journal_entries).flatMap(e => e.journal_entries || []).map((je, i) => {
+            {(journals[mealType] || []).map((je, i) => {
               const jeMember = je.member_id ? members.find(x => x.id === je.member_id) : null
               return (
                 <div key={je.id || i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.625rem', background: 'rgba(99,102,241,0.05)', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.2)', marginBottom: '0.375rem' }}>
@@ -279,6 +278,18 @@ export default function DayAgenda({
                       </span>
                     ) : null}
                   </div>
+                  {je.id ? (
+                    <button
+                      onClick={async () => {
+                        const supabase = createClient()
+                        if (!supabase) return
+                        await supabase.from('food_journal').delete().eq('id', je.id)
+                        onRefresh(dateKey)
+                      }}
+                      style={{ width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-4)', cursor: 'pointer', fontSize: '0.875rem', flexShrink: 0 }}
+                      aria-label="Remove journal entry"
+                    >×</button>
+                  ) : null}
                 </div>
               )
             })}
