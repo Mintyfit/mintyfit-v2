@@ -3,312 +3,1353 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; font-src 'self' data:;">
     <title>Vitamin D3 Calculator</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body {
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-                sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
-        #root {
-            width: 100%;
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #ffffff;
             min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .calculator-container {
+            width: 100%;
+            margin: 0;
+            background: rgba(255, 255, 255, 0.95);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            padding: 3rem 1rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: movePattern 20s linear infinite;
+        }
+        
+        @keyframes movePattern {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            margin: 0 0 0.5rem 0;
+            position: relative;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.95);
+            margin: 0;
+            position: relative;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            padding: 2rem 1rem;
+        }
+        
+        @media (max-width: 968px) {
+            .content {
+                grid-template-columns: 1fr;
+                padding: 2rem 0.5rem;
+            }
+        }
+        
+        .section {
+            background: white;
+            padding: 0.5rem;
+            border-radius: 16px;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #667eea;
+            margin: 0 0 1.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .input-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 8px;
+            background: linear-gradient(to right, #f093fb 0%, #667eea 100%);
+            border-radius: 4px;
+            outline: none;
+            padding: 0;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .range-value {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-top: 0.5rem;
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .radio-option {
+            position: relative;
+        }
+        
+        .radio-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .radio-label {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            background: white;
+            user-select: none;
+        }
+        
+        .radio-label:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .radio-option input[type="radio"]:checked + .radio-label {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .result-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        }
+        
+        .result-value {
+            font-size: 3rem;
+            font-weight: 700;
+            font-family: 'Space Mono', monospace;
+            margin: 0.5rem 0;
+        }
+        
+        .result-label {
+            font-size: 1rem;
+            opacity: 0.95;
+        }
+        
+        .factors-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .factors-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .factor-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .factor-label {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-bottom: 0.25rem;
+        }
+        
+        .factor-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .function-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .function-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .function-item.optimal {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .function-item.adequate {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .function-item.insufficient {
+            background: linear-gradient(135deg, #868f96 0%, #596164 100%);
+            color: white;
+        }
+        
+        .function-name {
+            font-weight: 600;
+            flex: 1;
+        }
+        
+        .function-levels {
+            font-size: 0.85rem;
+            opacity: 0.95;
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .function-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.25);
+            margin-left: 1rem;
+        }
+        
+        .cofactor-item {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(245, 87, 108, 0.05) 100%);
+            padding: 1.25rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .cofactor-item:hover {
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .cofactor-item.essential {
+            border-left-color: #11998e;
+        }
+        
+        .cofactor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .cofactor-name {
+            font-weight: 700;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .cofactor-amount {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 1.3rem;
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .cofactor-ratio {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .cofactor-reason {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-top: 0.5rem;
+        }
+        
+        .cofactor-timing {
+            font-size: 0.85rem;
+            color: #999;
+            font-style: italic;
+            margin-top: 0.5rem;
+        }
+        
+        .info-box {
+            background: linear-gradient(135deg, rgba(245, 87, 108, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 1.5rem;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+        
+        .info-box h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #667eea;
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+        }
+        
+        .info-box p {
+            color: #555;
+            line-height: 1.7;
+            margin: 0.5rem 0;
+            font-size: 0.95rem;
+        }
+        
+        .info-box ul {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        
+        .info-box li {
+            color: #555;
+            margin: 0.25rem 0;
+            line-height: 1.6;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .location-display {
+            background: rgba(102, 126, 234, 0.1);
+            padding: 0.75rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .location-display button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        
+        .location-display button:hover {
+            background: #5568d3;
+            transform: scale(1.05);
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
-
-    <script type="text/babel">
-const { useState, useEffect } = React;
-
-const SunIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="4"/>
-    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-  </svg>
-);
-
-const VitaminD3Calculator = () => {
-  const [age, setAge] = useState(35);
-  const [skinTone, setSkinTone] = useState('medium');
-  const [sunExposure, setSunExposure] = useState('limited');
-  const [bmi, setBmi] = useState('normal');
-  const [conditions, setConditions] = useState([]);
-  const [currentSupp, setCurrentSupp] = useState(0);
-  const [result, setResult] = useState(null);
-
-  const skinOptions = [
-    { value: 'very_light', label: 'Very light (type I–II, burns easily)' },
-    { value: 'light', label: 'Light (type III, tans with effort)' },
-    { value: 'medium', label: 'Medium (type IV, tans easily)' },
-    { value: 'dark', label: 'Dark (type V–VI, rarely burns)' },
-  ];
-
-  const sunOptions = [
-    { value: 'none', label: 'Minimal / indoor lifestyle' },
-    { value: 'limited', label: 'Limited (< 15 min/day outdoors)' },
-    { value: 'moderate', label: 'Moderate (15–30 min/day outdoor)' },
-    { value: 'good', label: 'Good (30–60 min/day in sun)' },
-    { value: 'high', label: 'High (> 1 hr/day in strong sun)' },
-  ];
-
-  const bmiOptions = [
-    { value: 'under', label: 'Underweight (BMI < 18.5)' },
-    { value: 'normal', label: 'Normal weight (BMI 18.5–24.9)' },
-    { value: 'over', label: 'Overweight (BMI 25–29.9)' },
-    { value: 'obese', label: 'Obese (BMI ≥ 30)' },
-  ];
-
-  const conditionOptions = [
-    { value: 'osteoporosis', label: 'Osteoporosis / low bone density' },
-    { value: 'malabsorption', label: 'Malabsorption (Crohn\'s, coeliac, bariatric surgery)' },
-    { value: 'kidney', label: 'Chronic kidney disease' },
-    { value: 'liver', label: 'Liver disease' },
-    { value: 'immune', label: 'Immune condition (MS, lupus, rheumatoid arthritis)' },
-    { value: 'depression', label: 'Depression / low mood (possible link)' },
-  ];
-
-  const toggleCondition = (val) => {
-    setConditions(prev =>
-      prev.includes(val) ? prev.filter(c => c !== val) : [...prev, val]
-    );
-    setResult(null);
-  };
-
-  const calculate = () => {
-    const ageNum = parseInt(age);
-    if (!ageNum || ageNum < 1) return;
-
-    // Base RDA by age
-    let base = 600; // IU — general adult RDA (Endocrine Society)
-    if (ageNum >= 70) base = 800;
-    if (ageNum < 1) base = 400;
-    if (ageNum < 12) base = 600;
-
-    // Skin tone: darker skin needs more sun / supplementation
-    const skinAdd = { very_light: 0, light: 200, medium: 400, dark: 700 };
-    base += skinAdd[skinTone] || 0;
-
-    // Sun exposure (less sun = more supplement needed)
-    const sunAdd = { none: 1000, limited: 600, moderate: 300, good: 100, high: 0 };
-    base += sunAdd[sunExposure] || 0;
-
-    // BMI: adipose tissue sequesters D3
-    const bmiAdd = { under: -100, normal: 0, over: 300, obese: 600 };
-    base += bmiAdd[bmi] || 0;
-
-    // Conditions
-    const condAdd = { osteoporosis: 400, malabsorption: 600, kidney: 200, liver: 300, immune: 400, depression: 200 };
-    conditions.forEach(c => { base += condAdd[c] || 0; });
-
-    // Round to nearest 200
-    base = Math.round(base / 200) * 200;
-    // Clamp to safe upper range (UL is 4000 IU for general population, 10000 for clinical)
-    base = Math.min(base, 4000);
-    base = Math.max(base, 400);
-
-    // Subtract current supplement (floor at 0)
-    const additionalNeeded = Math.max(0, base - parseInt(currentSupp || 0));
-
-    // mcg equivalent (1 IU vit D = 0.025 mcg)
-    const mcg = (base * 0.025).toFixed(1);
-
-    let riskLevel = 'Low';
-    let riskColor = 'green';
-    if (base >= 2000) { riskLevel = 'Moderate–High'; riskColor = 'orange'; }
-    else if (base >= 1000) { riskLevel = 'Moderate'; riskColor = 'yellow'; }
-
-    setResult({ iu: base, mcg, additionalNeeded, riskLevel, riskColor });
-  };
-
-  useEffect(() => {
-    const notify = () => {
-      const h = document.documentElement.scrollHeight;
-      window.parent.postMessage({ type: 'resize', height: h }, '*');
-    };
-    setTimeout(notify, 100);
-    setTimeout(notify, 500);
-    setTimeout(notify, 1000);
-    const observer = new MutationObserver(notify);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-    return () => observer.disconnect();
-  }, [result]);
-
-  const riskColorMap = {
-    green: 'text-green-700 bg-green-50',
-    yellow: 'text-yellow-700 bg-yellow-50',
-    orange: 'text-orange-700 bg-orange-50',
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-yellow-50 p-4 sm:p-6">
-      <div className="max-w-xl mx-auto">
-
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-100 mb-3">
-            <span className="text-amber-500"><SunIcon /></span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800">Vitamin D3 Intake Calculator</h1>
-          <p className="text-gray-500 text-sm mt-1">Personalised supplementation estimate based on your profile</p>
-        </div>
-
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-md p-6 space-y-5">
-
-          {/* Age */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Age (years)</label>
-            <input
-              type="number"
-              min="1"
-              max="110"
-              value={age}
-              onChange={e => { setAge(e.target.value); setResult(null); }}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
-              placeholder="e.g. 35"
-            />
-          </div>
-
-          {/* Skin tone */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Skin Tone (Fitzpatrick scale)</label>
-            <select
-              value={skinTone}
-              onChange={e => { setSkinTone(e.target.value); setResult(null); }}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
-            >
-              {skinOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-
-          {/* Sun exposure */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Daily Sun Exposure</label>
-            <select
-              value={sunExposure}
-              onChange={e => { setSunExposure(e.target.value); setResult(null); }}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
-            >
-              {sunOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-
-          {/* BMI range */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Body Weight Range</label>
-            <select
-              value={bmi}
-              onChange={e => { setBmi(e.target.value); setResult(null); }}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
-            >
-              {bmiOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-
-          {/* Health conditions */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Health Conditions (select all that apply)</label>
-            <div className="space-y-2">
-              {conditionOptions.map(o => (
-                <label key={o.value} className="flex items-start gap-3 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    checked={conditions.includes(o.value)}
-                    onChange={() => toggleCondition(o.value)}
-                    className="mt-0.5 accent-amber-500"
-                  />
-                  <span className="text-sm text-gray-700 group-hover:text-gray-900">{o.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Current supplement */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Current Vitamin D3 Supplement (IU/day, 0 if none)</label>
-            <input
-              type="number"
-              min="0"
-              max="10000"
-              step="200"
-              value={currentSupp}
-              onChange={e => { setCurrentSupp(e.target.value); setResult(null); }}
-              className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-300"
-              placeholder="e.g. 1000"
-            />
-          </div>
-
-          {/* Button */}
-          <button
-            onClick={calculate}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-xl transition-colors text-base"
-          >
-            Calculate My Vitamin D3 Needs
-          </button>
-
-          {/* Results */}
-          {result && (
-            <div className="mt-2 bg-amber-50 rounded-xl p-5 space-y-4">
-              <h2 className="text-center text-lg font-bold text-amber-800">Your Estimated Daily Target</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-xl p-4 text-center shadow-sm col-span-2">
-                  <div className="text-4xl font-extrabold text-amber-500">{result.iu.toLocaleString()}</div>
-                  <div className="text-sm text-gray-500 mt-1 font-medium">IU / day total intake</div>
-                  <div className="text-xs text-gray-400 mt-0.5">({result.mcg} mcg)</div>
-                </div>
-                <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-                  <div className="text-2xl font-extrabold text-orange-500">{result.additionalNeeded.toLocaleString()}</div>
-                  <div className="text-xs text-gray-500 mt-1 font-medium">Additional IU from supplement</div>
-                </div>
-                <div className={`rounded-xl p-4 text-center shadow-sm ${riskColorMap[result.riskColor]}`}>
-                  <div className="text-lg font-bold">{result.riskLevel}</div>
-                  <div className="text-xs mt-1 font-medium opacity-80">Deficiency risk level</div>
-                </div>
-              </div>
-              {result.iu >= 2000 && (
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-xs text-orange-800">
-                  ⚠️ At doses above 2,000 IU/day, consult your doctor or get a blood test (25-OH-D) before starting or increasing supplementation.
-                </div>
-              )}
-              <p className="text-xs text-gray-500 text-center leading-relaxed">
-                Estimates are based on population guidelines. Blood level testing is the only way to confirm your actual Vitamin D status.
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="mt-5 bg-white rounded-2xl shadow-sm p-5">
-          <h3 className="font-bold text-gray-700 mb-3 text-sm uppercase tracking-wide">Why Vitamin D3 Matters</h3>
-          <ul className="space-y-2 text-sm text-gray-600">
-            <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> Supports calcium absorption and bone mineralisation.</li>
-            <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> Regulates immune function — low levels linked to more frequent illness.</li>
-            <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> Over 40% of adults worldwide are Vitamin D deficient.</li>
-            <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> Darker skin requires significantly longer sun exposure to produce D3.</li>
-            <li className="flex gap-2"><span className="text-amber-500 font-bold">•</span> Take D3 with a meal containing fat — it is fat-soluble.</li>
-          </ul>
-        </div>
-
-        <p className="text-center text-xs text-gray-400 mt-4">
-          Powered by <span className="font-semibold text-amber-400">MintyFit</span> · For informational purposes only · Not medical advice
-        </p>
-      </div>
+    <div class="calculator-container">
+        
+        <div class="content" id="app"></div>
     </div>
-  );
-};
 
-ReactDOM.createRoot(document.getElementById('root')).render(<VitaminD3Calculator />);
+    <script>
+        // Comprehensive timezone to latitude mapping (covering 200+ timezones worldwide)
+        const timezoneLatitudes = {
+            // North America
+            'America/New_York': 40, 'America/Detroit': 42, 'America/Kentucky/Louisville': 38,
+            'America/Kentucky/Monticello': 36, 'America/Indiana/Indianapolis': 39,
+            'America/Indiana/Vincennes': 38, 'America/Indiana/Winamac': 41,
+            'America/Indiana/Marengo': 38, 'America/Indiana/Petersburg': 38,
+            'America/Indiana/Vevay': 38, 'America/Chicago': 41, 'America/Indiana/Tell_City': 37,
+            'America/Indiana/Knox': 41, 'America/Menominee': 45, 'America/North_Dakota/Center': 47,
+            'America/North_Dakota/New_Salem': 46, 'America/North_Dakota/Beulah': 47,
+            'America/Denver': 39, 'America/Boise': 43, 'America/Phoenix': 33,
+            'America/Los_Angeles': 34, 'America/Anchorage': 61, 'America/Juneau': 58,
+            'America/Sitka': 57, 'America/Metlakatla': 55, 'America/Yakutat': 59,
+            'America/Nome': 64, 'America/Adak': 51, 'Pacific/Honolulu': 21,
+            'America/Toronto': 43, 'America/Vancouver': 49, 'America/Edmonton': 53,
+            'America/Winnipeg': 49, 'America/Halifax': 44, 'America/St_Johns': 47,
+            'America/Mexico_City': 19, 'America/Cancun': 21, 'America/Monterrey': 25,
+            'America/Tijuana': 32, 'America/Hermosillo': 29, 'America/Mazatlan': 23,
+            'America/Chihuahua': 28, 'America/Merida': 20, 'America/Guatemala': 14,
+            'America/Belize': 17, 'America/San_Salvador': 13, 'America/Tegucigalpa': 14,
+            'America/Managua': 12, 'America/Costa_Rica': 9, 'America/Panama': 8,
+            'America/Havana': 23, 'America/Port-au-Prince': 18, 'America/Santo_Domingo': 18,
+            'America/Jamaica': 18, 'America/Bogota': 4, 'America/Caracas': 10,
+            'America/Lima': -12, 'America/Guayaquil': -2, 'America/La_Paz': -16,
+            'America/Santiago': -33, 'America/Buenos_Aires': -34, 'America/Montevideo': -34,
+            'America/Sao_Paulo': -23, 'America/Rio_Branco': -9, 'America/Manaus': -3,
+            
+            // Europe
+            'Europe/London': 51, 'Europe/Dublin': 53, 'Europe/Lisbon': 38,
+            'Europe/Madrid': 40, 'Europe/Barcelona': 41, 'Europe/Paris': 48,
+            'Europe/Brussels': 50, 'Europe/Amsterdam': 52, 'Europe/Berlin': 52,
+            'Europe/Vienna': 48, 'Europe/Zurich': 47, 'Europe/Rome': 41,
+            'Europe/Vatican': 41, 'Europe/San_Marino': 43, 'Europe/Prague': 50,
+            'Europe/Budapest': 47, 'Europe/Warsaw': 52, 'Europe/Stockholm': 59,
+            'Europe/Oslo': 59, 'Europe/Copenhagen': 55, 'Europe/Helsinki': 60,
+            'Europe/Tallinn': 59, 'Europe/Riga': 56, 'Europe/Vilnius': 54,
+            'Europe/Moscow': 55, 'Europe/Kiev': 50, 'Europe/Minsk': 53,
+            'Europe/Athens': 37, 'Europe/Istanbul': 41, 'Europe/Bucharest': 44,
+            'Europe/Sofia': 42, 'Europe/Belgrade': 44, 'Europe/Zagreb': 45,
+            
+            // Asia
+            'Asia/Shanghai': 31, 'Asia/Beijing': 39, 'Asia/Urumqi': 43,
+            'Asia/Hong_Kong': 22, 'Asia/Macau': 22, 'Asia/Taipei': 25,
+            'Asia/Tokyo': 35, 'Asia/Seoul': 37, 'Asia/Pyongyang': 39,
+            'Asia/Singapore': 1, 'Asia/Kuala_Lumpur': 3, 'Asia/Bangkok': 13,
+            'Asia/Jakarta': -6, 'Asia/Manila': 14, 'Asia/Ho_Chi_Minh': 10,
+            'Asia/Hanoi': 21, 'Asia/Dubai': 25, 'Asia/Riyadh': 24,
+            'Asia/Kuwait': 29, 'Asia/Bahrain': 26, 'Asia/Qatar': 25,
+            'Asia/Tehran': 35, 'Asia/Baghdad': 33, 'Asia/Damascus': 33,
+            'Asia/Beirut': 33, 'Asia/Jerusalem': 31, 'Asia/Amman': 31,
+            'Asia/Kolkata': 28, 'Asia/Mumbai': 19, 'Asia/Delhi': 28,
+            'Asia/Karachi': 24, 'Asia/Dhaka': 23, 'Asia/Kathmandu': 27,
+            'Asia/Colombo': 6, 'Asia/Yangon': 16, 'Asia/Kabul': 34,
+            'Asia/Tashkent': 41, 'Asia/Almaty': 43, 'Asia/Bishkek': 42,
+            
+            // Africa
+            'Africa/Cairo': 30, 'Africa/Johannesburg': -26, 'Africa/Lagos': 6,
+            'Africa/Nairobi': -1, 'Africa/Casablanca': 33, 'Africa/Algiers': 36,
+            'Africa/Tunis': 36, 'Africa/Tripoli': 32, 'Africa/Khartoum': 15,
+            'Africa/Addis_Ababa': 9, 'Africa/Dar_es_Salaam': -6, 'Africa/Kampala': 0,
+            'Africa/Kinshasa': -4, 'Africa/Lusaka': -15, 'Africa/Harare': -17,
+            'Africa/Maputo': -25, 'Africa/Windhoek': -22, 'Africa/Gaborone': -24,
+            'Africa/Abidjan': 5, 'Africa/Accra': 5, 'Africa/Dakar': 14,
+            
+            // Australia & Oceania
+            'Australia/Sydney': -33, 'Australia/Melbourne': -37, 'Australia/Brisbane': -27,
+            'Australia/Perth': -31, 'Australia/Adelaide': -34, 'Australia/Darwin': -12,
+            'Australia/Hobart': -42, 'Pacific/Auckland': -36, 'Pacific/Fiji': -18,
+            'Pacific/Port_Moresby': -9, 'Pacific/Guam': 13, 'Pacific/Pago_Pago': -14,
+            
+            // South America (additional)
+            'America/Fortaleza': -3, 'America/Recife': -8, 'America/Belem': -1,
+            'America/Campo_Grande': -20, 'America/Cuiaba': -15, 'America/Santarem': -2,
+            'America/Porto_Velho': -8, 'America/Boa_Vista': 2, 'America/Manaus': -3,
+            'America/Eirunepe': -6, 'America/Rio_Branco': -9, 'America/Bahia': -12
+        };
+
+        // Detect user's timezone and estimate latitude
+        function detectLatitude() {
+            try {
+                const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                return {
+                    timezone: timezone,
+                    latitude: timezoneLatitudes[timezone] || 40,
+                    detected: !!timezoneLatitudes[timezone]
+                };
+            } catch (e) {
+                return {
+                    timezone: 'Unknown',
+                    latitude: 40,
+                    detected: false
+                };
+            }
+        }
+
+        // Initialize app
+        const detectedLocation = detectLatitude();
+        
+        // State management
+        let state = {
+            age: 50,
+            weight: 75,
+            height: 175,
+            sex: 'male',
+            activityLevel: 'moderate',
+            season: 'winter',
+            weather: 'mixed',
+            outdoorTime: '30-60',
+            skinTone: 'fair',
+            sunscreenUse: 'sometimes',
+            targetLevel: 100,
+            currentLevel: 40, // Default: typical winter/high latitude baseline
+            latitude: detectedLocation.latitude,
+            showManualLatitude: false
+        };
+
+        function setState(updates) {
+            state = { ...state, ...updates };
+            render();
+        }
+
+        function calculateVitaminD() {
+            const { age, weight, height, sex, activityLevel, season, weather, outdoorTime, skinTone, sunscreenUse, targetLevel, currentLevel, latitude } = state;
+            
+            // Calculate BMI (CRITICAL for accurate dosing)
+            const bmi = weight / ((height / 100) ** 2);
+            
+            // RESEARCH-BASED FORMULA
+            // Step 1: Base dose from current → target levels
+            // Source: "Taking 1000 IU daily raises Vitamin D levels by approximately 12.5 nmol/L"
+            // Formula: Base Dose = (Target nmol/L - Current nmol/L) ÷ 12.5 × 1000
+            
+            let baseDoseNeeded = 0;
+            if (targetLevel > currentLevel) {
+                const increaseNeeded = targetLevel - currentLevel;
+                baseDoseNeeded = (increaseNeeded / 12.5) * 1000;
+            } else {
+                // Maintenance dose if already at or above target
+                baseDoseNeeded = 1000;
+            }
+            
+            // MODIFIERS based on clinical research
+            
+            // Determine latitude band and season
+            const absLat = Math.abs(latitude);
+            let latitudeBand;
+            if (absLat < 15) latitudeBand = 'equatorial';
+            else if (absLat < 35) latitudeBand = 'subtropical';
+            else if (absLat < 50) latitudeBand = 'midLatitude';
+            else latitudeBand = 'highLatitude';
+            
+            let adjustedSeason = season;
+            if (latitude < 0) {
+                const seasonMap = {
+                    'winter': 'summer',
+                    'summer': 'winter',
+                    'spring': 'autumn',
+                    'autumn': 'spring'
+                };
+                adjustedSeason = seasonMap[season];
+            }
+            
+            // MODIFIER 1: BMI (MOST IMPORTANT - Research: 2.6x difference between normal and obese)
+            // Research: Ekwaru et al. - Normal weight needs 2,080 IU, Overweight 3,065 IU, Obese 5,473 IU for 100 nmol/L
+            // This gives multipliers of: 1.0x, 1.47x, 2.63x
+            let bmiMultiplier = 1.0;
+            let bmiCategory = '';
+            
+            if (bmi < 18.5) {
+                bmiMultiplier = 0.9;
+                bmiCategory = 'underweight';
+            } else if (bmi < 25) {
+                bmiMultiplier = 1.0;
+                bmiCategory = 'normal';
+            } else if (bmi < 30) {
+                bmiMultiplier = 1.47;
+                bmiCategory = 'overweight';
+            } else if (bmi < 35) {
+                bmiMultiplier = 2.0;
+                bmiCategory = 'obese';
+            } else {
+                bmiMultiplier = 2.6;
+                bmiCategory = 'severely obese';
+            }
+            
+            // MODIFIER 2: SKIN TONE (darker skin = reduced synthesis, needs more)
+            let skinMultiplier = 1.0;
+            switch(skinTone) {
+                case 'very_fair':
+                case 'fair':
+                    skinMultiplier = 1.0;
+                    break;
+                case 'medium':
+                    skinMultiplier = 1.15;
+                    break;
+                case 'olive':
+                    skinMultiplier = 1.25;
+                    break;
+                case 'brown':
+                    skinMultiplier = 1.35;
+                    break;
+                case 'dark_brown':
+                case 'black':
+                    skinMultiplier = 1.5;
+                    break;
+            }
+            
+            // MODIFIER 3: AGE (older = reduced skin synthesis)
+            let ageMultiplier = 1.0;
+            if (age < 30) ageMultiplier = 0.95;
+            else if (age < 50) ageMultiplier = 1.0;
+            else if (age < 70) ageMultiplier = 1.08;
+            else ageMultiplier = 1.12;
+            
+            // MODIFIER 4: SEX (females need more due to hormonal effects + typically higher body fat %)
+            // Research shows females need ~10-15% more to reach same levels
+            let sexMultiplier = sex === 'female' ? 1.1 : 1.0;
+            
+            // MODIFIER 5: ACTIVITY LEVEL (minimal effect)
+            let activityMultiplier = 1.0;
+            switch(activityLevel) {
+                case 'sedentary':
+                    activityMultiplier = 0.98;
+                    break;
+                case 'light':
+                    activityMultiplier = 1.0;
+                    break;
+                case 'moderate':
+                    activityMultiplier = 1.02;
+                    break;
+                case 'active':
+                    activityMultiplier = 1.05;
+                    break;
+                case 'very_active':
+                    activityMultiplier = 1.08;
+                    break;
+            }
+            
+            // Apply all modifiers
+            let calculatedDose = baseDoseNeeded * bmiMultiplier * skinMultiplier * ageMultiplier * sexMultiplier * activityMultiplier;
+            
+            // STEP 9: LIFESTYLE REDUCTIONS (only in spring/summer with actual UVB)
+            let lifestyleReductionPercent = 0;
+            if ((adjustedSeason === 'summer' || adjustedSeason === 'spring') && latitudeBand !== 'equatorial') {
+                // Outdoor time benefit
+                switch(outdoorTime) {
+                    case '<30min':
+                        lifestyleReductionPercent += 0;
+                        break;
+                    case '30-60':
+                        lifestyleReductionPercent += 0.05; // 5% reduction
+                        break;
+                    case '1-2hrs':
+                        lifestyleReductionPercent += 0.10; // 10% reduction
+                        break;
+                    case '2-4hrs':
+                        lifestyleReductionPercent += 0.15; // 15% reduction
+                        break;
+                    case '4+hrs':
+                        lifestyleReductionPercent += 0.20; // 20% reduction
+                        break;
+                }
+                
+                // Weather benefit
+                switch(weather) {
+                    case 'sunny':
+                        lifestyleReductionPercent += 0.05;
+                        break;
+                    case 'mixed':
+                        lifestyleReductionPercent += 0.02;
+                        break;
+                    default:
+                        lifestyleReductionPercent += 0;
+                }
+                
+                // Sunscreen penalty (cancels some benefit)
+                switch(sunscreenUse) {
+                    case 'always':
+                        lifestyleReductionPercent -= 0.08; // Blocks synthesis
+                        break;
+                    case 'usually':
+                        lifestyleReductionPercent -= 0.05;
+                        break;
+                    case 'sometimes':
+                        lifestyleReductionPercent -= 0.02;
+                        break;
+                }
+            }
+            
+            // Apply lifestyle reduction
+            calculatedDose *= (1 - lifestyleReductionPercent);
+            
+            // Round to nearest 100 IU for practical dosing (more precise than 500 IU)
+            calculatedDose = Math.round(calculatedDose / 100) * 100;
+            
+            // Ensure minimum of 1000 IU
+            if (calculatedDose < 1000) calculatedDose = 1000;
+            
+            // Check if exceeds safe limit (but don't cap it)
+            const exceedsSafeLimit = calculatedDose > 10000;
+            
+            // Track calculation breakdown for display
+            const calculationBreakdown = {
+                weight: weight,
+                height: height,
+                bmi: bmi,
+                bmiCategory: bmiCategory,
+                currentLevel: currentLevel,
+                targetLevel: targetLevel,
+                increaseNeeded: Math.max(0, targetLevel - currentLevel),
+                baseDoseNeeded: Math.round(baseDoseNeeded),
+                bmiMultiplier: bmiMultiplier,
+                skinMultiplier: skinMultiplier,
+                ageMultiplier: ageMultiplier,
+                activityMultiplier: activityMultiplier,
+                sexMultiplier: sexMultiplier,
+                lifestyleReductionPercent: lifestyleReductionPercent,
+                latitudeBand: latitudeBand,
+                adjustedSeason: adjustedSeason,
+                skinTone: skinTone
+            };
+            
+            // Calculate cofactors based on actual recommended dose
+            let baseMagnesiumRDA;
+            if (sex === 'male') {
+                if (age >= 31) baseMagnesiumRDA = 420;
+                else if (age >= 19) baseMagnesiumRDA = 400;
+                else if (age >= 14) baseMagnesiumRDA = 410;
+                else baseMagnesiumRDA = 240;
+            } else {
+                if (age >= 31) baseMagnesiumRDA = 320;
+                else if (age >= 19) baseMagnesiumRDA = 310;
+                else if (age >= 14) baseMagnesiumRDA = 360;
+                else baseMagnesiumRDA = 240;
+            }
+            
+            let additionalMagnesiumForD3 = 0;
+            if (calculatedDose > 2000) {
+                const excessD3 = calculatedDose - 2000;
+                additionalMagnesiumForD3 = (excessD3 / 1000) * 7.5;
+            }
+            
+            const totalMagnesiumNeeded = Math.round(baseMagnesiumRDA + additionalMagnesiumForD3);
+            
+            const cofactors = [
+                {
+                    name: 'Magnesium',
+                    amount: totalMagnesiumNeeded,
+                    unit: 'mg',
+                    ratio: `${baseMagnesiumRDA}mg base + ${Math.round(additionalMagnesiumForD3)}mg for D3 metabolism`,
+                    reason: 'Required for vitamin D conversion (25(OH)D → 1,25(OH)2D). Every enzymatic step of vitamin D metabolism requires magnesium. Higher D3 doses increase magnesium utilization.',
+                    timing: 'With vitamin D dose or split throughout day',
+                    priority: 'essential'
+                },
+                {
+                    name: 'Vitamin K2 (MK-7)',
+                    amount: Math.round(calculatedDose / 1000 * 25),
+                    unit: 'mcg',
+                    ratio: '1000 IU D3 : 25mcg K2',
+                    reason: 'Directs calcium to bones and teeth, prevents arterial calcification. Critical when taking vitamin D to ensure calcium goes to bones, not arteries. Ratio scales with D3 dose.',
+                    timing: 'With vitamin D dose',
+                    priority: 'essential'
+                },
+                {
+                    name: 'Vitamin A (Retinol)',
+                    amount: Math.round(calculatedDose * 0.15),
+                    unit: 'IU',
+                    ratio: '1000 IU D3 : 150 IU Vitamin A',
+                    reason: 'Works synergistically with vitamin D for immune function and gene expression. Prevents vitamin D toxicity by balancing fat-soluble vitamin ratios. Amount scales with D3 dose.',
+                    timing: 'With vitamin D dose',
+                    priority: 'essential'
+                }
+            ];
+            
+            return {
+                calculatedDose,
+                exceedsSafeLimit,
+                cofactors,
+                ...calculationBreakdown
+            };
+        }
+        
+        function render() {
+            const calc = calculateVitaminD();
+            const absLat = Math.abs(state.latitude);
+            const hemisphere = state.latitude >= 0 ? 'N' : 'S';
+            
+            // Calculate adjusted season for display (southern hemisphere reversal)
+            let adjustedSeason = state.season;
+            if (state.latitude < 0) {
+                const seasonMap = {
+                    'winter': 'summer',
+                    'summer': 'winter',
+                    'spring': 'autumn',
+                    'autumn': 'spring'
+                };
+                adjustedSeason = seasonMap[state.season];
+            }
+            
+            // Determine latitude band description
+            let latitudeDescription;
+            if (absLat < 15) latitudeDescription = 'Equatorial - Year-round UVB';
+            else if (absLat < 25) latitudeDescription = 'Subtropical - Minimal winter reduction';
+            else if (absLat < 35) latitudeDescription = 'Mid-latitude - Moderate seasonality';
+            else if (absLat < 45) latitudeDescription = 'Upper mid-latitude - Significant winter reduction';
+            else if (absLat < 55) latitudeDescription = 'High latitude - Severe winter reduction';
+            else latitudeDescription = 'Arctic/Antarctic - Extreme seasonality';
+            
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <!-- Input Section -->
+                <div class="section">
+                    <h2 class="section-title">👤 Personal Information</h2>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Location</label>
+                        <div class="location-display">
+                            <span>📍 ${detectedLocation.timezone} (${absLat}°${hemisphere}) - ${latitudeDescription}</span>
+                            <button onclick="toggleManualLatitude()">${state.showManualLatitude ? 'Hide' : 'Change'}</button>
+                        </div>
+                        ${state.showManualLatitude ? `
+                            <input type="range" min="-60" max="70" step="1" value="${state.latitude}" 
+                                oninput="setState({ latitude: Number(this.value) })">
+                            <div class="range-value">${absLat}°${hemisphere}</div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Age (years)</label>
+                        <input type="range" min="1" max="100" step="1" value="${state.age}" 
+                            id="age-slider" data-state-key="age">
+                        <input type="number" min="1" max="100" step="1" value="${state.age}"
+                            id="age-display" 
+                            class="range-value"
+                            style="border: none; background: transparent; width: 100%; text-align: center; cursor: pointer;">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Weight (kg)</label>
+                        <input type="range" min="30" max="200" step="1" value="${state.weight}" 
+                            id="weight-slider" data-state-key="weight">
+                        <input type="number" min="30" max="200" step="1" value="${state.weight}"
+                            id="weight-display"
+                            class="range-value"
+                            style="border: none; background: transparent; width: 100%; text-align: center; cursor: pointer;">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Height (cm)</label>
+                        <input type="range" min="100" max="250" step="1" value="${state.height}" 
+                            id="height-slider" data-state-key="height">
+                        <input type="number" min="100" max="250" step="1" value="${state.height}"
+                            id="height-display"
+                            class="range-value"
+                            style="border: none; background: transparent; width: 100%; text-align: center; cursor: pointer;">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">📊 BMI</label>
+                        <div class="range-value" style="font-size: 1.2rem; color: #2196F3;">
+                            ${calc.bmi.toFixed(1)} kg/m² (${calc.bmiCategory})
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">Sex</label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="sex-male" name="sex" value="male" 
+                                    ${state.sex === 'male' ? 'checked' : ''} 
+                                    onchange="setState({ sex: this.value })">
+                                <label for="sex-male" class="radio-label">Male</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="sex-female" name="sex" value="female" 
+                                    ${state.sex === 'female' ? 'checked' : ''} 
+                                    onchange="setState({ sex: this.value })">
+                                <label for="sex-female" class="radio-label">Female</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">⚡ Activity Level (Metabolic Demands)</label>
+                        <div class="radio-group">
+                            ${['sedentary', 'light', 'moderate', 'active', 'very_active'].map(level => `
+                                <div class="radio-option">
+                                    <input type="radio" id="activity-${level}" name="activity" value="${level}" 
+                                        ${state.activityLevel === level ? 'checked' : ''} 
+                                        onchange="setState({ activityLevel: this.value })">
+                                    <label for="activity-${level}" class="radio-label">${level.charAt(0).toUpperCase() + level.slice(1).replace('_', ' ')}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">☀️ Skin Tone</label>
+                        <div class="radio-group">
+                            ${['very_fair', 'fair', 'medium', 'olive', 'brown', 'dark_brown', 'black'].map(tone => `
+                                <div class="radio-option">
+                                    <input type="radio" id="skin-${tone}" name="skinTone" value="${tone}" 
+                                        ${state.skinTone === tone ? 'checked' : ''} 
+                                        onchange="setState({ skinTone: this.value })">
+                                    <label for="skin-${tone}" class="radio-label">${tone.charAt(0).toUpperCase() + tone.slice(1).replace('_', ' ')}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">🌤️ Daily Outdoor Time</label>
+                        <div class="radio-group">
+                            ${['<30min', '30-60', '1-2hrs', '2-4hrs', '4+hrs'].map(time => `
+                                <div class="radio-option">
+                                    <input type="radio" id="outdoor-${time}" name="outdoorTime" value="${time}" 
+                                        ${state.outdoorTime === time ? 'checked' : ''} 
+                                        onchange="setState({ outdoorTime: this.value })">
+                                    <label for="outdoor-${time}" class="radio-label">${time}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">🧴 Sunscreen Use</label>
+                        <div class="radio-group">
+                            ${['never', 'sometimes', 'usually', 'always'].map(use => `
+                                <div class="radio-option">
+                                    <input type="radio" id="sunscreen-${use}" name="sunscreen" value="${use}" 
+                                        ${state.sunscreenUse === use ? 'checked' : ''} 
+                                        onchange="setState({ sunscreenUse: this.value })">
+                                    <label for="sunscreen-${use}" class="radio-label">${use.charAt(0).toUpperCase() + use.slice(1)}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">🌦️ Typical Weather</label>
+                        <div class="radio-group">
+                            ${['sunny', 'mixed', 'cloudy', 'overcast'].map(w => `
+                                <div class="radio-option">
+                                    <input type="radio" id="weather-${w}" name="weather" value="${w}" 
+                                        ${state.weather === w ? 'checked' : ''} 
+                                        onchange="setState({ weather: this.value })">
+                                    <label for="weather-${w}" class="radio-label">${w.charAt(0).toUpperCase() + w.slice(1)}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">📅 Season</label>
+                        <div class="radio-group">
+                            ${['winter', 'spring', 'summer', 'autumn'].map(s => `
+                                <div class="radio-option">
+                                    <input type="radio" id="season-${s}" name="season" value="${s}" 
+                                        ${state.season === s ? 'checked' : ''} 
+                                        onchange="setState({ season: this.value })">
+                                    <label for="season-${s}" class="radio-label">${s.charAt(0).toUpperCase() + s.slice(1)}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">📊 Current Vitamin D Level (if known)</label>
+                        <input type="range" min="0" max="125" step="5" value="${state.currentLevel}" 
+                            id="current-slider" data-state-key="currentLevel">
+                        <input type="number" min="0" max="125" step="5" value="${state.currentLevel}"
+                            id="current-display"
+                            class="range-value"
+                            style="border: none; background: transparent; width: 100%; text-align: center; cursor: pointer;">
+                        <div style="text-align: center; font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
+                            (<span id="current-ng">${(state.currentLevel * 0.4).toFixed(1)}</span> ng/mL)
+                        </div>
+                        <div style="text-align: center; font-size: 0.8rem; color: #888; margin-top: 0.5rem; font-style: italic;">
+                            Typical winter/high latitude baseline: 25-50 nmol/L
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label class="input-label">🎯 Target Serum Level (nmol/L)</label>
+                        <input type="range" min="50" max="150" step="5" value="${state.targetLevel}" 
+                            id="target-slider" data-state-key="targetLevel">
+                        <input type="number" min="50" max="150" step="5" value="${state.targetLevel}"
+                            id="target-display"
+                            class="range-value"
+                            style="border: none; background: transparent; width: 100%; text-align: center; cursor: pointer;">
+                        <div style="text-align: center; font-size: 0.85rem; color: #666; margin-top: 0.25rem;">
+                            (<span id="target-ng">${(state.targetLevel * 0.4).toFixed(1)}</span> ng/mL)
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Section -->
+                <div class="section">
+                    <h2 class="section-title">💊 Recommended Daily Dose</h2>
+                    
+                    <div class="result-box">
+                        <div class="result-label">Your Personalized Dose</div>
+                        <div class="result-value">${calc.calculatedDose.toLocaleString()} IU</div>
+                        <div class="result-label">Vitamin D3 per day</div>
+                        ${calc.exceedsSafeLimit ? `
+                            <div style="background: rgba(255, 193, 7, 0.3); padding: 1rem; border-radius: 8px; margin-top: 1rem; border: 2px solid rgba(255, 152, 0, 0.5);">
+                                <p style="margin: 0; font-size: 0.95rem; font-weight: 600; color: #e65100;">
+                                    ⚠️ HIGH DOSE WARNING
+                                </p>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #333;">
+                                    Your recommended dose (${calc.calculatedDose.toLocaleString()} IU) exceeds the general safe upper limit of 10,000 IU/day. 
+                                    This high dose may be appropriate for your situation, but should be taken under medical supervision with regular blood testing.
+                                    Ensure you take all required cofactors (especially magnesium and K2) and monitor for symptoms of toxicity.
+                                </p>
+                            </div>
+                        ` : ''}
+                        
+                        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.3);">
+                            <div style="text-align: left; font-size: 0.9rem;">
+                                <p style="margin: 0.5rem 0; opacity: 0.95;">
+                                    <strong>Research-Based Calculation:</strong>
+                                </p>
+                                <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                    Current level: ${calc.currentLevel} nmol/L
+                                </p>
+                                <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                    Target level: ${calc.targetLevel} nmol/L
+                                </p>
+                                <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                    Increase needed: ${calc.increaseNeeded} nmol/L
+                                </p>
+                                <p style="margin: 0.5rem 0; opacity: 0.9; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                                    <strong>Base dose:</strong> ${calc.baseDoseNeeded.toLocaleString()} IU
+                                </p>
+                                <p style="margin: 0.15rem 0; opacity: 0.85; font-size: 0.85rem; font-style: italic;">
+                                    (${calc.increaseNeeded} ÷ 12.5 × 1000)
+                                </p>
+                                <p style="margin: 0.5rem 0; opacity: 0.9; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 0.5rem;">
+                                    <strong>Modifiers:</strong>
+                                </p>
+                                <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                    <strong>× BMI (${calc.bmi.toFixed(1)}, ${calc.bmiCategory}): ${calc.bmiMultiplier.toFixed(2)}x</strong>
+                                </p>
+                                <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                    × Skin (${calc.skinTone}): ${calc.skinMultiplier.toFixed(2)}x
+                                </p>
+                                <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                    × Age: ${calc.ageMultiplier.toFixed(2)}x
+                                </p>
+                                <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                    × Sex: ${calc.sexMultiplier.toFixed(2)}x${calc.sexMultiplier > 1 ? ' (female)' : ''}
+                                </p>
+                                <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                    × Activity: ${calc.activityMultiplier.toFixed(2)}x
+                                </p>
+                                ${calc.lifestyleReductionPercent !== 0 ? `
+                                    <p style="margin: 0.25rem 0; opacity: 0.9;">
+                                        Lifestyle reduction: ${(calc.lifestyleReductionPercent * 100).toFixed(1)}%
+                                    </p>
+                                ` : ''}
+                                <p style="margin: 0.75rem 0 0.25rem 0; opacity: 0.95; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 0.5rem;">
+                                    <strong>Total: ${calc.calculatedDose.toLocaleString()} IU/day</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="info-box" style="margin-top: 1rem;">
+                        <p style="margin: 0; font-size: 0.9rem; line-height: 1.6;">
+                            <strong>📚 Research-Based BMI Formula:</strong> This calculator uses the clinically-validated approach where 
+                            <strong>1000 IU daily raises vitamin D by ~12.5 nmol/L</strong>. BMI is the PRIMARY modifier because vitamin D 
+                            is sequestered in adipose tissue. Research shows obese individuals (BMI ≥30) need <strong>2.6x more vitamin D</strong> 
+                            than normal weight individuals to achieve the same blood levels. Sources: Ekwaru et al. (2014) PLOS ONE study, 
+                            Endocrine Society Clinical Practice Guidelines, Singh et al. (2014) predictive equation study.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Cofactors Section -->
+                <div class="section full-width">
+                    <h2 class="section-title">Essential Cofactors for Vitamin D3 Metabolism</h2>
+                    <p style="color: #666; margin-bottom: 1.5rem; line-height: 1.6;">
+                        These nutrients work directly with vitamin D3 and their requirements scale with your D3 dose. 
+                        Taking these ensures optimal D3 conversion, function, and prevents imbalances.
+                    </p>
+                    
+                    ${calc.cofactors.map(cofactor => `
+                        <div class="cofactor-item ${cofactor.priority}">
+                            <div class="cofactor-header">
+                                <div>
+                                    <div class="cofactor-name">${cofactor.name}</div>
+                                    <div class="cofactor-ratio">${cofactor.ratio}</div>
+                                </div>
+                                <div class="cofactor-amount">${cofactor.amount.toLocaleString()} ${cofactor.unit}</div>
+                            </div>
+                            <div class="cofactor-reason">${cofactor.reason}</div>
+                            <div class="cofactor-timing">⏰ Timing: ${cofactor.timing}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Add event listeners for sliders after render
+            setTimeout(() => {
+                // Age slider
+                const ageSlider = document.getElementById('age-slider');
+                const ageDisplay = document.getElementById('age-display');
+                if (ageSlider && ageDisplay) {
+                    ageSlider.oninput = function() {
+                        ageDisplay.value = this.value;
+                    };
+                    ageSlider.onchange = function() {
+                        setState({ age: Number(this.value) });
+                    };
+                    ageDisplay.onchange = function() {
+                        const value = Math.max(1, Math.min(100, Number(this.value)));
+                        this.value = value;
+                        ageSlider.value = value;
+                        setState({ age: value });
+                    };
+                }
+                
+                // Weight slider
+                const weightSlider = document.getElementById('weight-slider');
+                const weightDisplay = document.getElementById('weight-display');
+                if (weightSlider && weightDisplay) {
+                    weightSlider.oninput = function() {
+                        weightDisplay.value = this.value;
+                    };
+                    weightSlider.onchange = function() {
+                        setState({ weight: Number(this.value) });
+                    };
+                    weightDisplay.onchange = function() {
+                        const value = Math.max(30, Math.min(200, Number(this.value)));
+                        this.value = value;
+                        weightSlider.value = value;
+                        setState({ weight: value });
+                    };
+                }
+                
+                // Height slider
+                const heightSlider = document.getElementById('height-slider');
+                const heightDisplay = document.getElementById('height-display');
+                if (heightSlider && heightDisplay) {
+                    heightSlider.oninput = function() {
+                        heightDisplay.value = this.value;
+                    };
+                    heightSlider.onchange = function() {
+                        setState({ height: Number(this.value) });
+                    };
+                    heightDisplay.onchange = function() {
+                        const value = Math.max(100, Math.min(250, Number(this.value)));
+                        this.value = value;
+                        heightSlider.value = value;
+                        setState({ height: value });
+                    };
+                }
+                
+                // Current level slider
+                const currentSlider = document.getElementById('current-slider');
+                const currentDisplay = document.getElementById('current-display');
+                const currentNg = document.getElementById('current-ng');
+                if (currentSlider && currentDisplay) {
+                    currentSlider.oninput = function() {
+                        currentDisplay.value = this.value;
+                        currentNg.textContent = (this.value * 0.4).toFixed(1);
+                    };
+                    currentSlider.onchange = function() {
+                        setState({ currentLevel: Number(this.value) });
+                    };
+                    currentDisplay.onchange = function() {
+                        const value = Math.max(0, Math.min(125, Number(this.value)));
+                        this.value = value;
+                        currentSlider.value = value;
+                        currentNg.textContent = (value * 0.4).toFixed(1);
+                        setState({ currentLevel: value });
+                    };
+                }
+                
+                // Target level slider
+                const targetSlider = document.getElementById('target-slider');
+                const targetDisplay = document.getElementById('target-display');
+                const targetNg = document.getElementById('target-ng');
+                if (targetSlider && targetDisplay) {
+                    targetSlider.oninput = function() {
+                        targetDisplay.value = this.value;
+                        targetNg.textContent = (this.value * 0.4).toFixed(1);
+                    };
+                    targetSlider.onchange = function() {
+                        setState({ targetLevel: Number(this.value) });
+                    };
+                    targetDisplay.onchange = function() {
+                        const value = Math.max(50, Math.min(150, Number(this.value)));
+                        this.value = value;
+                        targetSlider.value = value;
+                        targetNg.textContent = (value * 0.4).toFixed(1);
+                        setState({ targetLevel: value });
+                    };
+                }
+                
+                // Latitude slider (if visible)
+                const latSlider = document.querySelector('input[data-state-key="latitude"]');
+                if (latSlider) {
+                    latSlider.onchange = function() {
+                        setState({ latitude: Number(this.value) });
+                    };
+                }
+                
+                // Sex radio buttons (re-attach listeners after render)
+                const sexRadios = document.querySelectorAll('input[name="sex"]');
+                sexRadios.forEach(radio => {
+                    radio.onchange = function() {
+                        console.log('Sex changed to:', this.value);
+                        setState({ sex: this.value });
+                    };
+                });
+                
+                // Activity level radio buttons
+                const activityRadios = document.querySelectorAll('input[name="activityLevel"]');
+                activityRadios.forEach(radio => {
+                    radio.onchange = function() {
+                        setState({ activityLevel: this.value });
+                    };
+                });
+                
+                // Skin tone radio buttons
+                const skinRadios = document.querySelectorAll('input[name="skinTone"]');
+                skinRadios.forEach(radio => {
+                    radio.onchange = function() {
+                        setState({ skinTone: this.value });
+                    };
+                });
+                
+                // Season radio buttons
+                const seasonRadios = document.querySelectorAll('input[name="season"]');
+                seasonRadios.forEach(radio => {
+                    radio.onchange = function() {
+                        setState({ season: this.value });
+                    };
+                });
+                
+                // Weather radio buttons
+                const weatherRadios = document.querySelectorAll('input[name="weather"]');
+                weatherRadios.forEach(radio => {
+                    radio.onchange = function() {
+                        setState({ weather: this.value });
+                    };
+                });
+                
+                // Outdoor time radio buttons
+                const outdoorRadios = document.querySelectorAll('input[name="outdoorTime"]');
+                outdoorRadios.forEach(radio => {
+                    radio.onchange = function() {
+                        setState({ outdoorTime: this.value });
+                    };
+                });
+                
+                // Sunscreen use radio buttons
+                const sunscreenRadios = document.querySelectorAll('input[name="sunscreenUse"]');
+                sunscreenRadios.forEach(radio => {
+                    radio.onchange = function() {
+                        setState({ sunscreenUse: this.value });
+                    };
+                });
+            }, 10);
+        }
+
+        function toggleManualLatitude() {
+            setState({ showManualLatitude: !state.showManualLatitude });
+        }
+
+        // Initial render
+        console.log('Starting calculator initialization...');
+        console.log('Detected location:', detectedLocation);
+        console.log('Initial state:', state);
+        
+        try {
+            render();
+            console.log('Initial render complete');
+        } catch (error) {
+            console.error('Error during initial render:', error);
+            document.getElementById('app').innerHTML = `
+                <div style="padding: 2rem; background: #ffebee; border: 2px solid #f44336; border-radius: 8px; margin: 2rem;">
+                    <h2 style="color: #c62828;">Calculator Error</h2>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>Stack:</strong> ${error.stack}</p>
+                </div>
+            `;
+        }
+        
+        // Send height to parent for iframe resizing
+        function sendHeight() {
+            const height = document.documentElement.scrollHeight;
+            window.parent.postMessage({ type: 'resize', height: height }, '*');
+        }
+        
+        setTimeout(sendHeight, 100);
+        setTimeout(sendHeight, 500);
+        setTimeout(sendHeight, 1000);
+        
+        window.addEventListener('resize', sendHeight);
+        
+        const observer = new MutationObserver(sendHeight);
+        observer.observe(document.body, { 
+            childList: true, 
+            subtree: true, 
+            attributes: true 
+        });
     </script>
 </body>
 </html>
