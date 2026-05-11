@@ -44,8 +44,11 @@ async function getPlannerData() {
     .eq('id', user.id)
     .maybeSingle()
 
-  // Get family members
+  // Get family members + family scope. familyId flows to PlannerClient so
+  // calendar reads/writes are family-wide (mig 049): every member sees the
+  // same plan, and per-member recipe variants share a slot.
   let members = []
+  let familyId = null
   try {
     const { data: memberships } = await supabase
       .from('family_memberships')
@@ -54,7 +57,7 @@ async function getPlannerData() {
       .limit(1)
 
     if (memberships?.length) {
-      const familyId = memberships[0].family_id
+      familyId = memberships[0].family_id
 
       const [{ data: linked }, { data: managed }] = await Promise.all([
         supabase
@@ -78,10 +81,10 @@ async function getPlannerData() {
     members = profile ? [enrichMember({ ...profile, type: 'linked' })] : []
   }
 
-  return { userId: user.id, profile: enrichMember(profile), members }
+  return { userId: user.id, familyId, profile: enrichMember(profile), members }
 }
 
 export default async function PlanPage() {
-  const { userId, profile, members } = await getPlannerData()
-  return <PlannerClient userId={userId} profile={profile} members={members} />
+  const { userId, familyId, profile, members } = await getPlannerData()
+  return <PlannerClient userId={userId} familyId={familyId} profile={profile} members={members} />
 }

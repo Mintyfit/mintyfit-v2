@@ -27,6 +27,7 @@ export default function DayAgenda({
   members,
   activeMembers,
   userId,
+  familyId,
   onBack,
   onRefresh,
   onRemoveEntry,
@@ -76,33 +77,27 @@ export default function DayAgenda({
   async function handleAddRecipe(recipe, mealType) {
     const supabase = createClient()
     if (!supabase) return
-    const recipeTotals = recipe.nutrition?.totals || null
-
+    // One row per (slot, recipe). Eaters live in consumer_member_ids — same
+    // pattern as PlannerClient.saveRecipeToDay (post-mig 049). Per-member
+    // nutrition is computed at read time by DayStatsPanel, not stored as
+    // separate rows.
     const targetMembers = (activeMembers && activeMembers.length > 0) ? activeMembers : members
-    let rows
-    if (targetMembers.length > 0 && recipeTotals) {
-      rows = targetMembers.map(member => ({
-        profile_id: userId,
-        date_str: dateKey,
-        meal_type: mealType,
-        recipe_id: recipe.id,
-        member_id: member.id,
-        personal_nutrition: computeMemberNutrition(member, members, recipeTotals, {}),
-      }))
-    } else {
-      rows = [{
-        profile_id: userId,
-        date_str: dateKey,
-        meal_type: mealType,
-        recipe_id: recipe.id,
-        member_id: null,
-        personal_nutrition: recipe.nutrition?.perServing || null,
-      }]
+    const row = {
+      profile_id: userId,
+      family_id: familyId || null,
+      date_str: dateKey,
+      meal_type: mealType,
+      recipe_id: recipe.id,
+      recipe_name: recipe.title || '',
+      member_id: null,
+      consumer_member_ids: targetMembers.map(m => m.id),
+      personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
+      origin: 'planned',
     }
-
-    await supabase.from('calendar_entries').upsert(rows, {
-      onConflict: 'profile_id,date_str,meal_type,recipe_id,member_id',
-    })
+    const onConflict = familyId
+      ? 'family_id,date_str,meal_type,recipe_id,origin'
+      : 'profile_id,date_str,meal_type,recipe_id,origin'
+    await supabase.from('calendar_entries').upsert([row], { onConflict })
     setOpenMeal(null)
     onRefresh(dateKey)
   }
@@ -159,36 +154,77 @@ export default function DayAgenda({
               {MEAL_LABELS[mealType]}
             </h3>
 
-            {slotEntries.filter(e => e.recipes).map(entry => {
-              const r = entry.recipes
-              const slug = r?.slug || r?.id
-              const kcal = r?.nutrition?.perServing?.energy_kcal
-              return (
-                <div key={entry.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.625rem', background: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '0.5rem' }}>
-                  {r?.image_url ? (
-                    <div style={{ width: 44, height: 44, borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', position: 'relative' }}>
-                      <Image src={r.image_url} alt={r.title} fill style={{ objectFit: 'cover' }} sizes="44px" />
-                    </div>
-                  ) : null}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Link
-                      href={`/recipes/${slug}?date=${dateKey}&meal=${mealType}`}
-                      style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-1)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    >
-                      {r?.title}
-                    </Link>
-                    {kcal != null ? <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{Math.round(kcal)} kcal per serving</span> : null}
-                  </div>
-                  <button
-                    onClick={() => handleRemove(entry.id)}
-                    disabled={removingId === entry.id}
-                    style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-4)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                  >
-                    X
-                  </button>
-                </div>
+            {(() => {
+              // Variant stacking: in one slot, the entry with the most consumers
+              // is the headline (largest card). Others render as compact variant
+              // cards beneath it, so "Dad has eggs / Kids have oatmeal" is one
+              // visual group, not two equal-weight rows.
+              const recipeEntries = slotEntries.filter(e => e.recipes)
+              const ranked = [...recipeEntries].sort((a, b) =>
+                (b.consumer_member_ids?.length || 0) - (a.consumer_member_ids?.length || 0)
               )
-            })}
+              return ranked.map((entry, idx) => {
+                const r = entry.recipes
+                const slug = r?.slug || r?.id
+                const kcal = r?.nutrition?.perServing?.energy_kcal
+                const consumers = (entry.consumer_member_ids || [])
+                  .map(id => members.find(m => m.id === id))
+                  .filter(Boolean)
+                const isLogged = entry.origin === 'logged'
+                const isVariant = idx > 0
+                const imgSize = isVariant ? 32 : 44
+                return (
+                  <div
+                    key={entry.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.75rem',
+                      padding: isVariant ? '0.4rem 0.625rem' : '0.625rem',
+                      background: isLogged ? 'rgba(99,102,241,0.05)' : 'var(--bg-card)',
+                      borderRadius: '10px',
+                      border: `1px solid ${isLogged ? 'rgba(99,102,241,0.25)' : 'var(--border)'}`,
+                      marginBottom: '0.5rem',
+                      marginLeft: isVariant ? '1.25rem' : 0,
+                    }}
+                  >
+                    {r?.image_url ? (
+                      <div style={{ width: imgSize, height: imgSize, borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', position: 'relative' }}>
+                        <Image src={r.image_url} alt={r.title} fill style={{ objectFit: 'cover' }} sizes={`${imgSize}px`} />
+                      </div>
+                    ) : null}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap' }}>
+                        <Link
+                          href={`/recipes/${slug}?date=${dateKey}&meal=${mealType}`}
+                          style={{ fontSize: isVariant ? '0.875rem' : '0.9375rem', fontWeight: 600, color: 'var(--text-1)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        >
+                          {r?.title}
+                        </Link>
+                        {isLogged ? (
+                          <span style={{ fontSize: '0.6875rem', color: '#6366f1', background: 'rgba(99,102,241,0.12)', borderRadius: '4px', padding: '0.1rem 0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                            Logged
+                          </span>
+                        ) : null}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.125rem' }}>
+                        {kcal != null ? <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>{Math.round(kcal)} kcal/serving</span> : null}
+                        {consumers.length > 0 ? (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                            · {consumers.map(c => c.display_name || c.first_name || 'Member').join(', ')}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemove(entry.id)}
+                      disabled={removingId === entry.id}
+                      style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-4)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                    >
+                      X
+                    </button>
+                  </div>
+                )
+              })
+            })()}
 
             {slotEntries.filter(e => e.journal_entries).flatMap(e => e.journal_entries || []).map((je, i) => {
               const jeMember = je.member_id ? members.find(x => x.id === je.member_id) : null
