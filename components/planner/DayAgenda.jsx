@@ -94,10 +94,9 @@ export default function DayAgenda({
       personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
       origin: 'planned',
     }
-    const onConflict = familyId
-      ? 'family_id,date_str,meal_type,recipe_id,origin'
-      : 'profile_id,date_str,meal_type,recipe_id,origin'
-    await supabase.from('calendar_entries').upsert([row], { onConflict })
+    await supabase
+      .from('calendar_entries')
+      .upsert([row], { onConflict: 'family_id,date_str,meal_type,recipe_id,origin' })
     setOpenMeal(null)
     onRefresh(dateKey)
   }

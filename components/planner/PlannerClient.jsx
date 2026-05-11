@@ -203,13 +203,13 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
       origin: 'planned',
     }
-    // Mig 049 reshaped uniqueness to family-scoped + origin-aware. The conflict
-    // target matches the partial unique index (family_id, date, meal, recipe,
-    // origin). For solo users with no family, fall back to per-profile target.
-    const onConflict = familyId
-      ? 'family_id,date_str,meal_type,recipe_id,origin'
-      : 'profile_id,date_str,meal_type,recipe_id,origin'
-    const { error } = await supabase.from('calendar_entries').upsert([row], { onConflict })
+    // Mig 050: one non-partial unique on (family_id, date, meal, recipe,
+    // origin). For solo users (family_id=NULL), NULLS DISTINCT means duplicates
+    // won't trigger the upsert update path — that's fine; the UI never dupes
+    // intentionally for solo users.
+    const { error } = await supabase
+      .from('calendar_entries')
+      .upsert([row], { onConflict: 'family_id,date_str,meal_type,recipe_id,origin' })
     if (error) console.error('calendar upsert failed:', error)
     await refreshDay(dateKey)
     setAddingToMeal(false)
