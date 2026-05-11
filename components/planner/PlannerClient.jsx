@@ -50,6 +50,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   const [sidebarPage, setSidebarPage] = useState(0)
   const [sidebarHasMore, setSidebarHasMore] = useState(true)
   const [sidebarLoadingMore, setSidebarLoadingMore] = useState(false)
+  const [sidebarFilter, setSidebarFilter] = useState('all') // 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack'
   const draggedRecipe = useRef(null)
   const [dragActive, setDragActive] = useState(false)
   const [dropTarget, setDropTarget] = useState(null)
@@ -154,7 +155,13 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       })
   }, [userId, weekOffset])
 
-  // Sidebar recipes — first page; resets when search changes
+  function applySidebarFilter(query) {
+    if (sidebarFilter === 'snack') return query.in('meal_type', ['snack', 'snack2'])
+    if (sidebarFilter !== 'all') return query.eq('meal_type', sidebarFilter)
+    return query
+  }
+
+  // Sidebar recipes — first page; resets when search or filter changes
   useEffect(() => {
     if (!userId) return
     setSidebarLoading(true)
@@ -162,20 +169,21 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     setSidebarHasMore(true)
     const supabase = createClient()
     if (!supabase) { setSidebarLoading(false); return }
-    const query = supabase
+    let query = supabase
       .from('recipes')
       .select('id, title, slug, image_url, nutrition, meal_type')
       .or(`is_public.eq.true,profile_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .range(0, PAGE_SIZE - 1)
-    if (sidebarSearch.trim()) query.ilike('title', `%${sidebarSearch.trim()}%`)
+    if (sidebarSearch.trim()) query = query.ilike('title', `%${sidebarSearch.trim()}%`)
+    query = applySidebarFilter(query)
     query.then(({ data }) => {
       const list = data || []
       setSidebarRecipes(list)
       setSidebarHasMore(list.length === PAGE_SIZE)
       setSidebarLoading(false)
     })
-  }, [sidebarSearch, userId])
+  }, [sidebarSearch, sidebarFilter, userId])
 
   async function loadMoreSidebar() {
     if (sidebarLoadingMore || !sidebarHasMore) return
@@ -185,13 +193,14 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     const nextPage = sidebarPage + 1
     const from = nextPage * PAGE_SIZE
     const to = from + PAGE_SIZE - 1
-    const query = supabase
+    let query = supabase
       .from('recipes')
       .select('id, title, slug, image_url, nutrition, meal_type')
       .or(`is_public.eq.true,profile_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .range(from, to)
-    if (sidebarSearch.trim()) query.ilike('title', `%${sidebarSearch.trim()}%`)
+    if (sidebarSearch.trim()) query = query.ilike('title', `%${sidebarSearch.trim()}%`)
+    query = applySidebarFilter(query)
     const { data } = await query
     const list = data || []
     setSidebarRecipes(prev => [...prev, ...list])
@@ -395,6 +404,34 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                   placeholder="Search…"
                   style={{ width: '100%', padding: '0.4rem 0.625rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' }}
                 />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: '0.4rem' }}>
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'breakfast', label: 'Breakfast' },
+                    { id: 'lunch', label: 'Lunch' },
+                    { id: 'dinner', label: 'Dinner' },
+                    { id: 'snack', label: 'Snack' },
+                  ].map(f => {
+                    const active = sidebarFilter === f.id
+                    return (
+                      <button
+                        key={f.id}
+                        onClick={() => setSidebarFilter(f.id)}
+                        style={{
+                          padding: '0.2rem 0.55rem',
+                          borderRadius: '999px',
+                          border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                          background: active ? 'var(--primary)' : 'transparent',
+                          color: active ? '#fff' : 'var(--text-3)',
+                          fontSize: '0.6875rem',
+                          fontWeight: active ? 600 : 500,
+                          cursor: 'pointer',
+                          lineHeight: 1.4,
+                        }}
+                      >{f.label}</button>
+                    )
+                  })}
+                </div>
               </div>
               <div style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto', padding: '0.5rem' }}>
                 {sidebarLoading ? (
