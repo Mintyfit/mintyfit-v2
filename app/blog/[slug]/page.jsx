@@ -1,7 +1,8 @@
-import { createPublicClient } from '@/lib/supabase/server'
+import { createPublicClient, createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import BlogContent from '@/components/blog/BlogContent'
+import BlogPostHeader from '@/components/blog/BlogPostHeader'
 
 export const revalidate = 300
 
@@ -66,13 +67,29 @@ function getCTA(categories) {
   return { text: 'See MintyFit in action — free for your family', href: '/onboarding', emoji: '🥗' }
 }
 
+async function getIsSuperAdmin() {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return false
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    return profile?.role === 'super_admin'
+  } catch {
+    return false
+  }
+}
+
 export default async function BlogPostPage({ params }) {
   const { slug } = await params
   const post = await getPost(slug)
   if (!post) notFound()
 
   const cats = Array.isArray(post.categories) ? post.categories : (post.categories ? [post.categories] : [])
-  const related = await getRelated(cats, slug)
+  const [related, isSuperAdmin] = await Promise.all([getRelated(cats, slug), getIsSuperAdmin()])
   const cta = getCTA(cats)
   const date = post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
   const imageUrl = post.image_url || post.cover_url
@@ -99,6 +116,8 @@ export default async function BlogPostPage({ params }) {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '2rem 1rem' }}>
+        <BlogPostHeader post={post} isSuperAdmin={isSuperAdmin} />
+
         {/* Breadcrumb */}
         <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary, #6b7280)' }}>
           <Link href="/" style={{ color: '#10b981', textDecoration: 'none' }}>Home</Link>
