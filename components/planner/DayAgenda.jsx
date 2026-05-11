@@ -44,7 +44,7 @@ export default function DayAgenda({
     const needs = computeMemberDailyNeeds(member)
     const baseTarget = needs?.energy_kcal || member.daily_calories_target || 2000
     const memberActivities = activities[member.id] || []
-    const activityKcal = memberActivities.reduce((sum, act) => sum + (act.calories_burned || 0), 0)
+    const activityKcal = memberActivities.reduce((sum, act) => sum + (act.calories_burned || act.calories || 0), 0)
     const target = baseTarget + activityKcal
 
     let consumed = 0
@@ -151,8 +151,8 @@ export default function DayAgenda({
                   <div key={`${memberId}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.875rem', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.875rem' }}>
                     <span style={{ color: 'var(--text-2)' }}>{m?.display_name || m?.first_name || 'Member'}</span>
                     <span style={{ color: 'var(--text-3)' }}>-</span>
-                    <span style={{ color: 'var(--text-2)', flex: 1 }}>{act.activity_type} {act.duration_minutes ? `${act.duration_minutes} min` : ''}</span>
-                    {act.calories_burned ? <span style={{ color: '#6366f1', fontWeight: 600 }}>-{act.calories_burned} kcal</span> : null}
+                    <span style={{ color: 'var(--text-2)', flex: 1 }}>{act.activity_type || act.activity_text} {(act.duration_minutes || act.time_minutes) ? `${act.duration_minutes || act.time_minutes} min` : ''}</span>
+                    {(act.calories_burned || act.calories) ? <span style={{ color: '#6366f1', fontWeight: 600 }}>-{act.calories_burned || act.calories} kcal</span> : null}
                   </div>
                 )
               })

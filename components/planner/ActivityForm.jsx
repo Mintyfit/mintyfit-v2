@@ -106,19 +106,24 @@ export default function ActivityForm({ dateKey, userId, members, onSave, onClose
     setError('')
     try {
       const supabase = createClient()
-      if (!supabase) return
-      await supabase.from('daily_activities').insert({
+      if (!supabase) { setError('No connection.'); setLoading(false); return }
+      // Schema columns from migration 018: activity_text, time_minutes, calories,
+      // date_str, member_id (NOT NULL). Map UI fields onto them.
+      const { error: insertError } = await supabase.from('daily_activities').insert({
         profile_id: userId,
-        member_id: memberId || null,
-        date: dateKey,
-        activity_type: activityType,
-        duration_minutes: parseFloat(duration),
-        calories_burned: caloriesBurned ? parseFloat(caloriesBurned) : null,
-        logged_at: new Date().toISOString(),
+        member_id: memberId || userId,
+        date_str: dateKey,
+        activity_text: activityType,
+        time_minutes: parseFloat(duration),
+        calories: caloriesBurned ? parseFloat(caloriesBurned) : 0,
       })
-      onSave()
-    } catch {
-      setError('Could not save activity. Please try again.')
+      if (insertError) {
+        setError(insertError.message || 'Could not save activity.')
+      } else {
+        onSave()
+      }
+    } catch (e) {
+      setError(e?.message || 'Could not save activity. Please try again.')
     }
     setLoading(false)
   }
