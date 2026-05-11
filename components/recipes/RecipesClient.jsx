@@ -6,7 +6,8 @@ import RecipeCard from './RecipeCard'
 import { createClient } from '@/lib/supabase/client'
 import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
 
-const LIST_COLUMNS = 'id,slug,title,description,image_url,image_thumb_url,meal_type,food_type,cuisine_type,glycemic_load,price_level,calorie_range,cooking_technique,prep_time_minutes,cook_time_minutes,is_public,profile_id,created_at,updated_at,nutrition'
+// Keep in sync with app/recipes/page.jsx — slim columns, kcal only.
+const LIST_COLUMNS = 'id,slug,title,description,image_url,image_thumb_url,meal_type,food_type,cuisine_type,glycemic_load,price_level,calorie_range,cooking_technique,prep_time_minutes,cook_time_minutes,is_public,profile_id,created_at,updated_at,calories_kcal:nutrition->perServing->energy_kcal'
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
 const FOOD_TYPES = ['omnivore', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'paleo']

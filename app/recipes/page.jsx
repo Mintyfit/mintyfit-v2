@@ -9,7 +9,10 @@ export const metadata = {
 
 export const revalidate = 3600
 
-const LIST_COLUMNS = 'id,slug,title,description,image_url,image_thumb_url,meal_type,food_type,cuisine_type,glycemic_load,price_level,calorie_range,cooking_technique,prep_time_minutes,cook_time_minutes,is_public,profile_id,created_at,updated_at,nutrition'
+// Slim column list for the archive grid. We deliberately exclude the full
+// `nutrition` JSONB (a 47-nutrient blob, KB per row) and only pull the single
+// kcal value the card/filter actually needs via a JSON arrow operator.
+const LIST_COLUMNS = 'id,slug,title,description,image_url,image_thumb_url,meal_type,food_type,cuisine_type,glycemic_load,price_level,calorie_range,cooking_technique,prep_time_minutes,cook_time_minutes,is_public,profile_id,created_at,updated_at,calories_kcal:nutrition->perServing->energy_kcal'
 
 async function getPublicRecipes() {
   const supabase = createPublicClient()
@@ -18,7 +21,7 @@ async function getPublicRecipes() {
     .select(LIST_COLUMNS)
     .eq('is_public', true)
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(60)
 
   if (error) console.error('Recipes fetch error:', error)
   return (data || []).map(normalizeRecipe).filter(Boolean)
