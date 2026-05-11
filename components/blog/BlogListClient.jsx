@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 
 const CATEGORIES = ['All', 'Nutrition', 'Meal Planning', 'Family Health', 'Recipes', 'Weight Loss', 'Kids']
@@ -36,8 +35,8 @@ function PostCard({ post }) {
         onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}
       >
         {imageUrl && (
-          <div style={{ position: 'relative', height: 200, flexShrink: 0 }}>
-            <Image src={imageUrl} alt={post.title} fill style={{ objectFit: 'cover' }} />
+          <div style={{ position: 'relative', height: 200, flexShrink: 0, overflow: 'hidden' }}>
+            <img src={imageUrl} alt={post.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         )}
         <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column' }}>

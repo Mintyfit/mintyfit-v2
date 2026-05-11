@@ -1,6 +1,5 @@
 import { createPublicClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
 import BlogContent from '@/components/blog/BlogContent'
 
@@ -132,7 +131,7 @@ export default async function BlogPostPage({ params }) {
 
         {imageUrl && (
           <div style={{ position: 'relative', height: 400, borderRadius: '0.75rem', overflow: 'hidden', marginBottom: '2.5rem' }}>
-            <Image src={imageUrl} alt={post.title} fill style={{ objectFit: 'cover' }} priority />
+            <img src={imageUrl} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         )}
 
@@ -159,7 +158,7 @@ export default async function BlogPostPage({ params }) {
                   style={{ textDecoration: 'none', color: 'inherit', background: 'var(--card-bg, #f9fafb)', borderRadius: '0.5rem', padding: '1rem', border: '1px solid var(--border-color, #e5e7eb)', display: 'block' }}>
                   {r.image_url && (
                     <div style={{ position: 'relative', height: 120, borderRadius: '0.375rem', overflow: 'hidden', marginBottom: '0.75rem' }}>
-                      <Image src={r.image_url} alt={r.title} fill style={{ objectFit: 'cover' }} />
+                      <img src={r.image_url} alt={r.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   )}
                   <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary, #111827)' }}>{r.title}</p>

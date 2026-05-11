@@ -20,6 +20,14 @@ const CAL_RANGES = [
   { label: '500–700', min: 500, max: 700 },
   { label: '700+', min: 700, max: Infinity },
 ]
+// Total time = prep + cook (minutes)
+const TIME_RANGES = [
+  { label: 'Any', min: 0, max: Infinity },
+  { label: '≤15 min', min: 0, max: 16 },
+  { label: '15–30 min', min: 15, max: 31 },
+  { label: '30–60 min', min: 30, max: 61 },
+  { label: '60+ min', min: 60, max: Infinity },
+]
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
@@ -63,6 +71,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
   const [cuisine, setCuisine] = useState('')
   const [gl, setGl] = useState('')
   const [calRange, setCalRange] = useState(0) // index into CAL_RANGES
+  const [timeRange, setTimeRange] = useState(0) // index into TIME_RANGES
   const [sort, setSort] = useState('newest')
   const [page, setPage] = useState(1)
   const [showFilters, setShowFilters] = useState(false)
@@ -89,6 +98,13 @@ export default function RecipesClient({ initialRecipes = [] }) {
         return kcal >= min && kcal < max
       })
     }
+    const { min: tMin, max: tMax } = TIME_RANGES[timeRange]
+    if (tMin > 0 || tMax < Infinity) {
+      list = list.filter(r => {
+        const total = (r.prep_time_minutes || 0) + (r.cook_time_minutes || 0)
+        return total >= tMin && total < tMax
+      })
+    }
 
     if (sort === 'newest') list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     else if (sort === 'oldest') list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
@@ -96,7 +112,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
     else if (sort === 'calories-desc') list.sort((a, b) => (b.nutrition?.perServing?.energy_kcal || 0) - (a.nutrition?.perServing?.energy_kcal || 0))
 
     return list
-  }, [allRecipes, search, mealType, foodType, cuisine, gl, calRange, sort])
+  }, [allRecipes, search, mealType, foodType, cuisine, gl, calRange, timeRange, sort])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -108,11 +124,12 @@ export default function RecipesClient({ initialRecipes = [] }) {
     setCuisine('')
     setGl('')
     setCalRange(0)
+    setTimeRange(0)
     setSort('newest')
     setPage(1)
   }, [])
 
-  const hasActiveFilters = mealType || foodType || cuisine || gl || calRange > 0
+  const hasActiveFilters = mealType || foodType || cuisine || gl || calRange > 0 || timeRange > 0
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem 1.25rem 5rem' }}>
@@ -293,6 +310,30 @@ export default function RecipesClient({ initialRecipes = [] }) {
                     border: `1px solid ${calRange === i ? 'var(--primary)' : 'var(--border)'}`,
                     background: calRange === i ? 'var(--primary)' : 'transparent',
                     color: calRange === i ? '#fff' : 'var(--text-2)',
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Total time (prep + cook) */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>Total Time</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+              {TIME_RANGES.map((r, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setTimeRange(i); setPage(1) }}
+                  style={{
+                    padding: '0.3rem 0.7rem',
+                    borderRadius: '20px',
+                    border: `1px solid ${timeRange === i ? 'var(--primary)' : 'var(--border)'}`,
+                    background: timeRange === i ? 'var(--primary)' : 'transparent',
+                    color: timeRange === i ? '#fff' : 'var(--text-2)',
                     fontSize: '0.8125rem',
                     cursor: 'pointer',
                   }}
