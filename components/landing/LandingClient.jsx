@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import HeroCTA from './HeroCTA'
-import PricingToggle from './PricingToggle'
 import FAQAccordion from './FAQAccordion'
 import AuthModal from './AuthModal'
 
@@ -248,9 +247,6 @@ export default function LandingClient() {
             </div>
           </div>
         </section>
-
-        {/* ===== 4. PRICING ===== */}
-        <PricingToggle onOpenAuth={() => openAuth('signup')} />
 
         {/* ===== 5. TRUST ===== */}
         <section style={{ padding: '5rem 1.25rem', background: 'var(--bg-page)' }}>

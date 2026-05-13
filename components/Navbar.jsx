@@ -171,14 +171,31 @@ export default function Navbar() {
           flexDirection: 'column', position: 'fixed', top: 60, left: 0, right: 0, bottom: 0,
           backgroundColor: 'var(--bg-nav)', zIndex: 199, overflowY: 'auto', padding: '8px 0 24px', borderTop: '1px solid var(--border)',
         }}>
-          {DESKTOP_TABS.filter(t => !t.auth || user).map(t => (
-            <Link key={t.id} href={t.path} style={{
-              display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)',
-              color: isTabActive(t, pathname) ? 'var(--primary)' : 'var(--text-2)',
-              fontSize: 16, fontWeight: isTabActive(t, pathname) ? 700 : 500, textDecoration: 'none',
-              background: isTabActive(t, pathname) ? 'rgba(61,138,62,0.06)' : 'transparent',
-            }}><t.icon size={20} />{t.label}</Link>
-          ))}
+          {DESKTOP_TABS.filter(t => !t.auth || user).map(t => {
+            const active = isTabActive(t, pathname)
+            if (!user && (t.id === 'plan' || t.id === 'statistics')) {
+              return (
+                <button key={t.id} onClick={() => { setAuthTab('signup'); setAuthOpen(true); setMobileMenuOpen(false) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)',
+                    color: active ? 'var(--primary)' : 'var(--text-2)',
+                    fontSize: 16, fontWeight: active ? 700 : 500,
+                    background: active ? 'rgba(61,138,62,0.06)' : 'transparent',
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'left',
+                  }}>
+                  <t.icon size={20} />{t.label}
+                </button>
+              )
+            }
+            return (
+              <Link key={t.id} href={t.path} style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)',
+                color: active ? 'var(--primary)' : 'var(--text-2)',
+                fontSize: 16, fontWeight: active ? 700 : 500, textDecoration: 'none',
+                background: active ? 'rgba(61,138,62,0.06)' : 'transparent',
+              }}><t.icon size={20} />{t.label}</Link>
+            )
+          })}
           {user && (
             <>
               <Link href="/my-account" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 16, fontWeight: 500, textDecoration: 'none' }}><User size={20} />My Account</Link>
@@ -207,13 +224,24 @@ export default function Navbar() {
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
         <div style={{ display: 'flex', width: '100%' }}>
-          {MOBILE_TABS.filter(t => !t.auth || user).map(t => (
-            <Link key={t.id} href={t.path}
-              className={`mf-bottom-link${isTabActive(t, pathname) ? ' mf-bottom-link--active' : ''}`}>
-              <t.icon size={20} strokeWidth={isTabActive(t, pathname) ? 2.5 : 1.8} />
-              <span style={{ fontSize: 11, fontWeight: isTabActive(t, pathname) ? 700 : 500 }}>{t.label}</span>
-            </Link>
-          ))}
+          {MOBILE_TABS.filter(t => !t.auth || user).map(t => {
+            const classes = `mf-bottom-link${isTabActive(t, pathname) ? ' mf-bottom-link--active' : ''}`
+            if (!user && (t.id === 'plan' || t.id === 'statistics')) {
+              return (
+                <button key={t.id} onClick={() => { setAuthTab('signup'); setAuthOpen(true) }}
+                  className={classes} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <t.icon size={20} strokeWidth={isTabActive(t, pathname) ? 2.5 : 1.8} />
+                  <span style={{ fontSize: 11, fontWeight: isTabActive(t, pathname) ? 700 : 500 }}>{t.label}</span>
+                </button>
+              )
+            }
+            return (
+              <Link key={t.id} href={t.path} className={classes}>
+                <t.icon size={20} strokeWidth={isTabActive(t, pathname) ? 2.5 : 1.8} />
+                <span style={{ fontSize: 11, fontWeight: isTabActive(t, pathname) ? 700 : 500 }}>{t.label}</span>
+              </Link>
+            )
+          })}
         </div>
       </nav>
 
@@ -231,12 +259,18 @@ export default function Navbar() {
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', padding: '0 16px', height: 63 }}>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', marginRight: 28 }}><img src={logoSrc} alt="MintyFit" width="134" height="40" style={{ height: 40, objectFit: 'contain' }} /></Link>
           <div style={{ display: 'flex', gap: 4, flex: 1 }}>
-            {DESKTOP_TABS.filter(t => !t.auth || user).map(t => (
-              <Link key={t.id} href={t.path}
-                className={`mf-nav-link${isTabActive(t, pathname) ? ' mf-nav-link--active' : ''}`}>
-                <t.icon size={18} />{t.label}
-              </Link>
-            ))}
+            {DESKTOP_TABS.filter(t => !t.auth || user).map(t => {
+              const classes = `mf-nav-link${isTabActive(t, pathname) ? ' mf-nav-link--active' : ''}`
+              if (!user && (t.id === 'plan' || t.id === 'statistics')) {
+                return (
+                  <button key={t.id} onClick={() => { setAuthTab('signup'); setAuthOpen(true) }}
+                    className={classes} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <t.icon size={18} />{t.label}
+                  </button>
+                )
+              }
+              return <Link key={t.id} href={t.path} className={classes}><t.icon size={18} />{t.label}</Link>
+            })}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {loading ? <div style={{ width: 88, height: 36, borderRadius: 10, backgroundColor: 'var(--bg-subtle)' }} />
