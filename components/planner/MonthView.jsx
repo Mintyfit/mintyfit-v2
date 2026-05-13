@@ -194,7 +194,7 @@ export default function MonthView({ entries, activities, members, userId, onRefr
   })
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '16px 16px 80px' }}>
+    <div>
       {/* Filter bar */}
       <div style={{
         backgroundColor: 'var(--bg-card)', borderRadius: 16, padding: '14px 16px',
@@ -218,7 +218,7 @@ export default function MonthView({ entries, activities, members, userId, onRefr
 
         {/* Members */}
         {members.length > 0 && (
-          <div>
+    <div style={{ paddingBottom: '80px' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-4)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Family Members
             </div>

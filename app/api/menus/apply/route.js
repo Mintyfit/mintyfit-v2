@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 
 // ── POST /api/menus/apply ─────────────────────────────────────────────────────
@@ -11,8 +10,7 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request) {
   try {
-    const cookieStore = await cookies()
-    const supabase = createClient(cookieStore)
+    const supabase = await createClient()
 
     const { data: { user }, error: authErr } = await supabase.auth.getUser()
     if (authErr || !user) {
@@ -20,7 +18,7 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { menu_id, start_date } = body
+    const { menu_id, start_date, consumer_member_ids } = body
 
     if (!menu_id || !start_date) {
       return NextResponse.json({ error: 'menu_id and start_date are required' }, { status: 400 })
@@ -32,6 +30,40 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid start_date' }, { status: 400 })
     }
 
+    const { data: memberships } = await supabase
+      .from('family_memberships')
+      .select('family_id')
+      .eq('profile_id', user.id)
+      .eq('status', 'active')
+      .limit(1)
+    const familyId = memberships?.[0]?.family_id || null
+
+    let allowedConsumerIds = [user.id]
+    if (familyId) {
+      const [{ data: linked }, { data: managed }] = await Promise.all([
+        supabase
+          .from('family_memberships')
+          .select('profile_id')
+          .eq('family_id', familyId)
+          .eq('status', 'active'),
+        supabase
+          .from('managed_members')
+          .select('id')
+          .eq('family_id', familyId),
+      ])
+      allowedConsumerIds = [
+        ...(linked || []).map(m => m.profile_id),
+        ...(managed || []).map(m => m.id),
+      ].filter(Boolean)
+    }
+
+    const requestedConsumers = Array.isArray(consumer_member_ids) ? consumer_member_ids : []
+    const requestedSet = new Set(requestedConsumers)
+    const selectedConsumerIds = requestedConsumers.length
+      ? allowedConsumerIds.filter(id => requestedSet.has(id))
+      : allowedConsumerIds
+    const finalConsumerIds = selectedConsumerIds.length ? selectedConsumerIds : allowedConsumerIds
+
     // Fetch menu with its recipe assignments
     const { data: menu, error: menuErr } = await supabase
       .from('menus')
@@ -39,7 +71,7 @@ export async function POST(request) {
         id, name, is_public, profile_id,
         menu_recipes (
           id, meal_type, sort_order,
-          recipes ( id, title )
+          recipes ( id, title, nutrition )
         )
       `)
       .eq('id', menu_id)
@@ -79,9 +111,15 @@ export async function POST(request) {
         const dateStr = d.toISOString().split('T')[0]
         rows.push({
           profile_id: user.id,
+          family_id: familyId,
           date_str: dateStr,
           meal_type: mealType,
           recipe_id: mrs[i].recipes.id,
+          recipe_name: mrs[i].recipes.title || '',
+          member_id: null,
+          consumer_member_ids: finalConsumerIds,
+          personal_nutrition: mrs[i].recipes.nutrition?.totals || mrs[i].recipes.nutrition?.perServing || null,
+          origin: 'planned',
         })
       }
     }
@@ -92,11 +130,15 @@ export async function POST(request) {
 
     const { error: insertErr } = await supabase
       .from('calendar_entries')
-      .insert(rows)
+      .upsert(rows, { onConflict: 'family_id,date_str,meal_type,recipe_id,origin' })
 
     if (insertErr) throw new Error(insertErr.message)
 
-    return NextResponse.json({ added: rows.length, start_date })
+    return NextResponse.json({
+      added: rows.length,
+      start_date,
+      date_keys: Array.from(new Set(rows.map(row => row.date_str))),
+    })
   } catch (err) {
     console.error('[menus/apply POST]', err)
     return NextResponse.json({ error: err.message }, { status: 500 })

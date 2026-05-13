@@ -508,6 +508,9 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
   const [shoppingState, setShoppingState] = useState('idle') // 'idle' | 'loading' | 'success' | 'error'
   const [checkedIngredients, setCheckedIngredients] = useState(new Set())
   const [selectedShoppingState, setSelectedShoppingState] = useState('idle')
+  const [showShoppingPrompt, setShowShoppingPrompt] = useState(false)
+  const [shoppingListCount, setShoppingListCount] = useState(0)
+  const [shoppingPromptMode, setShoppingPromptMode] = useState('main')
   // 'steps' = ingredients inline with each step (default); 'list' = all ingredients first, then numbered steps
   const [viewMode, setViewMode] = useState('steps')
 
@@ -932,8 +935,123 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
     })
   }
 
+  async function addItemsToShoppingList(clearFirst = false) {
+    if (clearFirst) {
+      await fetch('/api/shopping-list', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clear_all: true }),
+      })
+    }
+    setShoppingState('loading')
+    try {
+      let body
+      if (checkedIngredients.size > 0) {
+        const seen = new Set()
+        const selected = []
+        for (const step of (recipe.steps || [])) {
+          for (const ing of (step.ingredients || [])) {
+            const key = ing.name?.toLowerCase()
+            if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
+            seen.add(key)
+            selected.push({
+              ingredient_name: ing.name,
+              amount: ing.amount || null,
+              unit: ing.unit || null,
+            })
+          }
+        }
+        body = JSON.stringify({ recipe_id: recipe.id, ingredients: selected })
+      } else {
+        body = JSON.stringify({ recipe_id: recipe.id })
+      }
+      const res = await fetch('/api/shopping-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      })
+      if (!res.ok) throw new Error('failed')
+      setShoppingState('success')
+      setTimeout(() => setShoppingState('idle'), 3000)
+    } catch {
+      setShoppingState('error')
+      setTimeout(() => setShoppingState('idle'), 3000)
+    }
+    setShowShoppingPrompt(false)
+  }
+
+  async function handleShoppingListClick() {
+    if (shoppingState === 'loading') return
+    try {
+      const res = await fetch('/api/shopping-list/count')
+      const { count } = await res.json()
+      if (count > 0) {
+        setShoppingListCount(count)
+        setShoppingPromptMode('main')
+        setShowShoppingPrompt(true)
+      } else {
+        await addItemsToShoppingList(false)
+      }
+    } catch {
+      await addItemsToShoppingList(false)
+    }
+  }
+
   async function addSelectedToShoppingList() {
     if (selectedShoppingState === 'loading') return
+    try {
+      const res = await fetch('/api/shopping-list/count')
+      const { count } = await res.json()
+      if (count > 0) {
+        setShoppingListCount(count)
+        setShoppingPromptMode('selected')
+        setShowShoppingPrompt(true)
+        return
+      }
+    } catch {}
+    await addSelectedToShoppingListDirect()
+  }
+
+  async function addSelectedToShoppingListDirect() {
+    const seen = new Set()
+    const selected = []
+    for (const step of (recipe.steps || [])) {
+      for (const ing of (step.ingredients || [])) {
+        const key = ing.name?.toLowerCase()
+        if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
+        seen.add(key)
+        selected.push({
+          ingredient_name: ing.name,
+          amount: ing.amount || null,
+          unit: ing.unit || null,
+        })
+      }
+    }
+    if (!selected.length) return
+    setSelectedShoppingState('loading')
+    setShowShoppingPrompt(false)
+    try {
+      const res = await fetch('/api/shopping-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipe_id: recipe.id, ingredients: selected }),
+      })
+      if (!res.ok) throw new Error('failed')
+      setSelectedShoppingState('success')
+      setTimeout(() => setSelectedShoppingState('idle'), 3000)
+    } catch {
+      setSelectedShoppingState('error')
+      setTimeout(() => setSelectedShoppingState('idle'), 3000)
+    }
+  }
+
+  async function addSelectedToShoppingClear() {
+    await fetch('/api/shopping-list', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clear_all: true }),
+    })
+    setShowShoppingPrompt(false)
     const seen = new Set()
     const selected = []
     for (const step of (recipe.steps || [])) {
@@ -1259,43 +1377,8 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             {addingToPlan ? '⏳ Adding…' : '📅 Add to Plan'}
           </button>
           <button
-            onClick={async () => {
-              if (shoppingState === 'loading') return
-              setShoppingState('loading')
-              try {
-                let body
-                if (checkedIngredients.size > 0) {
-                  const seen = new Set()
-                  const selected = []
-                  for (const step of (recipe.steps || [])) {
-                    for (const ing of (step.ingredients || [])) {
-                      const key = ing.name?.toLowerCase()
-                      if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
-                      seen.add(key)
-                      selected.push({
-                        ingredient_name: ing.name,
-                        amount: ing.amount || null,
-                        unit: ing.unit || null,
-                      })
-                    }
-                  }
-                  body = JSON.stringify({ recipe_id: recipe.id, ingredients: selected })
-                } else {
-                  body = JSON.stringify({ recipe_id: recipe.id })
-                }
-                const res = await fetch('/api/shopping-list', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body,
-                })
-                if (!res.ok) throw new Error('failed')
-                setShoppingState('success')
-                setTimeout(() => setShoppingState('idle'), 3000)
-              } catch {
-                setShoppingState('error')
-                setTimeout(() => setShoppingState('idle'), 3000)
-              }
-            }}
+            onClick={handleShoppingListClick}
+            disabled={shoppingState === 'loading'}
             style={{
               padding: '0.625rem 1.25rem', borderRadius: '10px',
               background: shoppingState === 'success' ? 'rgba(61,138,62,0.1)' : 'transparent',
@@ -1460,7 +1543,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           return (
             <div style={{ marginBottom: '1.5rem', padding: '1rem 1.125rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }}>
               <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.75rem' }}>Ingredients</h3>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
                 {flat.map(item => {
                   const checked = checkedIngredients.has(item.key)
                   return (
@@ -1691,43 +1774,8 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
               {addingToPlan ? '⏳ Adding…' : '📅 Add to Plan'}
             </button>
             <button
-              onClick={async () => {
-                if (shoppingState === 'loading') return
-                setShoppingState('loading')
-                try {
-                  let body
-                  if (checkedIngredients.size > 0) {
-                    const seen = new Set()
-                    const selected = []
-                    for (const step of (recipe.steps || [])) {
-                      for (const ing of (step.ingredients || [])) {
-                        const key = ing.name?.toLowerCase()
-                        if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
-                        seen.add(key)
-                        selected.push({
-                          ingredient_name: ing.name,
-                          amount: ing.amount || null,
-                          unit: ing.unit || null,
-                        })
-                      }
-                    }
-                    body = JSON.stringify({ recipe_id: recipe.id, ingredients: selected })
-                  } else {
-                    body = JSON.stringify({ recipe_id: recipe.id })
-                  }
-                  const res = await fetch('/api/shopping-list', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body,
-                  })
-                  if (!res.ok) throw new Error('failed')
-                  setShoppingState('success')
-                  setTimeout(() => setShoppingState('idle'), 3000)
-                } catch {
-                  setShoppingState('error')
-                  setTimeout(() => setShoppingState('idle'), 3000)
-                }
-              }}
+              onClick={handleShoppingListClick}
+              disabled={shoppingState === 'loading'}
               style={{
                 padding: '0.625rem 1.25rem', borderRadius: '10px',
                 background: shoppingState === 'success' ? 'rgba(61,138,62,0.1)' : 'transparent',
@@ -1981,6 +2029,72 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
         onSelect={handleSelectAlternative}
         onClose={() => setShowAlternativesFor(null)}
       />
+
+      {/* Shopping list prompt modal */}
+      {showShoppingPrompt && (
+        <div
+          onClick={() => setShowShoppingPrompt(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)', borderRadius: '16px', maxWidth: '360px', width: '100%',
+              padding: '1.5rem', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+            }}
+          >
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.5rem' }}>
+              Shopping list is not empty
+            </h3>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--text-2)', margin: '0 0 1.25rem', lineHeight: 1.5 }}>
+              You have {shoppingListCount} item{shoppingListCount !== 1 ? 's' : ''} in your shopping list. What would you like to do?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <button
+                onClick={() => {
+                  if (shoppingPromptMode === 'selected') addSelectedToShoppingListDirect()
+                  else addItemsToShoppingList(false)
+                }}
+                disabled={shoppingState === 'loading' || selectedShoppingState === 'loading'}
+                style={{
+                  padding: '0.75rem', borderRadius: '10px', background: 'var(--primary)', color: '#fff',
+                  border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer',
+                }}
+              >
+                Add items
+              </button>
+              <button
+                onClick={() => {
+                  if (shoppingPromptMode === 'selected') addSelectedToShoppingClear()
+                  else addItemsToShoppingList(true)
+                }}
+                disabled={shoppingState === 'loading' || selectedShoppingState === 'loading'}
+                style={{
+                  padding: '0.75rem', borderRadius: '10px', background: 'transparent',
+                  border: '2px solid #ef4444', color: '#ef4444',
+                  fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer',
+                }}
+              >
+                Clear shopping list
+              </button>
+              <button
+                onClick={() => setShowShoppingPrompt(false)}
+                style={{
+                  padding: '0.75rem', borderRadius: '10px', background: 'transparent',
+                  border: '1px solid var(--border)', color: 'var(--text-3)',
+                  fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   )

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import WeekOverview from './WeekOverview'
 import DayAgenda from './DayAgenda'
 import DayStatsPanel from './DayStatsPanel'
+import MonthView from './MonthView'
 
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
 const MEAL_LABELS = { breakfast: 'Breakfast', snack: 'Morning Snack', lunch: 'Lunch', snack2: 'Afternoon Snack', dinner: 'Dinner' }
@@ -36,11 +37,15 @@ function toDateKey(date) {
 export default function PlannerClient({ userId, familyId, profile, members }) {
   const [today] = useState(() => new Date())
   const [weekOffset, setWeekOffset] = useState(0)
+  const [viewMode, setViewMode] = useState('week') // 'week' | 'month'
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [entries, setEntries] = useState({})
   const [activities, setActivities] = useState({})
   const [journals, setJournals] = useState({}) // { dateKey: { mealType: [foodJournalRow, ...] } }
   const [loading, setLoading] = useState(false)
+  const [monthEntries, setMonthEntries] = useState({})
+  const [clearing, setClearing] = useState(false)
+  const [showClearMenu, setShowClearMenu] = useState(false)
   const touchStartX = useRef(null)
 
   // Recipe sidebar (column 1) — always rendered, always populated
@@ -52,6 +57,10 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   const [sidebarHasMore, setSidebarHasMore] = useState(true)
   const [sidebarLoadingMore, setSidebarLoadingMore] = useState(false)
   const [sidebarFilter, setSidebarFilter] = useState('all') // 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack'
+  const [sidebarTab, setSidebarTab] = useState('recipes')
+  const [sidebarMenus, setSidebarMenus] = useState([])
+  const [sidebarMenusLoading, setSidebarMenusLoading] = useState(true)
+  const draggedMenu = useRef(null)
   const draggedRecipe = useRef(null)
   const [dragActive, setDragActive] = useState(false)
   const [dropTarget, setDropTarget] = useState(null)
@@ -174,6 +183,38 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       })
   }, [userId, weekOffset])
 
+  // Fetch month-wide entries when in month view
+  useEffect(() => {
+    if (viewMode !== 'month' || !userId) return
+    const supabase = createClient()
+    if (!supabase) return
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+    const end = new Date(now.getFullYear(), now.getMonth() + 3, 0)
+    const startKey = toDateKey(start)
+    const endKey = toDateKey(end)
+    const baseSelect = `
+        id, date_str, meal_type, member_id, consumer_member_ids,
+        family_id, origin,
+        recipes(id, title, slug, image_url, nutrition, servings)
+      `
+    const mQuery = familyId
+      ? supabase.from('calendar_entries').select(baseSelect).eq('family_id', familyId)
+      : supabase.from('calendar_entries').select(baseSelect).eq('profile_id', userId).is('family_id', null)
+    mQuery
+      .gte('date_str', startKey)
+      .lte('date_str', endKey)
+      .then(({ data }) => {
+        const map = {}
+        for (const entry of data || []) {
+          if (!map[entry.date_str]) map[entry.date_str] = {}
+          if (!map[entry.date_str][entry.meal_type]) map[entry.date_str][entry.meal_type] = []
+          map[entry.date_str][entry.meal_type].push(entry)
+        }
+        setMonthEntries(map)
+      })
+  }, [viewMode, userId, familyId])
+
   function applySidebarFilter(query) {
     if (sidebarFilter === 'snack') return query.in('meal_type', ['snack', 'snack2'])
     if (sidebarFilter !== 'all') return query.eq('meal_type', sidebarFilter)
@@ -204,6 +245,45 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     })
   }, [sidebarSearch, sidebarFilter, userId])
 
+  useEffect(() => {
+    if (!userId) return
+    setSidebarMenusLoading(true)
+    const supabase = createClient()
+    if (!supabase) { setSidebarMenusLoading(false); return }
+    Promise.all([
+      supabase
+        .from('menus')
+        .select('*, menu_recipes(count)')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(100),
+      supabase
+        .from('menus')
+        .select('*, menu_recipes(count)')
+        .eq('profile_id', userId)
+        .eq('is_public', false)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]).then(([publicResult, privateResult]) => {
+      const seen = new Set()
+      const merged = [...(publicResult.data || []), ...(privateResult.data || [])]
+        .filter(menu => {
+          if (seen.has(menu.id)) return false
+          seen.add(menu.id)
+          return true
+        })
+      const term = sidebarSearch.trim().toLowerCase()
+      const filtered = term
+        ? merged.filter(menu =>
+            menu.name?.toLowerCase().includes(term) ||
+            menu.description?.toLowerCase().includes(term)
+          )
+        : merged
+      setSidebarMenus(filtered)
+      setSidebarMenusLoading(false)
+    })
+  }, [sidebarSearch, userId])
+
   async function loadMoreSidebar() {
     if (sidebarLoadingMore || !sidebarHasMore) return
     setSidebarLoadingMore(true)
@@ -228,6 +308,31 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     setSidebarLoadingMore(false)
   }
 
+  async function applyMenuToDay(menu, dateKey) {
+    if (!menu?.id || !dateKey) return
+    setAddingToMeal(true)
+    try {
+      const res = await fetch('/api/menus/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          menu_id: menu.id,
+          start_date: dateKey,
+          consumer_member_ids: activeMembers.map(m => m.id),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Failed to apply menu')
+
+      const refreshKeys = data.date_keys?.length ? data.date_keys : [dateKey]
+      await Promise.all(refreshKeys.map(refreshDay))
+    } catch (err) {
+      console.error('menu apply failed:', err)
+    } finally {
+      setAddingToMeal(false)
+    }
+  }
+
   // Tap "+" on a sidebar recipe — adds to selectedDate. If recipe has a
   // meal_type, save directly; else open the meal-slot picker.
   function handleTapAddRecipe(recipe) {
@@ -243,6 +348,14 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
 
   // Drag-and-drop helpers
   function handleDropRecipe(date, dateKey) {
+    if (draggedMenu.current) {
+      const menu = draggedMenu.current
+      applyMenuToDay(menu, dateKey).then(() => {
+        draggedMenu.current = null
+        setDragActive(false)
+      })
+      return
+    }
     if (!draggedRecipe.current) return
     const recipe = draggedRecipe.current
     // If the recipe knows its meal type, save directly — no picker.
@@ -393,6 +506,61 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     refreshDay(dateKey)
   }, [refreshDay])
 
+  async function clearDay() {
+    if (!selectedKey || clearing) return
+    if (!confirm('Clear all meals for this day?')) return
+    setClearing(true)
+    const supabase = createClient()
+    if (!supabase) { setClearing(false); return }
+    const query = familyId
+      ? supabase.from('calendar_entries').delete().eq('family_id', familyId).eq('date_str', selectedKey)
+      : supabase.from('calendar_entries').delete().eq('profile_id', userId).is('family_id', null).eq('date_str', selectedKey)
+    await query
+    await refreshDay(selectedKey)
+    setClearing(false)
+  }
+
+  async function clearWeek() {
+    if (clearing) return
+    if (!confirm(`Clear all meals for ${weekLabel}?`)) return
+    setClearing(true)
+    const supabase = createClient()
+    if (!supabase) { setClearing(false); return }
+    const dateKeys = weekDates.map(d => toDateKey(d))
+    const query = familyId
+      ? supabase.from('calendar_entries').delete().eq('family_id', familyId).in('date_str', dateKeys)
+      : supabase.from('calendar_entries').delete().eq('profile_id', userId).is('family_id', null).in('date_str', dateKeys)
+    await query
+    for (const dk of dateKeys) await refreshDay(dk)
+    setClearing(false)
+  }
+
+  async function clearMonthRange() {
+    if (clearing) return
+    const now = new Date()
+    const mStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const label = mStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+    if (!confirm(`Clear all meals for ${label}?`)) return
+    setClearing(true)
+    const supabase = createClient()
+    if (!supabase) { setClearing(false); return }
+    const startKey = toDateKey(mStart)
+    const endKey = toDateKey(mEnd)
+    const query = familyId
+      ? supabase.from('calendar_entries').delete().eq('family_id', familyId).gte('date_str', startKey).lte('date_str', endKey)
+      : supabase.from('calendar_entries').delete().eq('profile_id', userId).is('family_id', null).gte('date_str', startKey).lte('date_str', endKey)
+    await query
+    // Refresh the current week and month views
+    for (const d of weekDates) await refreshDay(toDateKey(d))
+    // Re-fetch month entries
+    if (viewMode === 'month') {
+      const map = {}
+      setMonthEntries(map)
+    }
+    setClearing(false)
+  }
+
   const selectedKey = selectedDate ? toDateKey(selectedDate) : null
   const dayEntries = selectedKey ? (entries[selectedKey] || {}) : {}
   const dayActivities = selectedKey ? (activities[selectedKey] || {}) : {}
@@ -402,7 +570,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     <>
       <div
         className="plan-page"
-        style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.25rem 1.25rem 5rem' }}
+        style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.25rem 1.25rem 5rem' }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -429,7 +597,32 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           <aside className="plan-col1">
             <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
               <div style={{ padding: '0.75rem 0.875rem', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-1)', marginBottom: '0.4rem' }}>Drag a recipe</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', marginBottom: '0.5rem', padding: '0.2rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)' }}>
+                  {[
+                    { id: 'recipes', label: 'Recipes' },
+                    { id: 'menus', label: 'Menus' },
+                  ].map(tab => {
+                    const active = sidebarTab === tab.id
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setSidebarTab(tab.id)}
+                        style={{
+                          padding: '0.35rem 0.5rem',
+                          border: 'none',
+                          borderRadius: '6px',
+                          background: active ? 'var(--primary)' : 'transparent',
+                          color: active ? '#fff' : 'var(--text-3)',
+                          fontSize: '0.8125rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    )
+                  })}
+                </div>
                 <input
                   type="text"
                   value={sidebarSearch}
@@ -437,7 +630,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                   placeholder="Search…"
                   style={{ width: '100%', padding: '0.4rem 0.625rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' }}
                 />
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: '0.4rem' }}>
+                {sidebarTab === 'recipes' && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: '0.4rem' }}>
                   {[
                     { id: 'all', label: 'All' },
                     { id: 'breakfast', label: 'Breakfast' },
@@ -464,10 +657,50 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                       >{f.label}</button>
                     )
                   })}
-                </div>
+                </div>}
               </div>
               <div style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto', padding: '0.5rem' }}>
-                {sidebarLoading ? (
+                {sidebarTab === 'menus' ? (
+                  sidebarMenusLoading ? (
+                    <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>Loading…</p>
+                  ) : sidebarMenus.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>No menus</p>
+                  ) : (
+                    sidebarMenus.map(menu => {
+                      return (
+                        <div
+                          key={menu.id}
+                          draggable
+                          onDragStart={() => { draggedMenu.current = menu; setDragActive(true) }}
+                          onDragEnd={() => { draggedMenu.current = null; setDragActive(false) }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
+                        >
+                          {menu.image_url && (
+                            <img src={menu.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                          )}
+                          <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                            {menu.name}
+                          </span>
+                          <button
+                            onClick={() => applyMenuToDay(menu, toDateKey(selectedDate || today))}
+                            disabled={addingToMeal}
+                            aria-label={`Add ${menu.name} to plan`}
+                            title={selectedDate
+                              ? `Start on ${selectedDate.toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}`
+                              : 'Start today'}
+                            style={{
+                              width: 28, height: 28, borderRadius: '50%',
+                              border: 'none', background: 'var(--primary)', color: '#fff',
+                              fontSize: '1rem', fontWeight: 700, cursor: addingToMeal ? 'wait' : 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0, lineHeight: 1, opacity: addingToMeal ? 0.65 : 1,
+                            }}
+                          >+</button>
+                        </div>
+                      )
+                    })
+                  )
+                ) : sidebarLoading ? (
                   <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>Loading…</p>
                 ) : sidebarRecipes.length === 0 ? (
                   <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>No recipes</p>
@@ -535,32 +768,96 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           <div className="plan-main">
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div>
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Meal Plan</h1>
-                <p style={{ color: 'var(--text-3)', fontSize: '0.875rem', margin: 0 }}>{weekLabel}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <div>
+                  <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Meal Plan</h1>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.875rem', margin: 0 }}>{viewMode === 'week' ? weekLabel : new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
+                </div>
+                {/* Clear buttons */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setShowClearMenu(o => !o)}
+                    disabled={clearing}
+                    title="Clear meals"
+                    style={{ padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text-3)', fontSize: '0.8125rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    🗑 Clear ▾
+                  </button>
+                  {showClearMenu && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '10px', padding: '0.375rem', zIndex: 50, display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '130px', boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
+                      onMouseLeave={() => setShowClearMenu(false)}>
+                      <button onClick={() => { clearDay(); setShowClearMenu(false) }} disabled={clearing}
+                        style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: 'none', background: 'transparent', color: 'var(--text-2)', fontSize: '0.8125rem', cursor: 'pointer', textAlign: 'left' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >Clear Day</button>
+                      <button onClick={() => { clearWeek(); setShowClearMenu(false) }} disabled={clearing}
+                        style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: 'none', background: 'transparent', color: 'var(--text-2)', fontSize: '0.8125rem', cursor: 'pointer', textAlign: 'left' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >Clear Week</button>
+                      <button onClick={() => { clearMonthRange(); setShowClearMenu(false) }} disabled={clearing}
+                        style={{ padding: '0.4rem 0.75rem', borderRadius: '6px', border: 'none', background: 'transparent', color: '#ef4444', fontSize: '0.8125rem', cursor: 'pointer', textAlign: 'left' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >Clear Month</button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <button
-                  onClick={() => setWeekOffset(o => o - 1)}
-                  style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-2)' }}
-                  aria-label="Previous week"
-                >◀</button>
-                <button
-                  onClick={() => setWeekOffset(0)}
-                  style={{ padding: '0.35rem 0.75rem', borderRadius: '20px', border: '1px solid var(--border)', background: weekOffset === 0 ? 'var(--primary)' : 'var(--bg-card)', color: weekOffset === 0 ? '#fff' : 'var(--text-2)', fontSize: '0.8125rem', cursor: 'pointer' }}
-                >This week</button>
-                <button
-                  onClick={() => setWeekOffset(o => o + 1)}
-                  style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-2)' }}
-                  aria-label="Next week"
-                >▶</button>
+                {/* Week navigation (only in week mode) */}
+                {viewMode === 'week' && (<>
+                  <button
+                    onClick={() => setWeekOffset(o => o - 1)}
+                    style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-2)' }}
+                    aria-label="Previous week"
+                  >◀</button>
+                  <button
+                    onClick={() => setWeekOffset(0)}
+                    style={{ padding: '0.35rem 0.75rem', borderRadius: '20px', border: '1px solid var(--border)', background: weekOffset === 0 ? 'var(--primary)' : 'var(--bg-card)', color: weekOffset === 0 ? '#fff' : 'var(--text-2)', fontSize: '0.8125rem', cursor: 'pointer' }}
+                  >This week</button>
+                  <button
+                    onClick={() => setWeekOffset(o => o + 1)}
+                    style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-2)' }}
+                    aria-label="Next week"
+                  >▶</button>
+                </>)}
+                {/* Week / Month toggle */}
+                <div style={{ display: 'inline-flex', border: '1.5px solid var(--border)', borderRadius: '8px', overflow: 'hidden', fontSize: '0.75rem', fontWeight: 600 }}>
+                  {['week', 'month'].map(v => (
+                    <button
+                      key={v}
+                      onClick={() => { setViewMode(v); if (v === 'week') setWeekOffset(0) }}
+                      style={{
+                        padding: '0.35rem 0.7rem',
+                        background: viewMode === v ? 'var(--primary)' : 'transparent',
+                        color: viewMode === v ? '#fff' : 'var(--text-3)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
             {/* Calendar */}
             <div className="plan-calendar">
-              {loading ? (
+              {loading && viewMode === 'week' ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-4)' }}>Loading…</div>
+              ) : viewMode === 'month' ? (
+                <MonthView
+                  entries={monthEntries}
+                  activities={activities}
+                  members={members}
+                  userId={userId}
+                  onRefresh={refreshDay}
+                  onRemoveEntry={removeEntry}
+                />
               ) : (
                 <WeekOverview
                   weekDates={weekDates}
@@ -581,8 +878,8 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
               )}
             </div>
 
-            {/* Day view (col 2 + col 3) */}
-            {selectedDate && (
+            {/* Day view (col 2 + col 3) — only in week mode */}
+            {viewMode === 'week' && selectedDate && (
               <div className="plan-day">
                 <div className="plan-col2">
                   <DayAgenda
@@ -676,17 +973,19 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           /* Desktop: col1 sidebar | (calendar on top + day view below as 2 cols) */
           .plan-grid {
             display: grid;
-            grid-template-columns: 240px 1fr;
+            grid-template-columns: 240px minmax(0, 780px);
             gap: 1.25rem;
             align-items: start;
+            justify-content: center;
           }
           .plan-day {
             display: grid;
-            grid-template-columns: 1fr 320px;
+            grid-template-columns: 1fr 280px;
             gap: 1rem;
             margin-top: 1.25rem;
           }
           .plan-col1 { position: sticky; top: 1rem; }
+          .plan-col2 { max-width: 535px; }
 
           /* Mobile: order = calendar → col2 → col3 → col1 */
           @media (max-width: 900px) {
