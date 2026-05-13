@@ -84,7 +84,7 @@ export default function LandingClient() {
         .limit(12),
       supabase
         .from('recipes')
-        .select('id, title, slug, image_url, nutrition, meal_type, prep_time, cook_time, description')
+        .select('id, title, slug, image_url, nutrition, meal_type, prep_time_minutes, cook_time_minutes, description')
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .limit(12),
@@ -335,8 +335,8 @@ export default function LandingClient() {
                     {recipe.nutrition?.perServing?.energy_kcal != null && (
                       <span>🔥 {Math.round(recipe.nutrition.perServing.energy_kcal)} kcal</span>
                     )}
-                    {((recipe.prep_time || 0) + (recipe.cook_time || 0)) > 0 && (
-                      <span>⏱ {(recipe.prep_time || 0) + (recipe.cook_time || 0)} min</span>
+                    {((recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0)) > 0 && (
+                      <span>⏱ {(recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0)} min</span>
                     )}
                   </div>
                 </div>

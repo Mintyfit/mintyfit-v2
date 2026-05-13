@@ -13,7 +13,7 @@ function getVisibleCount() {
 
 export default function CarouselSlider({ items, renderCard, title, subtitle, linkHref, linkLabel }) {
   const [visibleCount, setVisibleCount] = useState(4)
-  const [cardW, setCardW] = useState(0)
+  const [cardW, setCardW] = useState(260) // default ~265px card width, measured on mount
   const [slide, setSlide] = useState(4)
   const [animate, setAnimate] = useState(true)
   const [hovered, setHovered] = useState(false)
