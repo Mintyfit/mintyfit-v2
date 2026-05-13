@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import HeroCTA from './HeroCTA'
 import FAQAccordion from './FAQAccordion'
 import AuthModal from './AuthModal'
+import CarouselSlider from './CarouselSlider'
 
 // --- Section data ---
 
@@ -64,7 +67,39 @@ const FEATURES = [
 export default function LandingClient() {
   const [authOpen, setAuthOpen] = useState(false)
   const [authTab, setAuthTab] = useState('signup')
+  const [blogPosts, setBlogPosts] = useState([])
+  const [recipes, setRecipes] = useState([])
+  const [menus, setMenus] = useState([])
   const router = useRouter()
+
+  useEffect(() => {
+    const supabase = createClient()
+    if (!supabase) return
+    Promise.all([
+      supabase
+        .from('blog_posts')
+        .select('id, title, slug, excerpt, image_url, published_at, created_at, content, blog_post_categories(blog_categories(id,name,slug,color))')
+        .eq('is_published', true)
+        .order('published_at', { ascending: false, nullsLast: true })
+        .limit(12),
+      supabase
+        .from('recipes')
+        .select('id, title, slug, image_url, nutrition, meal_type, prep_time, cook_time, description')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(12),
+      supabase
+        .from('menus')
+        .select('id, name, slug, image_url, description, menu_recipes(count)')
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(12),
+    ]).then(([blogResult, recipeResult, menuResult]) => {
+      setBlogPosts(blogResult.data || [])
+      setRecipes(recipeResult.data || [])
+      setMenus(menuResult.data || [])
+    })
+  }, [])
 
   function openAuth(tab = 'signup') {
     setAuthTab(tab)
@@ -248,7 +283,188 @@ export default function LandingClient() {
           </div>
         </section>
 
-        {/* ===== 5. TRUST ===== */}
+        {/* ===== 4. RECIPE SLIDER ===== */}
+        <CarouselSlider
+          title="Try These Recipes"
+          subtitle="Popular family meals — every recipe has full nutrition breakdown"
+          linkHref="/recipes"
+          linkLabel="Browse all recipes →"
+          items={recipes}
+          renderCard={recipe => (
+            <Link href={`/recipes/${recipe.slug || recipe.id}`} style={{ textDecoration: 'none', display: 'flex', width: '100%' }}>
+              <article style={{
+                background: 'var(--bg-card)', borderRadius: 16, overflow: 'hidden',
+                border: '1px solid var(--border)', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', width: '100%',
+                transition: 'transform 0.15s, box-shadow 0.15s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+              >
+                <div style={{ height: 160, background: '#f3f4f6', overflow: 'hidden', position: 'relative' }}>
+                  {recipe.image_url ? (
+                    <img src={recipe.image_url} alt={recipe.title} loading="lazy"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '2.5rem' }}>🍽️</div>
+                  )}
+                  {recipe.meal_type && (
+                    <div style={{
+                      position: 'absolute', bottom: 8, left: 8,
+                      background: 'rgba(255,255,255,0.9)', color: 'var(--primary)',
+                      padding: '2px 8px', borderRadius: 20, fontSize: '0.6875rem', fontWeight: 700, textTransform: 'capitalize',
+                    }}>
+                      {recipe.meal_type.replace('snack2', 'snack')}
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: '12px 14px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.3, marginBottom: 6,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
+                    {recipe.title}
+                  </h3>
+                  {recipe.description && (
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', lineHeight: 1.4, marginBottom: 'auto',
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
+                      {recipe.description}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: 10, fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                    {recipe.nutrition?.perServing?.energy_kcal != null && (
+                      <span>🔥 {Math.round(recipe.nutrition.perServing.energy_kcal)} kcal</span>
+                    )}
+                    {((recipe.prep_time || 0) + (recipe.cook_time || 0)) > 0 && (
+                      <span>⏱ {(recipe.prep_time || 0) + (recipe.cook_time || 0)} min</span>
+                    )}
+                  </div>
+                </div>
+              </article>
+            </Link>
+          )}
+        />
+
+        {/* ===== 5. MENU SLIDER ===== */}
+        <CarouselSlider
+          title="Browse Meal Plans"
+          subtitle="Curated family menus — apply one to your planner in one click"
+          linkHref="/menus"
+          linkLabel="Browse all menus →"
+          items={menus}
+          renderCard={menu => {
+            const count = menu.menu_recipes?.[0]?.count || 0
+            return (
+              <Link href={`/menus/${menu.slug || menu.id}`} style={{ textDecoration: 'none', display: 'flex', width: '100%' }}>
+                <article style={{
+                  background: 'var(--bg-card)', borderRadius: 16, overflow: 'hidden',
+                  border: '1px solid var(--border)', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', width: '100%',
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+                >
+                  <div style={{ height: 160, background: '#f3f4f6', overflow: 'hidden' }}>
+                    {menu.image_url ? (
+                      <img src={menu.image_url} alt={menu.name} loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '2.5rem' }}>🥗</div>
+                    )}
+                  </div>
+                  <div style={{ padding: '12px 14px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.3, marginBottom: 6,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
+                      {menu.name}
+                    </h3>
+                    {menu.description && (
+                      <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', lineHeight: 1.4, marginBottom: 'auto',
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                      }}>
+                        {menu.description}
+                      </p>
+                    )}
+                    {count > 0 && (
+                      <div style={{ marginTop: 10, fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}>
+                        {count} recipe{count !== 1 ? 's' : ''}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              </Link>
+            )
+          }}
+        />
+
+        {/* ===== 6. BLOG SLIDER ===== */}
+        <CarouselSlider
+          title="From the MintyFit Blog"
+          subtitle="Tips, research, and inspiration for healthier family meals"
+          linkHref="/blog"
+          linkLabel="View all blog posts →"
+          items={blogPosts}
+          renderCard={post => {
+            const category = post.blog_post_categories?.[0]?.blog_categories
+            const words = (post.content || '').replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length
+            const mins = Math.max(1, Math.ceil(words / 200))
+            const dateStr = post.published_at || post.created_at
+            const date = dateStr ? new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
+            return (
+              <Link href={`/blog/${post.slug}`} style={{ textDecoration: 'none', display: 'flex', width: '100%' }}>
+                <article style={{
+                  background: 'var(--bg-card)', borderRadius: 16, overflow: 'hidden',
+                  border: '1px solid var(--border)', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', width: '100%',
+                  transition: 'transform 0.15s, box-shadow 0.15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none' }}
+                >
+                  <div style={{ height: 160, background: '#f3f4f6', overflow: 'hidden' }}>
+                    {post.image_url ? (
+                      <img src={post.image_url} alt={post.title} loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '2.5rem' }}>📝</div>
+                    )}
+                  </div>
+                  <div style={{ padding: '12px 14px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    {category && (
+                      <span style={{
+                        display: 'inline-block', alignSelf: 'flex-start',
+                        background: '#f0fdf4', color: 'var(--primary)',
+                        fontSize: '0.6875rem', fontWeight: 700,
+                        padding: '2px 8px', borderRadius: 100, marginBottom: 8,
+                      }}>
+                        {category.name}
+                      </span>
+                    )}
+                    <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.3, marginBottom: 6,
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                    }}>
+                      {post.title}
+                    </h3>
+                    {post.excerpt && (
+                      <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', lineHeight: 1.4, marginBottom: 'auto',
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                      }}>
+                        {post.excerpt}
+                      </p>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                      <span>{date}</span>
+                      <span>{mins} min read</span>
+                    </div>
+                  </div>
+                </article>
+              </Link>
+            )
+          }}
+        />
+
+        {/* ===== 7. TRUST ===== */}
         <section style={{ padding: '5rem 1.25rem', background: 'var(--bg-page)' }}>
           <div style={{ maxWidth: '780px', margin: '0 auto', textAlign: 'center' }}>
             <p style={{ color: 'var(--primary)', fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -286,10 +502,10 @@ export default function LandingClient() {
           </div>
         </section>
 
-        {/* ===== 6. FAQ ===== */}
+        {/* ===== 8. FAQ ===== */}
         <FAQAccordion />
 
-        {/* ===== 7. FINAL CTA ===== */}
+        {/* ===== 9. FINAL CTA ===== */}
         <section style={{
           padding: '5rem 1.25rem',
           background: 'linear-gradient(135deg, var(--primary) 0%, #2d6b2e 100%)',
