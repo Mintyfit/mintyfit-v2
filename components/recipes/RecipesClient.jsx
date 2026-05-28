@@ -70,10 +70,10 @@ export default function RecipesClient({ initialRecipes = [] }) {
   const [foodType, setFoodType] = useState('')
   const [cuisine, setCuisine] = useState('')
   const [gl, setGl] = useState('')
-  const [calRange, setCalRange] = useState(0) // index into CAL_RANGES
-  const [timeRange, setTimeRange] = useState(0) // index into TIME_RANGES
+  const [calRange, setCalRange] = useState(0)
+  const [timeRange, setTimeRange] = useState(0)
   const [sort, setSort] = useState('newest')
-  const [page, setPage] = useState(1)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [showFilters, setShowFilters] = useState(false)
 
   const filtered = useMemo(() => {
@@ -114,8 +114,8 @@ export default function RecipesClient({ initialRecipes = [] }) {
     return list
   }, [allRecipes, search, mealType, foodType, cuisine, gl, calRange, timeRange, sort])
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const visible = filtered.slice(0, visibleCount)
+  const hasMore = visibleCount < filtered.length
 
   const resetFilters = useCallback(() => {
     setSearch('')
@@ -126,7 +126,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
     setCalRange(0)
     setTimeRange(0)
     setSort('newest')
-    setPage(1)
+    setVisibleCount(PAGE_SIZE)
   }, [])
 
   const hasActiveFilters = mealType || foodType || cuisine || gl || calRange > 0 || timeRange > 0
@@ -161,7 +161,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
           <input
             type="search"
             value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
+            onChange={e => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE) }}
             placeholder="Search recipes..."
             style={{
               width: '100%',
@@ -179,7 +179,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
         {/* Sort */}
         <select
           value={sort}
-          onChange={e => { setSort(e.target.value); setPage(1) }}
+          onChange={e => { setSort(e.target.value); setVisibleCount(PAGE_SIZE) }}
           style={{
             padding: '0.625rem 0.75rem',
             border: '1px solid var(--border)',
@@ -232,7 +232,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
               {['', ...MEAL_TYPES].map(m => (
                 <button
                   key={m || 'all'}
-                  onClick={() => { setMealType(m); setPage(1) }}
+                  onClick={() => { setMealType(m); setVisibleCount(PAGE_SIZE) }}
                   style={{
                     padding: '0.3rem 0.7rem',
                     borderRadius: '20px',
@@ -257,7 +257,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
               {['', ...FOOD_TYPES].map(f => (
                 <button
                   key={f || 'all'}
-                  onClick={() => { setFoodType(f); setPage(1) }}
+                  onClick={() => { setFoodType(f); setVisibleCount(PAGE_SIZE) }}
                   style={{
                     padding: '0.3rem 0.7rem',
                     borderRadius: '20px',
@@ -280,7 +280,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
             <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>Cuisine</label>
             <select
               value={cuisine}
-              onChange={e => { setCuisine(e.target.value); setPage(1) }}
+              onChange={e => { setCuisine(e.target.value); setVisibleCount(PAGE_SIZE) }}
               style={{
                 width: '100%',
                 padding: '0.5rem 0.75rem',
@@ -303,7 +303,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
               {CAL_RANGES.map((r, i) => (
                 <button
                   key={i}
-                  onClick={() => { setCalRange(i); setPage(1) }}
+                  onClick={() => { setCalRange(i); setVisibleCount(PAGE_SIZE) }}
                   style={{
                     padding: '0.3rem 0.7rem',
                     borderRadius: '20px',
@@ -327,7 +327,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
               {TIME_RANGES.map((r, i) => (
                 <button
                   key={i}
-                  onClick={() => { setTimeRange(i); setPage(1) }}
+                  onClick={() => { setTimeRange(i); setVisibleCount(PAGE_SIZE) }}
                   style={{
                     padding: '0.3rem 0.7rem',
                     borderRadius: '20px',
@@ -351,7 +351,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
               {['', ...GL_OPTIONS].map(g => (
                 <button
                   key={g || 'all'}
-                  onClick={() => { setGl(g); setPage(1) }}
+                  onClick={() => { setGl(g); setVisibleCount(PAGE_SIZE) }}
                   style={{
                     padding: '0.3rem 0.7rem',
                     borderRadius: '20px',
@@ -392,14 +392,14 @@ export default function RecipesClient({ initialRecipes = [] }) {
       )}
 
       {/* Recipe grid */}
-      {paginated.length > 0 ? (
+      {visible.length > 0 ? (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
           gap: '1.25rem',
           marginBottom: '2rem',
         }}>
-          {paginated.map(recipe => (
+          {visible.map(recipe => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
         </div>
@@ -433,58 +433,18 @@ export default function RecipesClient({ initialRecipes = [] }) {
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
+      {/* Load More */}
+      {hasMore && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
           <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
+            onClick={() => setVisibleCount(v => v + PAGE_SIZE)}
             style={{
-              padding: '0.5rem 1rem', borderRadius: '8px',
+              padding: '0.75rem 2rem', borderRadius: '10px',
               border: '1px solid var(--border)', background: 'var(--bg-card)',
-              color: page === 1 ? 'var(--text-4)' : 'var(--text-2)',
-              cursor: page === 1 ? 'default' : 'pointer', fontSize: '0.9375rem',
+              color: 'var(--text-2)', cursor: 'pointer', fontSize: '0.9375rem', fontWeight: 600,
             }}
           >
-            ← Prev
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-            .reduce((acc, p, idx, arr) => {
-              if (idx > 0 && p - arr[idx - 1] > 1) acc.push('…')
-              acc.push(p)
-              return acc
-            }, [])
-            .map((p, i) =>
-              p === '…' ? (
-                <span key={`ellipsis-${i}`} style={{ color: 'var(--text-4)', padding: '0 0.25rem' }}>…</span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  style={{
-                    width: '36px', height: '36px', borderRadius: '8px',
-                    border: `1px solid ${p === page ? 'var(--primary)' : 'var(--border)'}`,
-                    background: p === page ? 'var(--primary)' : 'var(--bg-card)',
-                    color: p === page ? '#fff' : 'var(--text-2)',
-                    cursor: 'pointer', fontSize: '0.9375rem', fontWeight: p === page ? 600 : 400,
-                  }}
-                >
-                  {p}
-                </button>
-              )
-            )}
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            style={{
-              padding: '0.5rem 1rem', borderRadius: '8px',
-              border: '1px solid var(--border)', background: 'var(--bg-card)',
-              color: page === totalPages ? 'var(--text-4)' : 'var(--text-2)',
-              cursor: page === totalPages ? 'default' : 'pointer', fontSize: '0.9375rem',
-            }}
-          >
-            Next →
+            Load More Recipes
           </button>
         </div>
       )}

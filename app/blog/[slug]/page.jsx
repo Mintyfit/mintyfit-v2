@@ -119,12 +119,12 @@ export default async function BlogPostPage({ params }) {
         <BlogPostHeader post={post} isSuperAdmin={isSuperAdmin} />
 
         {/* Breadcrumb */}
-        <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary, #6b7280)' }}>
-          <Link href="/" style={{ color: '#10b981', textDecoration: 'none' }}>Home</Link>
+        <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary, #6b7280)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+          <Link href="/" style={{ color: '#10b981', textDecoration: 'none', flexShrink: 0 }}>Home</Link>
           {' / '}
-          <Link href="/blog" style={{ color: '#10b981', textDecoration: 'none' }}>Blog</Link>
+          <Link href="/blog" style={{ color: '#10b981', textDecoration: 'none', flexShrink: 0 }}>Blog</Link>
           {' / '}
-          <span>{post.title}</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.title}</span>
         </nav>
 
         {/* Categories */}

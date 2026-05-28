@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { computeBMR, SEDENTARY_MULTIPLIER } from '@/lib/nutrition/portionCalc'
+import { enrichMember } from '@/lib/member/enrichMember'
 import PlannerClient from '@/components/planner/PlannerClient'
 
 export const metadata = {
@@ -8,18 +8,7 @@ export const metadata = {
   description: 'Plan your family meals for the week. See nutrition at a glance for every member.',
 }
 
-function enrichMember(m) {
-  if (!m) return m
-  const age = m.age || 30
-  const bmr = computeBMR(m.weight, m.height, age, m.gender)
-  return {
-    ...m,
-    age,
-    gender: m.gender || 'female',
-    baseDailyCalories: bmr ? Math.round(bmr * SEDENTARY_MULTIPLIER) : null,
-    display_name: m.display_name || m.first_name || m.name || m.full_name || 'Member',
-  }
-}
+
 
 async function getPlannerData() {
   let supabase
@@ -44,6 +33,16 @@ async function getPlannerData() {
     .eq('id', user.id)
     .maybeSingle()
 
+  if (profile) {
+    const { data: logs } = await supabase
+      .from('weight_logs')
+      .select('weight')
+      .eq('profile_id', user.id)
+      .order('logged_date', { ascending: false })
+      .limit(1)
+    profile.weight = profile.weight ?? logs?.[0]?.weight ?? null
+  }
+
   // Get family members + family scope. familyId flows to PlannerClient so
   // calendar reads/writes are family-wide (mig 049): every member sees the
   // same plan, and per-member recipe variants share a slot.
@@ -66,13 +65,42 @@ async function getPlannerData() {
           .eq('family_id', familyId),
         supabase
           .from('managed_members')
-          .select('id, name, date_of_birth, weight, height, age, gender, goals, daily_calories_target')
+          .select('id, name, date_of_birth, weight_kg, height_cm, gender')
           .eq('family_id', familyId),
       ])
 
+      // Fetch latest weight_log for each linked member (weight lives in weight_logs, not on profiles)
+      const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
+      let weightByProfile = new Map()
+      if (linkedProfileIds.length > 0) {
+        const { data: logs } = await supabase
+          .from('weight_logs')
+          .select('profile_id, weight')
+          .in('profile_id', linkedProfileIds)
+          .order('logged_date', { ascending: false })
+        if (logs) {
+          for (const log of logs) {
+            if (!weightByProfile.has(log.profile_id)) {
+              weightByProfile.set(log.profile_id, log.weight)
+            }
+          }
+        }
+      }
+
       members = [
-        ...(linked || []).map(l => enrichMember({ ...l.profiles, type: 'linked', role: l.role })),
-        ...(managed || []).map(m => enrichMember({ ...m, display_name: m.name, type: 'managed' })),
+        ...(linked || []).map(l => enrichMember({
+          ...l.profiles,
+          type: 'linked',
+          role: l.role,
+          weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
+        })),
+        ...(managed || []).map(m => enrichMember({
+          ...m,
+          display_name: m.name,
+          type: 'managed',
+          weight: m.weight_kg ?? null,
+          height: m.height_cm ?? null,
+        })),
       ].filter(Boolean)
     } else {
       members = profile ? [enrichMember({ ...profile, type: 'linked' })] : []

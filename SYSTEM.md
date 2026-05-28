@@ -93,6 +93,7 @@ Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabas
 | `lib/nutrition/memberRDA.js` | `computeMemberDailyNeeds(member)` — 47 personal daily nutrient targets. Metabolic-health focused (low carb, higher protein) |
 | `lib/nutrition/nutrition.js` | `NUTRITION_FIELDS` array (47 nutrients), `getNutritionData()`, `scaleNutrition()`, `sumNutrition()` |
 | `lib/member/syncFamily.js` | `syncFamilyMembers(userId)` — loads family from Supabase with measurements, computes BMR/TDEE |
+| `lib/member/enrichMember.js` | `enrichMember(m)` — computes baseDailyCalories, falls back to age/gender estimates when weight/height missing. Single source of truth — NOT duplicated in pages/components. |
 | `lib/recipe/recipeGenerator.js` | Full recipe generation pipeline: Claude → nutrition → image → save |
 | `lib/recipe/ingredientDatabase.js` | Central ingredient lookup: Supabase → USDA → Claude Haiku fallback |
 | `lib/recipe/imageGeneration.js` | Ideogram image generation + Supabase Storage upload |
@@ -291,8 +292,13 @@ All tables in Supabase PostgreSQL. RLS enabled on everything.
 - RLS: auth.uid() = profile_id
 
 **`calendar_entries`** — Meal plan (one row per member per recipe per slot)
-- id, profile_id, date_str (YYYY-MM-DD), meal_type, recipe_id, recipe_name, member_id, personal_nutrition (jsonb)
-- UNIQUE(profile_id, date_str, meal_type, recipe_id, member_id)
+- id, profile_id, date_str (YYYY-MM-DD), meal_type, recipe_id, recipe_name, member_id, consumer_member_ids (uuid[]), personal_nutrition (jsonb), origin (planned|journal)
+- UNIQUE(family_id, date_str, meal_type, recipe_id, origin)
+
+**`day_meal_config`** — Per-day meal type toggles
+- id, family_id (FK→families), date_str (date), enabled_meal_types (text[]), created_at
+- UNIQUE(family_id, date_str)
+- RLS: family-scoped (read/insert/update via family_memberships)
 
 **`food_journal`** — Journal entries
 - id, profile_id, logged_date, meal_type, food_name, amount, unit, nutrition (jsonb), member_id

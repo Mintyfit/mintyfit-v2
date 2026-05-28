@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
 import { notFound, permanentRedirect } from 'next/navigation'
+import { enrichMember } from '@/lib/member/enrichMember'
 import RecipeDetailClient from '@/components/recipes/RecipeDetailClient'
 
 // Auth-aware: a private recipe must only be visible to its owner / family.
@@ -80,6 +81,81 @@ async function fetchRecipeRow(slug) {
   return { row: null, canonicalSlug: null }
 }
 
+async function loadFamilyMembers(supabase, userId) {
+  try {
+    const { data: memberships } = await supabase
+      .from('family_memberships')
+      .select('family_id')
+      .eq('profile_id', userId)
+      .limit(1)
+
+    if (!memberships?.length) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, full_name, display_name, first_name, weight, height, age, gender, goals')
+        .eq('id', userId)
+        .maybeSingle()
+      if (!profile) return { members: [], familyId: null }
+      const { data: logs } = await supabase
+        .from('weight_logs')
+        .select('weight')
+        .eq('profile_id', userId)
+        .order('logged_date', { ascending: false })
+        .limit(1)
+      profile.weight = profile.weight ?? logs?.[0]?.weight ?? null
+      return { members: [enrichMember({ ...profile, type: 'linked' })], familyId: null }
+    }
+
+    const familyId = memberships[0].family_id
+    const [{ data: linked }, { data: managed }] = await Promise.all([
+      supabase
+        .from('family_memberships')
+        .select('profile_id, profiles(id, full_name, display_name, first_name, weight, height, age, gender, goals)')
+        .eq('family_id', familyId),
+      supabase
+        .from('managed_members')
+        .select('id, name, date_of_birth, weight_kg, height_cm, gender')
+        .eq('family_id', familyId),
+    ])
+
+    const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
+    let weightByProfile = new Map()
+    if (linkedProfileIds.length > 0) {
+      const { data: logs } = await supabase
+        .from('weight_logs')
+        .select('profile_id, weight')
+        .in('profile_id', linkedProfileIds)
+        .order('logged_date', { ascending: false })
+      if (logs) {
+        for (const log of logs) {
+          if (!weightByProfile.has(log.profile_id)) {
+            weightByProfile.set(log.profile_id, log.weight)
+          }
+        }
+      }
+    }
+
+    const members = [
+      ...(linked || []).map(l => enrichMember({
+        ...l.profiles,
+        type: 'linked',
+        weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
+      })),
+      ...(managed || []).map(m => enrichMember({
+        ...m,
+        display_name: m.name,
+        type: 'managed',
+        weight: m.weight_kg ?? null,
+        height: m.height_cm ?? null,
+      })),
+    ].filter(Boolean)
+
+    return { members, familyId }
+  } catch {
+    return { members: [], familyId: null }
+  }
+}
+
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
@@ -98,6 +174,7 @@ export async function generateMetadata({ params }) {
 
 export default async function RecipeDetailPage({ params }) {
   const { slug } = await params
+  const supabase = await createClient()
   const { row, canonicalSlug } = await fetchRecipeRow(slug)
 
   if (!row) notFound()
@@ -109,8 +186,18 @@ export default async function RecipeDetailPage({ params }) {
 
   const recipe = normalizeRecipe(row)
 
-  // Family members are loaded client-side by RecipeDetailClient after auth —
-  // keeps this route static so ISR cache works
+  // Load family members server-side so weight_logs queries bypass RLS —
+  // client-side direct queries are scoped to auth.uid() only.
+  let members = []
+  let familyId = null
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const result = await loadFamilyMembers(supabase, user.id)
+      members = result.members
+      familyId = result.familyId
+    }
+  } catch { /* pass empty members on error */ }
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Recipe',
@@ -147,7 +234,7 @@ export default async function RecipeDetailPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <RecipeDetailClient recipe={recipe} members={[]} />
+      <RecipeDetailClient recipe={recipe} members={members} familyId={familyId} />
     </>
   )
 }

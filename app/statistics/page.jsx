@@ -123,6 +123,13 @@ async function getStatisticsData(userId, supabase) {
       .gte('logged_date', fromKey)
       .order('logged_date', { ascending: false })
 
+    const { data: recipes } = await supabase
+      .from('recipes')
+      .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
+      .or(`is_public.eq.true,profile_id.eq.${userId}`)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
     const { data: weightLogs } = await supabase
       .from('weight_logs')
       .select('*')
@@ -135,6 +142,7 @@ async function getStatisticsData(userId, supabase) {
       calendarEntries: calendarEntries || [],
       journalEntries: journalEntries || [],
       weightLogs: weightLogs || [],
+      allRecipes: recipes || [],
     }
   } catch (error) {
     console.error('Statistics data error:', error)
@@ -172,6 +180,7 @@ export default async function StatisticsPage() {
       userId={user.id}
       initialData={initialData}
       nutritionFields={NUTRITION_FIELDS}
+      allRecipes={initialData.allRecipes}
     />
   )
 }

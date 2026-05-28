@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
-import { computeBMR, SEDENTARY_MULTIPLIER, computeMemberNutrition } from '@/lib/nutrition/portionCalc'
+import { NUTRITION_FIELDS, scaleNutrition } from '@/lib/nutrition/nutrition'
+import { getMemberBMIFraction } from '@/lib/nutrition/portionCalc'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
+import { enrichMember } from '@/lib/member/enrichMember'
 import { createClient } from '@/lib/supabase/client'
 
 // ── NutritionDelta (small inline nutrition preview per alternative) ──────────
@@ -494,11 +495,24 @@ function SidebarNutrition({ nutrition, memberMultiplier, memberGoal, memberDaily
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-export default function RecipeDetailClient({ recipe, members: initialMembers }) {
+export default function RecipeDetailClient({ recipe, members: initialMembers, familyId: initialFamilyId }) {
   const router = useRouter()
   const [members, setMembers] = useState(initialMembers || [])
-  const [familyId, setFamilyId] = useState(null)
+  const [familyId, setFamilyId] = useState(initialFamilyId || null)
   const [activeEaters, setActiveEaters] = useState(new Set()) // member IDs who are eating this meal
+  const [guestCount, setGuestCount] = useState(2)
+  const [guestCalories, setGuestCalories] = useState(200)
+  const [showGuests, setShowGuests] = useState(false)
+
+  // Sync server-provided members when navigating between recipes (Next.js reuses
+  // the client component, so useState won't re-initialize on prop change).
+  useEffect(() => {
+    if (initialMembers && initialMembers.length > 0) {
+      setMembers(initialMembers)
+      setActiveEaters(new Set())
+    }
+    if (initialFamilyId) setFamilyId(initialFamilyId)
+  }, [initialMembers, initialFamilyId])
   const [addingToPlan, setAddingToPlan] = useState(false)
   const [addPlanMsg, setAddPlanMsg] = useState(null) // null | 'success' | 'error'
   const [addPlanError, setAddPlanError] = useState(null)
@@ -559,8 +573,9 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
     })
   }, [recipe.id])
 
-  // Load family members client-side — keeps the server route static (ISR-cacheable)
+  // Load family members client-side as fallback when server didn't provide them
   useEffect(() => {
+    if (initialMembers && initialMembers.length > 0) return
     const supabase = createClient()
     if (!supabase) return
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -582,16 +597,47 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             .eq('family_id', familyId),
           supabase
             .from('managed_members')
-            .select('id, name, date_of_birth, weight, height, gender')
+            .select('id, name, date_of_birth, weight_kg, height_cm, gender')
             .eq('family_id', familyId),
         ])
+
+        // Fetch latest weight_log for each linked member (weight lives in weight_logs, not on profiles)
+        const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
+        let weightByProfile = new Map()
+        if (linkedProfileIds.length > 0) {
+          const { data: logs } = await supabase
+            .from('weight_logs')
+            .select('profile_id, weight')
+            .in('profile_id', linkedProfileIds)
+            .order('logged_date', { ascending: false })
+          if (logs) {
+            for (const log of logs) {
+              if (!weightByProfile.has(log.profile_id)) {
+                weightByProfile.set(log.profile_id, log.weight)
+              }
+            }
+          }
+        }
+
         loaded = [
-          ...(linked || []).map(l => ({ ...l.profiles, type: 'linked' })),
+          ...(linked || []).map(l => ({
+            ...l.profiles,
+            type: 'linked',
+            weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
+          })),
           ...(managed || []).map(m => {
             const age = m.date_of_birth
               ? Math.floor((Date.now() - new Date(m.date_of_birth)) / 31557600000)
               : null
-            return { ...m, age, goals: [], display_name: m.name, type: 'managed' }
+            return {
+              ...m,
+              age,
+              goals: [],
+              display_name: m.name,
+              type: 'managed',
+              weight: m.weight_kg ?? null,
+              height: m.height_cm ?? null,
+            }
           }),
         ].filter(Boolean)
       } else {
@@ -600,20 +646,19 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           .select('id, full_name, display_name, first_name, weight, height, age, gender, goals')
           .eq('id', user.id)
           .maybeSingle()
-        if (profile) loaded = [{ ...profile, type: 'linked' }]
-      }
-      // Enrich each member with computed baseDailyCalories from BMR
-      loaded = loaded.map(m => {
-        const age = m.age || 30
-        const bmr = computeBMR(m.weight, m.height, age, m.gender)
-        return {
-          ...m,
-          age,
-          gender: m.gender || 'female',
-          baseDailyCalories: bmr ? Math.round(bmr * SEDENTARY_MULTIPLIER) : null,
-          display_name: m.display_name || m.first_name || (m.full_name?.split(' ')[0]) || m.name || 'Member',
+        if (profile) {
+          const { data: logs } = await supabase
+            .from('weight_logs')
+            .select('weight')
+            .eq('profile_id', user.id)
+            .order('logged_date', { ascending: false })
+            .limit(1)
+          profile.weight = logs?.[0]?.weight ?? null
+          loaded = [{ ...profile, type: 'linked' }]
         }
-      })
+      }
+      // Enrich each member via shared utility (lib/member/enrichMember.js)
+      loaded = loaded.map(m => enrichMember(m))
       if (loaded.length) {
         setMembers(loaded)
         // Default: no eaters checked → base recipe shown.
@@ -724,40 +769,35 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
 
   // ── Active-eaters portion scaling ──────────────────────────────────────────
   // Each checked member contributes their BMI fraction × activity factor of the
-  // whole recipe. With 0 checked → base recipe shown (whole-recipe ingredient
-  // amounts, per-serving nutrition). With 1+ checked → ingredients and nutrition
-  // both scale to the SUM of the checked members' shares.
+  // whole recipe. Guests add a calorie-based scaling factor. With nothing checked
+  // or added → base recipe shown. Guests scale ingredients + displayed nutrition
+  // but are excluded from personal_nutrition saved to plan/statistics.
   const eatingMembers = members.filter(m => activeEaters.has(m.id))
-  const isScaled = eatingMembers.length > 0
+  const hasMembers = eatingMembers.length > 0
+  const hasGuests = showGuests && guestCount > 0
 
-  // BMI fraction of the whole family (falls back to equal split when data missing)
-  const { familyWithBMI, totalBMI } = (() => {
-    const list = members
-      .map(m => (m.weight && m.height) ? { id: m.id, bmi: m.weight / Math.pow(m.height / 100, 2) } : null)
-      .filter(Boolean)
-    return { familyWithBMI: list, totalBMI: list.reduce((s, x) => s + x.bmi, 0) }
-  })()
-  function bmiFraction(member) {
-    const e = familyWithBMI.find(x => x.id === member.id)
-    return (e && totalBMI > 0) ? e.bmi / totalBMI : 1 / (members.length || 1)
-  }
-  function activityFactor(member) {
-    // Activity hooks not wired here yet — keep shape consistent with portionCalc.js
-    return 1
-  }
-
-  const combinedFraction = isScaled
-    ? eatingMembers.reduce((s, m) => s + bmiFraction(m) * activityFactor(m), 0)
+  const memberFraction = hasMembers
+    ? eatingMembers.reduce((s, m) => s + getMemberBMIFraction(m, members), 0)
     : 0
 
+  const recipeTotalCal = recipe.nutrition?.totals?.energy_kcal
+    || (recipe.nutrition?.perServing?.energy_kcal * (recipe.base_servings || 1))
+    || 2000
+
+  const guestFraction = hasGuests
+    ? (guestCount * guestCalories) / recipeTotalCal
+    : 0
+
+  const isScaled = hasMembers || hasGuests
+  const combinedFraction = memberFraction + guestFraction
+
   // Multiplier applied to nutrition.perServing in the donut / RDA bars.
-  // perServing × base_servings = totals; totals × combinedFraction = displayed nutrition.
   const memberMultiplier = isScaled
     ? combinedFraction * (recipe.base_servings || 1)
     : 1
 
   // Personal daily nutrient needs for RDA denominators — sum across checked members
-  const memberDailyNeeds = isScaled
+  const memberDailyNeeds = hasMembers
     ? eatingMembers.reduce((acc, m) => {
         const needs = computeMemberDailyNeeds(m)
         if (!needs) return acc
@@ -807,6 +847,13 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
         ? members.filter(m => activeEaters.has(m.id)).map(m => m.id)
         : members.map(m => m.id)
 
+      // Pre-compute personal_nutrition scaled by member BMI fraction only
+      // (guests excluded so their nutrition doesn't appear in stats).
+      const totals = recipe.nutrition?.totals
+      const personalNutrition = (totals && hasMembers)
+        ? scaleNutrition(totals, memberFraction, 1)
+        : totals
+
       const row = {
         profile_id: user.id,
         family_id: resolvedFamilyId,
@@ -816,7 +863,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
         recipe_name: recipe.title || '',
         member_id: null,
         consumer_member_ids: eaterIds,
-        personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
+        personal_nutrition: personalNutrition || null,
         origin: 'planned',
       }
 
@@ -1166,16 +1213,24 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
   return (
     <>
       <style>{`
-        .rd-grid {
+        .rd-content {
           display: grid;
-          grid-template-columns: minmax(320px, 1fr) minmax(280px, 380px);
+          grid-template-columns: 1fr;
           gap: 28px;
           align-items: start;
         }
-        @media (max-width: 780px) {
-          .rd-grid { grid-template-columns: 1fr; }
-          .rd-right { order: 2; }
-          .rd-left  { order: 1; }
+        @media (min-width: 781px) {
+          .rd-content {
+            grid-template-columns: minmax(320px, 1fr) minmax(280px, 380px);
+          }
+          .rd-section-image { grid-column: 1; }
+          .rd-section-eaters { grid-column: 2; grid-row: 1; }
+          .rd-section-prepcook { grid-column: 2; }
+          .rd-section-intro { grid-column: 1; }
+          .rd-section-instructions { grid-column: 1; }
+          .rd-section-actions { grid-column: 1; }
+          .rd-section-nutrition { grid-column: 2; }
+          .rd-section-edit { grid-column: 1 / -1; }
         }
         .rd-card {
           background: var(--bg-card, #fff);
@@ -1197,13 +1252,22 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
           border-radius: 3px;
         }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @media (max-width: 600px) {
+          .rd-step-row {
+            display: block !important;
+          }
+          .rd-step-number {
+            float: left !important;
+            margin: 0.15rem 0.5rem 0.25rem 0 !important;
+          }
+        }
       `}</style>
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '1.5rem 1.25rem 5rem' }}>
       {/* Breadcrumb */}
-      <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-3)' }}>
-        <Link href="/recipes" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Recipes</Link>
-        <span>›</span>
-        <span style={{ color: 'var(--text-2)' }}>{recipe.title}</span>
+      <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-3)', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        <Link href="/recipes" style={{ color: 'var(--primary)', textDecoration: 'none', flexShrink: 0 }}>Recipes</Link>
+        <span style={{ flexShrink: 0 }}>›</span>
+        <span style={{ color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.title}</span>
       </div>
 
       {/* Title & meta */}
@@ -1243,25 +1307,10 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
       ) : null}
 
       {/* Meta pills */}
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem', alignItems: 'center' }}>
         {recipe.meal_type && (
           <span style={{ padding: '0.2rem 0.7rem', borderRadius: '20px', background: mealStyle.bg, color: mealStyle.color, fontSize: '0.8125rem', fontWeight: 600, textTransform: 'capitalize' }}>
             {recipe.meal_type.replace('snack2', 'snack')}
-          </span>
-        )}
-        {recipe.base_servings && (
-          <span style={{ padding: '0.2rem 0.7rem', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
-            👥 {recipe.base_servings} servings
-          </span>
-        )}
-        {recipe.prep_time > 0 && (
-          <span style={{ padding: '0.2rem 0.7rem', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
-            Prep: {recipe.prep_time} min
-          </span>
-        )}
-        {recipe.cook_time > 0 && (
-          <span style={{ padding: '0.2rem 0.7rem', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
-            Cook: {recipe.cook_time} min
           </span>
         )}
         {totalTime > 0 && (
@@ -1269,21 +1318,6 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             ⏱ {totalTime} min total
           </span>
         )}
-        {recipe.cuisine_type && (
-          <span style={{ padding: '0.2rem 0.7rem', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
-            🌍 {recipe.cuisine_type}
-          </span>
-        )}
-        {(() => {
-          const gi = estimateGI(recipe)
-          const gl = estimateGL(recipe, recipe.nutrition?.perServing?.carbs_total)
-          if (gi == null && gl == null) return null
-          return (
-            <span style={{ padding: '0.2rem 0.7rem', borderRadius: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
-              GI {gi ?? '—'}{gl != null && <> · GL {gl}</>}
-            </span>
-          )
-        })()}
       </div>
 
       {/* Edit meta fields row — only shown in edit mode */}
@@ -1330,159 +1364,175 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
         </div>
       )}
 
-      {/* Action buttons */}
-      <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-        {isOwner && !isEditing && (
-          <button
-            onClick={startEditing}
-            style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
-          >
-            ✏️ Edit Recipe
-          </button>
-        )}
-        {isEditing && (
-          <>
-            <button
-              onClick={saveEditing}
-              disabled={isSavingEdit}
-              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: isSavingEdit ? 'wait' : 'pointer', opacity: isSavingEdit ? 0.7 : 1 }}
-            >
-              {isSavingEdit ? '⏳ Saving…' : '✅ Save Changes'}
-            </button>
-            <button
-              onClick={cancelEditing}
-              disabled={isSavingEdit}
-              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
-              disabled={isSavingEdit}
-              style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid #ef4444', color: '#ef4444', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer', marginLeft: 'auto' }}
-            >
-              🗑️ Delete Recipe
-            </button>
-            {saveEditError && (
-              <span style={{ alignSelf: 'center', color: '#ef4444', fontSize: '0.875rem' }}>{saveEditError}</span>
-            )}
-          </>
-        )}
-        {!isEditing && (<>
-          <button
-            onClick={handleAddToPlan}
-            disabled={addingToPlan}
-            style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: addingToPlan ? 'wait' : 'pointer', opacity: addingToPlan ? 0.7 : 1 }}
-          >
-            {addingToPlan ? '⏳ Adding…' : '📅 Add to Plan'}
-          </button>
-          <button
-            onClick={handleShoppingListClick}
-            disabled={shoppingState === 'loading'}
-            style={{
-              padding: '0.625rem 1.25rem', borderRadius: '10px',
-              background: shoppingState === 'success' ? 'rgba(61,138,62,0.1)' : 'transparent',
-              border: `2px solid ${shoppingState === 'error' ? '#ef4444' : 'var(--primary)'}`,
-              color: shoppingState === 'error' ? '#ef4444' : 'var(--primary)',
-              fontWeight: 600, fontSize: '0.9375rem',
-              cursor: shoppingState === 'loading' ? 'wait' : 'pointer',
-              opacity: shoppingState === 'loading' ? 0.7 : 1,
-            }}
-          >
-            {shoppingState === 'loading' ? '⏳ Adding…' : shoppingState === 'success' ? '✅ Added!' : shoppingState === 'error' ? '❌ Failed' : '🛒 Add to Shopping List'}
-          </button>
-          <button
-            onClick={() => navigator?.share?.({ title: recipe.title, url: window.location.href })}
-            style={{ padding: '0.625rem 1rem', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', fontSize: '0.9375rem', cursor: 'pointer' }}
-          >
-            ↗ Share
-          </button>
-        </>)}
-      </div>
 
-      {/* Delete confirmation modal */}
-      {showDeleteConfirm && (
-        <div
-          onClick={() => !isDeleting && setShowDeleteConfirm(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '1rem',
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: 'var(--bg-card)', borderRadius: '14px', maxWidth: '420px', width: '100%',
-              padding: '1.5rem', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-            }}
-          >
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.5rem' }}>
-              Delete this recipe?
-            </h3>
-            <p style={{ fontSize: '0.9375rem', color: 'var(--text-2)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
-              <strong>{recipe.title}</strong> will be permanently removed — including every entry on your Plan and any
-              record in Statistics that references it. Shopping list items and ingredient swaps tied to this recipe
-              will also be deleted.
-            </p>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', margin: '0 0 1.25rem' }}>
-              This can&apos;t be undone.
-            </p>
-            {deleteError && (
-              <div style={{ padding: '0.625rem 0.75rem', background: '#fef2f2', borderRadius: '8px', color: '#dc2626', fontSize: '0.8125rem', marginBottom: '0.875rem' }}>
-                {deleteError}
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={isDeleting}
-                style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, fontSize: '0.875rem', cursor: isDeleting ? 'wait' : 'pointer' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: '#ef4444', border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.875rem', cursor: isDeleting ? 'wait' : 'pointer', opacity: isDeleting ? 0.7 : 1 }}
-              >
-                {isDeleting ? 'Deleting…' : 'Delete permanently'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {addPlanMsg === 'success' && (
-        <div style={{ padding: '0.75rem 1rem', background: '#d1fae5', borderRadius: '10px', color: '#065f46', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 500 }}>
-          ✅ Recipe added to today&apos;s plan! <Link href="/plan" style={{ color: '#065f46', textDecoration: 'underline', fontWeight: 700 }}>View Planner</Link>
-        </div>
-      )}
-      {addPlanMsg === 'error' && (
-        <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', borderRadius: '10px', color: '#dc2626', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 500 }}>
-          ❌ Could not add to plan{addPlanError ? `: ${addPlanError}` : '. Please try again.'}
-        </div>
-      )}
-
-      <div className="rd-grid">
-        {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
-        <div className="rd-left">
-
-          {/* Hero image — sits at top of left column so right column starts beside it */}
+      <div className="rd-content">
+        {/* ── Image ── */}
+        <div className="rd-section-image">
           {recipe.image && (
-            <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', marginBottom: '1.25rem', background: '#f3f4f6' }}>
+            <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#f3f4f6' }}>
               <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 780px) 100vw, 640px" priority />
             </div>
           )}
+        </div>
 
-          {/* Intro */}
+        {/* ── Who's eating ── */}
+        <div className="rd-section-eaters">
+          {members.length > 0 && (
+            <div className="rd-card">
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Who&apos;s eating?</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-4)' }}>
+                  {activeEaters.size}/{members.length} checked
+                </span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', margin: '0 0 0.6rem' }}>
+                Check members to sum their portions. None checked = base recipe.
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {members.map(m => {
+                  const isEating = activeEaters.has(m.id)
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={isEating}
+                      onClick={() => toggleEater(m.id)}
+                      title={isEating ? `${m.display_name} is eating — click to uncheck` : `Click to add ${m.display_name}`}
+                      style={{
+                        padding: '0.35rem 0.875rem', borderRadius: '20px',
+                        border: `1.5px solid ${isEating ? 'var(--primary)' : 'var(--border)'}`,
+                        background: isEating ? 'var(--primary)' : 'transparent',
+                        color: isEating ? '#fff' : 'var(--text-3)',
+                        fontSize: '0.8125rem', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        opacity: isEating ? 1 : 0.7,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                          border: `1.5px solid ${isEating ? '#fff' : 'var(--text-4)'}`,
+                          background: isEating ? '#fff' : 'transparent',
+                          color: 'var(--primary)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 10, fontWeight: 800, lineHeight: 1,
+                        }}
+                      >
+                        {isEating ? '✓' : ''}
+                      </span>
+                      {m.display_name}
+                    </button>
+                  )
+                })}
+              </div>
+              {isScaled ? (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
+                  Showing {Math.round(combinedFraction * 100)}% of the recipe
+                  {' '}for {eatingMembers.map(m => m.display_name).join(', ')}
+                  {hasGuests && ` + ${guestCount} guest${guestCount > 1 ? 's' : ''}`}.
+                </p>
+              ) : (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
+                  Showing full recipe ({recipe.base_servings || 1} serving{(recipe.base_servings || 1) === 1 ? '' : 's'}).
+                </p>
+              )}
+
+              {/* ── Guests toggle ── */}
+              <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                <button
+                  onClick={() => setShowGuests(v => !v)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-2)', padding: '0.25rem 0',
+                  }}
+                >
+                  <span>Add guests</span>
+                  <span style={{ color: 'var(--text-4)', fontSize: '0.75rem' }}>{showGuests ? '▲' : '▼'}</span>
+                </button>
+                {showGuests && (
+                  <div style={{ paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '0.25rem' }}>
+                        <span>Number of guests</span>
+                        <strong style={{ color: 'var(--text-1)' }}>{guestCount}</strong>
+                      </div>
+                      <input
+                        type="range" min="1" max="20" value={guestCount}
+                        onChange={e => setGuestCount(parseInt(e.target.value, 10))}
+                        style={{ width: '100%', accentColor: 'var(--primary)' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-4)' }}>
+                        <span>1</span>
+                        <span>20</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '0.25rem' }}>
+                        <span>Calories per guest</span>
+                        <strong style={{ color: 'var(--text-1)' }}>{guestCalories} kcal</strong>
+                      </div>
+                      <input
+                        type="range" min="100" max="500" step="10" value={guestCalories}
+                        onChange={e => setGuestCalories(parseInt(e.target.value, 10))}
+                        style={{ width: '100%', accentColor: 'var(--primary)' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-4)' }}>
+                        <span>100</span>
+                        <span>500</span>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.6875rem', color: 'var(--text-4)', margin: 0 }}>
+                      Guests scale ingredient amounts but their nutrition is not saved to your Plan statistics.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Prep/Cook time ── */}
+        <div className="rd-section-prepcook">
+          {(recipe.prep_time > 0 || recipe.cook_time > 0) && (
+            <div className="rd-card">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {recipe.prep_time > 0 && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Prep Time</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1, #111)' }}>
+                      {recipe.prep_time}<span style={{ fontSize: 13, fontWeight: 500 }}> Min</span>
+                    </div>
+                  </div>
+                )}
+                {recipe.cook_time > 0 && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Cook Time</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1, #111)' }}>
+                      {recipe.cook_time}<span style={{ fontSize: 13, fontWeight: 500 }}> Min</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Short description / Intro ── */}
+        <div className="rd-section-intro">
           {recipe.intro && (
-            <p style={{ color: 'var(--text-2)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1.5rem', fontStyle: 'italic' }}>
+            <p style={{ color: 'var(--text-2)', fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }}>
               {recipe.intro}
             </p>
           )}
+        </div>
 
-          {/* Steps — each step shows its own ingredients inline with checkboxes */}
+        {/* ── Instructions ── */}
+        <div className="rd-section-instructions">
           <section style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>
@@ -1651,13 +1701,13 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
 
           // ── Normal read view ───────────────────────────────────────────────
           return (
-            <div key={i} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%',
+            <div className="rd-step-row" key={i} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+              <div className="rd-step-number" style={{
+                width: 24, height: 24, borderRadius: '50%',
                 background: isside ? '#e0e7ff' : 'var(--primary)',
                 color: isside ? '#4338ca' : '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: '0.875rem', flexShrink: 0, marginTop: '0.125rem',
+                fontWeight: 700, fontSize: '0.75rem', flexShrink: 0, marginTop: '0.2rem',
               }}>
                 {i + 1}
               </div>
@@ -1764,8 +1814,13 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             🍽️ {recipe.plating_note}
           </div>
         )}
-        {!isEditing && (
-          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.625rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+      </section>
+        </div>
+
+        {/* ── Add to Plan / Shopping List ── */}
+        <div className="rd-section-actions">
+          {!isEditing && (
+          <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={handleAddToPlan}
               disabled={addingToPlan}
@@ -1789,103 +1844,11 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
               {shoppingState === 'loading' ? '⏳ Adding…' : shoppingState === 'success' ? '✅ Added!' : shoppingState === 'error' ? '❌ Failed' : '🛒 Add to Shopping List'}
             </button>
           </div>
-        )}
-      </section>
-
-        </div>{/* end rd-left */}
-
-        {/* ── RIGHT COLUMN (sidebar) ──────────────────────────────────── */}
-        <div className="rd-right">
-
-          {/* Member selector — check members to scale portions */}
-          {members.length > 0 && (
-            <div className="rd-card">
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Who&apos;s eating?</h3>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-4)' }}>
-                  {activeEaters.size}/{members.length} checked
-                </span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', margin: '0 0 0.6rem' }}>
-                Check members to sum their portions. None checked = base recipe.
-              </p>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {members.map(m => {
-                  const isEating = activeEaters.has(m.id)
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      role="checkbox"
-                      aria-checked={isEating}
-                      onClick={() => toggleEater(m.id)}
-                      title={isEating ? `${m.display_name} is eating — click to uncheck` : `Click to add ${m.display_name}`}
-                      style={{
-                        padding: '0.35rem 0.875rem', borderRadius: '20px',
-                        border: `1.5px solid ${isEating ? 'var(--primary)' : 'var(--border)'}`,
-                        background: isEating ? 'var(--primary)' : 'transparent',
-                        color: isEating ? '#fff' : 'var(--text-3)',
-                        fontSize: '0.8125rem', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '0.4rem',
-                        opacity: isEating ? 1 : 0.7,
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                          border: `1.5px solid ${isEating ? '#fff' : 'var(--text-4)'}`,
-                          background: isEating ? '#fff' : 'transparent',
-                          color: 'var(--primary)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 10, fontWeight: 800, lineHeight: 1,
-                        }}
-                      >
-                        {isEating ? '✓' : ''}
-                      </span>
-                      {m.display_name}
-                    </button>
-                  )
-                })}
-              </div>
-              {isScaled ? (
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
-                  Showing {Math.round(combinedFraction * 100)}% of the recipe
-                  {' '}for {eatingMembers.map(m => m.display_name).join(', ')}.
-                </p>
-              ) : (
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
-                  Showing full recipe ({recipe.base_servings || 1} serving{(recipe.base_servings || 1) === 1 ? '' : 's'}).
-                </p>
-              )}
-            </div>
           )}
+        </div>
 
-          {/* Prep / Cook time */}
-          {(recipe.prep_time > 0 || recipe.cook_time > 0) && (
-            <div className="rd-card">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                {recipe.prep_time > 0 && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Prep Time</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1, #111)' }}>
-                      {recipe.prep_time}<span style={{ fontSize: 13, fontWeight: 500 }}> Min</span>
-                    </div>
-                  </div>
-                )}
-                {recipe.cook_time > 0 && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Cook Time</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1, #111)' }}>
-                      {recipe.cook_time}<span style={{ fontSize: 13, fontWeight: 500 }}> Min</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
+        {/* ── Nutritional data ── */}
+        <div className="rd-section-nutrition">
           {/* Donut chart + Glycemic Load */}
           {activeNutrition?.perServing && (() => {
             const ps = {}
@@ -1900,28 +1863,6 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
                 {showRawNutrition ? 'Raw Ingredients' : isScaled ? `For ${eatingMembers.map(m => m.display_name).join(' & ')}` : 'Per Serving'}
               </div>
               <DonutChart ps={ps} />
-              {(() => {
-                const gi = estimateGI(recipe)
-                // GL scales with the displayed (per-member) carbs, so it tracks the donut.
-                const gl = estimateGL(recipe, ps.carbs_total)
-                if (gi == null && gl == null) return null
-                return (
-                  <div style={{ marginTop: 14, display: 'flex', justifyContent: 'center', gap: 24 }}>
-                    {gi != null && (
-                      <div>
-                        <div style={{ fontSize: 12, color: '#999' }}>Glycemic Index</div>
-                        <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)' }}>{gi}</div>
-                      </div>
-                    )}
-                    {gl != null && (
-                      <div>
-                        <div style={{ fontSize: 12, color: '#999' }}>Glycemic Load</div>
-                        <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)' }}>{gl}</div>
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
             </div>
             )
           })()}
@@ -2017,9 +1958,115 @@ export default function RecipeDetailClient({ recipe, members: initialMembers }) 
             memberGoal={memberGoal}
             memberDailyNeeds={memberDailyNeeds}
           />
+        </div>
 
-        </div>{/* end rd-right */}
-      </div>{/* end rd-grid */}
+        {/* ── Edit recipe (author only) / Save & Cancel (when editing) ── */}
+        <div className="rd-section-edit" style={{ textAlign: 'center' }}>
+          {isOwner && (
+            <>
+              {!isEditing ? (
+                <button
+                  onClick={startEditing}
+                  style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+                >
+                  ✏️ Edit Recipe
+                </button>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={saveEditing}
+                    disabled={isSavingEdit}
+                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: isSavingEdit ? 'wait' : 'pointer', opacity: isSavingEdit ? 0.7 : 1 }}
+                  >
+                    {isSavingEdit ? '⏳ Saving…' : '✅ Save Changes'}
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    disabled={isSavingEdit}
+                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
+                    disabled={isSavingEdit}
+                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid #ef4444', color: '#ef4444', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+                  >
+                    🗑️ Delete Recipe
+                  </button>
+                  {saveEditError && (
+                    <span style={{ width: '100%', textAlign: 'center', color: '#ef4444', fontSize: '0.875rem' }}>{saveEditError}</span>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div
+          onClick={() => !isDeleting && setShowDeleteConfirm(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--bg-card)', borderRadius: '14px', maxWidth: '420px', width: '100%',
+              padding: '1.5rem', boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+            }}
+          >
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.5rem' }}>
+              Delete this recipe?
+            </h3>
+            <p style={{ fontSize: '0.9375rem', color: 'var(--text-2)', margin: '0 0 0.75rem', lineHeight: 1.5 }}>
+              <strong>{recipe.title}</strong> will be permanently removed — including every entry on your Plan and any
+              record in Statistics that references it. Shopping list items and ingredient swaps tied to this recipe
+              will also be deleted.
+            </p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', margin: '0 0 1.25rem' }}>
+              This can&apos;t be undone.
+            </p>
+            {deleteError && (
+              <div style={{ padding: '0.625rem 0.75rem', background: '#fef2f2', borderRadius: '8px', color: '#dc2626', fontSize: '0.8125rem', marginBottom: '0.875rem' }}>
+                {deleteError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, fontSize: '0.875rem', cursor: isDeleting ? 'wait' : 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                style={{ padding: '0.5rem 1rem', borderRadius: '8px', background: '#ef4444', border: 'none', color: '#fff', fontWeight: 600, fontSize: '0.875rem', cursor: isDeleting ? 'wait' : 'pointer', opacity: isDeleting ? 0.7 : 1 }}
+              >
+                {isDeleting ? 'Deleting…' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addPlanMsg === 'success' && (
+        <div style={{ padding: '0.75rem 1rem', background: '#d1fae5', borderRadius: '10px', color: '#065f46', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 500 }}>
+          ✅ Recipe added to today&apos;s plan! <Link href="/plan" style={{ color: '#065f46', textDecoration: 'underline', fontWeight: 700 }}>View Planner</Link>
+        </div>
+      )}
+      {addPlanMsg === 'error' && (
+        <div style={{ padding: '0.75rem 1rem', background: '#fef2f2', borderRadius: '10px', color: '#dc2626', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 500 }}>
+          ❌ Could not add to plan{addPlanError ? `: ${addPlanError}` : '. Please try again.'}
+        </div>
+      )}
 
       {/* Ingredient alternatives sheet */}
       <IngredientAlternativesSheet

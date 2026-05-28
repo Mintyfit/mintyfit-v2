@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { computeFamilyBMI, getMemberBMIFraction } from '@/lib/nutrition/portionCalc'
+import { scaleNutrition } from '@/lib/nutrition/nutrition'
 import WeekOverview from './WeekOverview'
 import DayAgenda from './DayAgenda'
 import DayStatsPanel from './DayStatsPanel'
@@ -66,6 +68,45 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   const [dropTarget, setDropTarget] = useState(null)
   const [addingToMeal, setAddingToMeal] = useState(false)
 
+  // Per-day meal type toggles — persisted in day_meal_config table
+  const [dayEnabledMeals, setDayEnabledMeals] = useState({})
+  const loadDayMealConfigs = useCallback(async (fromDate, toDate) => {
+    if (!familyId) return
+    const supabase = createClient()
+    if (!supabase) return
+    const { data } = await supabase
+      .from('day_meal_config')
+      .select('date_str, enabled_meal_types')
+      .eq('family_id', familyId)
+      .gte('date_str', fromDate)
+      .lte('date_str', toDate)
+    if (data?.length) {
+      const map = {}
+      for (const row of data) map[row.date_str] = row.enabled_meal_types
+      setDayEnabledMeals(map)
+    }
+  }, [familyId])
+  const toggleDayMeal = useCallback(async (dateKey, mealType) => {
+    const supabase = createClient()
+    if (!supabase || !familyId) return
+    // Compute new array from current state
+    const current = dayEnabledMeals[dateKey] || MEAL_TYPES
+    const idx = current.indexOf(mealType)
+    const next = idx >= 0
+      ? current.filter(m => m !== mealType)
+      : [...current, mealType].sort((a,b) => MEAL_TYPES.indexOf(a) - MEAL_TYPES.indexOf(b))
+    // Optimistic update
+    setDayEnabledMeals(prev => ({ ...prev, [dateKey]: next }))
+    await supabase.from('day_meal_config').upsert({
+      family_id: familyId,
+      date_str: dateKey,
+      enabled_meal_types: next,
+    }, { onConflict: 'family_id,date_str' })
+  }, [familyId, dayEnabledMeals])
+  const getDayEnabledMeals = useCallback((dateKey) => {
+    return dayEnabledMeals[dateKey] || MEAL_TYPES
+  }, [dayEnabledMeals])
+
   // Pending recipe from /recipes/[slug] "Add to Plan" button
   const [pendingRecipe, setPendingRecipe] = useState(null)
 
@@ -107,6 +148,13 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     const me = weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
     return `${ms} – ${me}`
   })()
+
+  // Load per-day meal configs for the visible week
+  useEffect(() => {
+    if (weekDates.length) {
+      loadDayMealConfigs(toDateKey(weekDates[0]), toDateKey(weekDates[6]))
+    }
+  }, [weekOffset, loadDayMealConfigs])
 
   // Read pending recipe handed off from /recipes page
   useEffect(() => {
@@ -373,9 +421,12 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     setAddingToMeal(true)
     const supabase = createClient()
     if (!supabase) { setAddingToMeal(false); return }
-    // ONE row per (day, meal, recipe). Eaters are tracked on the entry via
-    // `consumer_member_ids` (defaults to currently-checked members). The
-    // donut/per-member panel scales the recipe's totals at read time.
+    // Compute combined BMI fraction of checked members to pre-scale nutrition
+    const combinedFraction = activeMembers.reduce((s, m) => s + getMemberBMIFraction(m, members), 0)
+    const totals = recipe.nutrition?.totals
+    const personalNutrition = (totals && combinedFraction > 0 && combinedFraction !== 1)
+      ? scaleNutrition(totals, combinedFraction, 1)
+      : totals
     const row = {
       profile_id: userId,
       family_id: familyId || null,
@@ -385,7 +436,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       recipe_name: recipe.title || '',
       member_id: null,
       consumer_member_ids: activeMembers.map(m => m.id),
-      personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
+      personal_nutrition: personalNutrition || null,
       origin: 'planned',
     }
     // Mig 050: one non-partial unique on (family_id, date, meal, recipe,
@@ -714,12 +765,14 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                         onDragEnd={() => { if (!dropTarget) { draggedRecipe.current = null; setDragActive(false) } }}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
                       >
-                        {r.image_url && (
-                          <img src={r.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
-                        )}
-                        <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                          {r.title}
-                        </span>
+                        <Link href={`/recipes/${r.slug || r.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, textDecoration: 'none', minWidth: 0 }} onClick={e => e.stopPropagation()}>
+                          {r.image_url && (
+                            <img src={r.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+                          )}
+                          <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                            {r.title}
+                          </span>
+                        </Link>
                         {MEAL_ICONS[r.meal_type] && (
                           <img
                             src={MEAL_ICONS[r.meal_type]}
@@ -865,6 +918,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                   activities={activities}
                   members={members}
                   today={today}
+                  dayEnabledMeals={dayEnabledMeals}
                   onSelectDay={(date) => {
                     if (pendingRecipe) {
                       placePendingRecipeOnDay(date, toDateKey(date))
@@ -890,6 +944,8 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                     journals={dayJournals}
                     members={members}
                     activeMembers={activeMembers}
+                    enabledMealTypes={getDayEnabledMeals(selectedKey)}
+                    onToggleDayMeal={(mt) => toggleDayMeal(selectedKey, mt)}
                     userId={userId}
                     familyId={familyId}
                     onBack={() => setSelectedDate(null)}
@@ -905,6 +961,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
                     entries={dayEntries}
                     activities={dayActivities}
                     members={members}
+                    enabledMealTypes={getDayEnabledMeals(selectedKey)}
                     selectedMemberIds={selectedMemberIds}
                     onToggleMember={async (id) => {
                       // Optimistic UI: flip set, flip every entry's consumer list, persist.

@@ -244,8 +244,8 @@ export default function MenuDetailClient({ menu, userId }) {
 
         <div style={{ padding: '1.5rem 1.25rem 0' }}>
           {/* Breadcrumb */}
-          <div style={{ marginBottom: '0.875rem' }}>
-            <Link href="/menus" style={{ fontSize: '0.8125rem', color: 'var(--text-3)', textDecoration: 'none' }}>
+          <div style={{ marginBottom: '0.875rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+            <Link href="/menus" style={{ fontSize: '0.8125rem', color: 'var(--text-3)', textDecoration: 'none', flexShrink: 0 }}>
               ← Meal Plans
             </Link>
           </div>

@@ -10,7 +10,7 @@ export default function HeroCTA({ onOpenAuth }) {
 
   if (user) {
     return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'center' }}>
         <Link href="/planner" style={{
           display: 'inline-block',
           background: 'var(--primary)',
@@ -42,21 +42,8 @@ export default function HeroCTA({ onOpenAuth }) {
         boxShadow: '0 4px 14px rgba(61,138,62,0.35)',
         whiteSpace: 'nowrap',
       }}>
-        Plan Your Family's First Week — Free →
+        GO
       </Link>
-      <a href="#how-it-works" style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.375rem',
-        color: 'var(--text-2)',
-        textDecoration: 'none',
-        fontSize: '0.9375rem',
-      }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
-        </svg>
-        See how it works
-      </a>
     </div>
   )
 }

@@ -46,14 +46,14 @@ All public URLs use clean descriptive slugs. No UUIDs, no database IDs in URLs.
 1. Recipe nutrition estimated by Codex Haiku / USDA at creation → stored on recipe
 2. Family member BMR computed via `computeBMR()` from `lib/nutrition/portionCalc.js`
 3. Personal daily needs via `computeMemberDailyNeeds()` from `lib/nutrition/memberRDA.js`
-4. Calendar entries store `personal_nutrition` per member (pre-computed, immutable)
-5. Statistics reads stored values — it does NOT calculate nutrition
-6. Journal entries are facts (exact amounts) — no BMI scaling
+4. Calendar entries store `personal_nutrition` pre-computed at write time (recipe totals × sum of consumer BMI fractions). Immutable — Statistics reads this directly.
+7. DayStatsPanel uses RAW recipe totals (from joined recipes table) for per-member breakdown — each member's contribution = recipe.totals × their BMI fraction × activity factor. Per-member values are independent; unchecking a member removes only their share. Falls back to `personal_nutrition` for legacy rows without recipe join data.
 
 ### Files You Must Not Duplicate Logic From
-- `lib/nutrition/portionCalc.js` — BMR, TDEE, BMI fraction, activity factor
+- `lib/nutrition/portionCalc.js` — BMR, TDEE, BMI fraction (`getMemberBMIFraction`), activity factor
 - `lib/nutrition/memberRDA.js` — personal daily nutrient needs
 - `lib/nutrition/nutrition.js` — NUTRITION_FIELDS array, nutrient keys
+- `lib/member/enrichMember.js` — `enrichMember()` — computes baseDailyCalories, falls back to age/gender estimates when weight/height missing
 
 ### Meal Types
 Always: `['breakfast', 'snack', 'lunch', 'snack2', 'dinner']`

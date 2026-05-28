@@ -42,7 +42,7 @@ function NutritionRing({ ratio, size = 32, color = 'var(--primary)' }) {
   )
 }
 
-export default function WeekOverview({ weekDates, entries, activities, members, today, onSelectDay, onDropRecipe, dragActive }) {
+export default function WeekOverview({ weekDates, entries, activities, members, today, dayEnabledMeals, onSelectDay, onDropRecipe, dragActive }) {
   const todayKey = toDateKey(today)
 
   return (
@@ -149,18 +149,22 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
 
             {/* Meal slot dots */}
             <div className="wo-dots" style={{ display: 'flex', justifyContent: 'center', gap: '3px', marginBottom: '0.375rem' }}>
-              {MEAL_TYPES.map(m => (
-                <span
-                  key={m}
-                  title={m}
-                  style={{
-                    width: 7, height: 7, borderRadius: '50%',
-                    background: (dayEntries[m]?.length || 0) > 0 ? 'var(--primary)' : 'var(--border)',
-                    display: 'inline-block',
-                    transition: 'background 0.2s',
-                  }}
-                />
-              ))}
+              {MEAL_TYPES.map(m => {
+                const enabled = (dayEnabledMeals?.[dk] || MEAL_TYPES).includes(m)
+                return (
+                  <span
+                    key={m}
+                    title={m}
+                    style={{
+                      width: 7, height: 7, borderRadius: '50%',
+                      background: (dayEntries[m]?.length || 0) > 0 ? 'var(--primary)' : 'var(--border)',
+                      display: 'inline-block',
+                      transition: 'background 0.2s',
+                      opacity: enabled ? 1 : 0.25,
+                    }}
+                  />
+                )
+              })}
             </div>
 
             {/* Calorie badge */}

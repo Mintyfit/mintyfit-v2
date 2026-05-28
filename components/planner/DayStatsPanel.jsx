@@ -1,9 +1,11 @@
 'use client'
 
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { calculateMacroPercentages } from '@/lib/nutrition/dailyTotals'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 import { computeFamilyBMI } from '@/lib/nutrition/portionCalc'
+import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
 
@@ -51,16 +53,27 @@ function MacroDonut({ protein, carbs, fat }) {
 }
 
 /**
- * Sum what each member actually consumed today, using:
- *   contribution = recipe.totals × (member's BMI fraction of family) × activity factor
- * Only entries where the member is in `consumer_member_ids` count toward that
- * member. Falls back to legacy per-member rows when consumer_member_ids is null.
+ * Sum what each member actually consumed today.
+ *
+ * Each member's contribution = recipe.totals × their BMI fraction × activity
+ * factor. Uses RAW recipe totals (from joined recipes table) so per-member
+ * values are independent — unchecking a member removes only THEIR share,
+ * others stay the same (matches single recipe view behavior).
+ *
+ * personal_nutrition is a fallback for legacy rows without recipe join data.
  */
-function computeDayBreakdown(entries, activities, members) {
+function computeDayBreakdown(entries, activities, members, enabledMealTypes) {
+  const meals = enabledMealTypes && enabledMealTypes.length ? enabledMealTypes : MEAL_TYPES
   const { familyWithBMI, totalBMI } = computeFamilyBMI(members)
   const bmiFraction = (memberId) => {
     const e = familyWithBMI.find(x => x.id === memberId)
-    return (e && totalBMI > 0) ? e.bmi / totalBMI : 1 / (members.length || 1)
+    const n = members.length || 1
+    if (e && totalBMI > 0) {
+      const nBmi = familyWithBMI.length
+      if (nBmi === n) return e.bmi / totalBMI
+      return (e.bmi / totalBMI) * (nBmi / n)
+    }
+    return 1 / n
   }
   const activityFactor = (memberId) => {
     const acts = activities[memberId] || []
@@ -77,23 +90,28 @@ function computeDayBreakdown(entries, activities, members) {
 
   for (const meal of MEAL_TYPES) {
     for (const entry of entries[meal] || []) {
-      const totals = entry.recipes?.nutrition?.totals
+      // Per-member scaling uses RAW recipe totals (from joined recipes table)
+      // so each member's contribution = totals_raw × bmiFraction — independent
+      // of which other members are checked (same behavior as single recipe view).
+      // personal_nutrition (pre-scaled at write time) is a fallback for legacy
+      // rows where the recipe join is missing.
+      const rawTotals = entry.recipes?.nutrition?.totals
         || (entry.recipes?.nutrition?.perServing && {
               ...entry.recipes.nutrition.perServing,
             })
-      if (!totals) continue
+        || entry.personal_nutrition
+      if (!rawTotals) continue
 
-      // Backwards compatible: legacy rows used member_id; new rows use consumer_member_ids
       const consumers = entry.consumer_member_ids
         || (entry.member_id ? [entry.member_id] : members.map(m => m.id))
 
       for (const memberId of consumers) {
         if (!perMember[memberId]) continue
         const scale = bmiFraction(memberId) * activityFactor(memberId)
-        perMember[memberId].kcal    += (totals.energy_kcal || 0) * scale
-        perMember[memberId].protein += (totals.protein || 0) * scale
-        perMember[memberId].carbs   += (totals.carbs_total || 0) * scale
-        perMember[memberId].fat     += (totals.fat_total || 0) * scale
+        perMember[memberId].kcal    += (rawTotals.energy_kcal || 0) * scale
+        perMember[memberId].protein += (rawTotals.protein || 0) * scale
+        perMember[memberId].carbs   += (rawTotals.carbs_total || 0) * scale
+        perMember[memberId].fat     += (rawTotals.fat_total || 0) * scale
       }
     }
   }
@@ -101,9 +119,10 @@ function computeDayBreakdown(entries, activities, members) {
   return perMember
 }
 
-export default function DayStatsPanel({ date, dateKey, entries, activities, members, selectedMemberIds, onToggleMember }) {
-  const breakdown = computeDayBreakdown(entries, activities, members)
+export default function DayStatsPanel({ date, dateKey, entries, activities, members, enabledMealTypes, selectedMemberIds, onToggleMember }) {
+  const breakdown = computeDayBreakdown(entries, activities, members, enabledMealTypes)
   const isChecked = (id) => selectedMemberIds ? selectedMemberIds.has(id) : true
+  const mealCount = (enabledMealTypes && enabledMealTypes.length) || MEAL_TYPES.length
 
   // Top donut = sum across CHECKED members only
   const donutTotals = members.reduce(
@@ -127,6 +146,65 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
     }
   }
   const netCalories = Math.round(donutTotals.kcal - activityCalories)
+  const [showAllNutrients, setShowAllNutrients] = useState(false)
+
+  // Daily nutrition totals across all 47 nutrients for checked members
+  const dayNutrition = useMemo(() => {
+    const meals = enabledMealTypes && enabledMealTypes.length ? enabledMealTypes : MEAL_TYPES
+    const { familyWithBMI, totalBMI } = computeFamilyBMI(members)
+    const bmi = (id) => {
+      const e = familyWithBMI.find(x => x.id === id)
+      const n = members.length || 1
+      if (e && totalBMI > 0) {
+        const nBmi = familyWithBMI.length
+        if (nBmi === n) return e.bmi / totalBMI
+        return (e.bmi / totalBMI) * (nBmi / n)
+      }
+      return 1 / n
+    }
+    const act = (id) => {
+      const acts = activities[id] || []
+      const burned = acts.reduce((s, a) => s + (a.calories_burned || a.calories || 0), 0)
+      const m = members.find(x => x.id === id)
+      if (burned > 0 && m?.baseDailyCalories) return 1 + burned / m.baseDailyCalories
+      return 1
+    }
+
+    const consumed = {}
+    const targets = {}
+
+    for (const m of members) {
+      if (!isChecked(m.id)) continue
+      const needs = computeMemberDailyNeeds(m)
+      if (!needs) continue
+      for (const [k, v] of Object.entries(needs)) {
+        if (typeof v === 'number') targets[k] = (targets[k] || 0) + v
+      }
+    }
+
+  for (const meal of meals) {
+      for (const entry of entries[meal] || []) {
+        const rawTotals = entry.recipes?.nutrition?.totals
+          || entry.personal_nutrition
+        if (!rawTotals) continue
+        const consumers = entry.consumer_member_ids
+          || (entry.member_id ? [entry.member_id] : members.map(m => m.id))
+        for (const memberId of consumers) {
+          if (!isChecked(memberId)) continue
+          const scale = bmi(memberId) * act(memberId)
+          for (const [k, v] of Object.entries(rawTotals)) {
+            if (typeof v === 'number') consumed[k] = (consumed[k] || 0) + v * scale
+          }
+        }
+      }
+    }
+
+    return { consumed, targets }
+  }, [entries, members, activities, selectedMemberIds])
+
+  const KEY_KEYS = ['energy_kcal', 'protein', 'carbs_total', 'fat_total', 'fiber']
+  const keyFields = NUTRITION_FIELDS.filter(f => KEY_KEYS.includes(f.key))
+  const allNutrientFields = NUTRITION_FIELDS.filter(f => f.rda && f.key !== 'energy_kj' && dayNutrition.consumed[f.key] != null)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -137,7 +215,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
         <MacroDonut protein={donutTotals.protein} carbs={donutTotals.carbs} fat={donutTotals.fat} />
         {activityCalories > 0 && (
           <div style={{ marginTop: '0.75rem', padding: '0.4rem 0.625rem', background: 'rgba(99,102,241,0.08)', borderRadius: '8px', fontSize: '0.8125rem', color: '#4338ca', textAlign: 'center' }}>
-            ⚡ {Math.round(activityCalories)} kcal burned · Net {netCalories} kcal
+            {Math.round(activityCalories)} kcal burned - Net {netCalories} kcal
           </div>
         )}
       </div>
@@ -199,6 +277,91 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
         </div>
       )}
 
+      {/* Day nutrition breakdown */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
+          Nutrition & % of daily needs
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: showAllNutrients ? 12 : 0 }}>
+          {keyFields.map(f => {
+            const val = dayNutrition.consumed[f.key] || 0
+            const rawTarget = dayNutrition.targets[f.key] || f.rda
+            const target = mealCount > 0 ? rawTarget / mealCount : rawTarget
+            if (!target) return null
+            const pct = target ? Math.min(100, (val / target) * 100) : null
+            const barColor = pct == null ? '#9ca3af'
+              : pct >= 80 ? '#10B981'
+              : pct >= 50 ? '#f59e0b'
+              : '#9ca3af'
+            return (
+              <div key={f.key}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, alignItems: 'baseline', gap: 4 }}>
+                  <span style={{ color: 'var(--text-3, #666)' }}>{f.label}</span>
+                  <span style={{ fontWeight: 600, color: 'var(--text-1, #111)', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {val < 1 && val > 0 ? val.toFixed(2) : Math.round(val * 10) / 10}{' '}{f.unit}
+                    {target && (
+                      <span style={{ color: '#bbb', fontWeight: 400, fontSize: 11 }}>
+                        {' '}· {Math.round((val / target) * 100)}%
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {pct != null && (
+                  <div style={{ height: 5, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden', flex: 1, marginTop: 2 }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 3 }} />
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+        <button
+          onClick={() => setShowAllNutrients(v => !v)}
+          style={{
+            width: '100%', padding: '0.5rem 0', marginTop: 4,
+            background: 'none', border: 'none', borderTop: '1px solid var(--border)', cursor: 'pointer',
+            fontSize: '0.8125rem', fontWeight: 600, color: 'var(--primary)',
+          }}
+        >
+          {showAllNutrients ? '▲ Show less' : `▼ All ${allNutrientFields.length} nutrients`}
+        </button>
+        {showAllNutrients && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            {allNutrientFields.map(f => {
+              const val = dayNutrition.consumed[f.key] || 0
+              const rawTarget = dayNutrition.targets[f.key] || f.rda
+              const target = mealCount > 0 ? rawTarget / mealCount : rawTarget
+              if (!target || !val && val !== 0) return null
+              const pct = target ? Math.min(100, (val / target) * 100) : null
+              const barColor = pct == null ? '#9ca3af'
+                : pct >= 80 ? '#10B981'
+                : pct >= 50 ? '#f59e0b'
+                : '#9ca3af'
+              return (
+                <div key={f.key}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, alignItems: 'baseline', gap: 4 }}>
+                    <span style={{ color: 'var(--text-3, #666)' }}>{f.label}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text-1, #111)', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {val < 1 && val > 0 ? val.toFixed(2) : Math.round(val * 10) / 10}{' '}{f.unit}
+                      {target && (
+                        <span style={{ color: '#bbb', fontWeight: 400, fontSize: 10 }}>
+                          {' '}· {Math.round((val / target) * 100)}%
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {pct != null && (
+                    <div style={{ height: 5, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden', flex: 1, marginTop: 2 }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 3 }} />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       <Link
         href={`/statistics?date=${dateKey}`}
         style={{
@@ -208,7 +371,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
           fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none',
         }}
       >
-        See full statistics →
+        See full statistics -
       </Link>
     </div>
   )

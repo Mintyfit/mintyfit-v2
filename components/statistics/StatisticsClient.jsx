@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
+import { useSubscription } from '@/hooks/useSubscription'
+import { Sparkles } from 'lucide-react'
 
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
 
@@ -73,6 +75,15 @@ function pct(value, target) {
   return (value / target) * 100
 }
 
+function extractJSON(text) {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+  if (fenced) { try { return JSON.parse(fenced[1]) } catch {} }
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start !== -1 && end !== -1) return JSON.parse(text.slice(start, end + 1))
+  throw new Error('No JSON found in response')
+}
+
 function computeTDEE(weight, height, age, gender) {
   if (!weight || !height || !age) return 2000
   const bmr = gender === 'female'
@@ -81,13 +92,17 @@ function computeTDEE(weight, height, age, gender) {
   return Math.round(bmr * 1.2)
 }
 
-export default function StatisticsClient({ initialData, nutritionFields }) {
+export default function StatisticsClient({ userId, initialData, nutritionFields, allRecipes }) {
+  const { isPro } = useSubscription()
   const [period, setPeriod] = useState('7d')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
   const [selectedMeals, setSelectedMeals] = useState(new Set(MEAL_TYPES))
   const [selectedMembers, setSelectedMembers] = useState(new Set())
   const [expandedGroups, setExpandedGroups] = useState(new Set(['Energy', 'Macronutrients']))
+  const [analysisResult, setAnalysisResult] = useState(null)
+  const [analysisLoading, setAnalysisLoading] = useState(false)
+  const [analysisError, setAnalysisError] = useState(null)
 
   const members = initialData?.members || []
   const calendarEntries = initialData?.calendarEntries || []
@@ -150,6 +165,7 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
         date: dateStr,
         mealType: entry.meal_type,
         memberId: entry.member_id || null,
+        consumerMemberIds: entry.consumer_member_ids || null,
         label: entry.recipe_name || entry.recipes?.title || 'Recipe',
         nutrition,
       })
@@ -188,8 +204,14 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
 
     for (const row of visibleRows) {
       if (row.memberId) {
+        // Legacy per-member row — assign directly
+        addNutrition(result, row.nutrition)
+      } else if (row.consumerMemberIds?.length) {
+        // Pre-scaled personal_nutrition (totals × sum of BMI fractions) — use
+        // directly. The value already reflects the eating members' combined share.
         addNutrition(result, row.nutrition)
       } else {
+        // No consumer info — legacy fallback: divide by member count
         addNutrition(result, row.nutrition, 1 / memberCountForShared)
       }
     }
@@ -214,8 +236,15 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
 
       for (const row of normalizedRows) {
         if (row.memberId === member.id) {
+          // Legacy per-member row — assign directly to this member
           addNutrition(mTotals, row.nutrition)
-        } else if (!row.memberId) {
+        } else if (row.consumerMemberIds?.includes(member.id)) {
+          // Pre-scaled personal_nutrition: split equally among the consumer
+          // members listed on the entry.
+          const share = 1 / row.consumerMemberIds.length
+          addNutrition(mTotals, row.nutrition, share)
+        } else if (!row.memberId && !row.consumerMemberIds?.length) {
+          // Legacy row with no consumer info — split across all members
           addNutrition(mTotals, row.nutrition, 1 / Math.max(members.length, 1))
         }
       }
@@ -273,6 +302,98 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1))
   }, [visibleRows])
 
+  async function runAnalysis() {
+    setAnalysisLoading(true)
+    setAnalysisError(null)
+    setAnalysisResult(null)
+
+    const recipeList = (allRecipes || []).slice(0, 50).map(r => {
+      const n = r.nutrition?.perServing || {}
+      return `${r.id}|${r.title}|${r.meal_type || 'any'}|` +
+        `${Math.round(n.energy_kcal||0)}kcal|${Math.round(n.protein||0)}g prot|` +
+        `${Math.round(n.carbs_total||0)}g carbs|${Math.round(n.fat_total||0)}g fat|` +
+        `${Math.round(n.fiber||0)}g fiber|${Math.round((n.vit_d||0)*10)/10}µg VitD|` +
+        `${Math.round(n.iron||0)}mg Fe|${Math.round(n.calcium||0)}mg Ca|` +
+        `${Math.round(n.vit_c||0)}mg VitC`
+    }).join('\n')
+
+    const nutrientLines = nutritionFields
+      .filter(f => (dailyTargets[f.key] || f.rda) && (avg[f.key] || 0) > 0)
+      .map(f => {
+        const target = dailyTargets[f.key] || f.rda
+        const value = avg[f.key] || 0
+        const pctVal = Math.round((value / target) * 100)
+        return `${f.label}: ${Math.round(value * 10) / 10}${f.unit} (${pctVal}% of ${Math.round(target * 10) / 10}${f.unit} RDA)`
+      }).join('\n')
+
+    const memberInfo = filteredMembers.length > 0
+      ? filteredMembers.map(m =>
+          `${m.name}${m.date_of_birth ? `, age ${ageFromDob(m.date_of_birth)}` : ''}${m.gender ? `, ${m.gender}` : ''}`
+        ).join('; ')
+      : 'Not specified'
+
+    try {
+      const response = await fetch('/api/grok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'grok-3-fast',
+          max_tokens: 2500,
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert nutritionist AI. Analyze dietary data and give evidence-based, practical recommendations. Always suggest specific recipes from the provided catalogue. Output valid JSON only — no markdown, no explanation outside JSON.`,
+            },
+            {
+              role: 'user',
+              content: `Analyze this dietary data and provide personalized nutrition recommendations.
+
+PERIOD: ${loggedDays} days with logged food data
+MEAL TYPES INCLUDED: ${Array.from(selectedMeals).join(', ')}
+FAMILY MEMBERS: ${memberInfo}
+
+AVERAGE DAILY NUTRIENT INTAKE:
+${nutrientLines || 'No nutrient data available'}
+
+AVAILABLE RECIPES IN CATALOGUE (id|title|mealType|kcal|protein|carbs|fat|fiber|VitD|Iron|Calcium|VitC):
+${recipeList || 'No recipes in catalogue'}
+
+Respond with ONLY this JSON structure:
+{
+  "summary": "2-3 sentence overall diet quality assessment mentioning standout positives and concerns",
+  "score": 75,
+  "deficiencies": [
+    {"nutrient": "Vitamin D", "pct": 15, "advice": "Specific actionable advice", "foods": ["salmon", "egg yolks", "fortified milk"]}
+  ],
+  "excesses": [
+    {"nutrient": "Sodium", "pct": 185, "advice": "Specific advice to reduce"}
+  ],
+  "recipeSuggestions": [
+    {"id": "exact-recipe-uuid-from-list", "title": "Exact Recipe Title", "reason": "High in vitamin D and omega-3, addresses deficiency"}
+  ],
+  "generalAdvice": "2-3 sentence practical daily eating advice tailored to the specific gaps identified"
+}
+
+Rules:
+- deficiencies: only nutrients below 70% RDA (sort by worst first, max 6)
+- excesses: only nutrients above 150% RDA (max 4)
+- recipeSuggestions: pick 3-5 recipes from the catalogue that best address the identified deficiencies; use exact IDs from the list
+- score: 0-100 overall diet quality (consider variety, macro balance, micronutrient coverage)`,
+            },
+          ],
+        }),
+      })
+
+      if (!response.ok) throw new Error(`API error ${response.status}`)
+      const data = await response.json()
+      setAnalysisResult(extractJSON(data.text || ''))
+    } catch (err) {
+      setAnalysisError(err.message)
+    } finally {
+      setAnalysisLoading(false)
+    }
+  }
+
   function toggleMeal(meal) {
     setSelectedMeals(prev => {
       const next = new Set(prev)
@@ -305,12 +426,8 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
       <h1 style={{ fontSize: 42, lineHeight: 1.1, fontWeight: 800, color: 'var(--text-1)', marginBottom: 8 }}>
         Nutrition Statistics
       </h1>
-      <p style={{ color: 'var(--text-3)', fontSize: 18, marginBottom: 22 }}>
-        Rebuilt for Next.js App Router with family analytics, day breakdowns, and nutrient insight.
-      </p>
-
       <section style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
           Time Range
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -329,8 +446,8 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
                 background: period === item.key ? 'var(--primary)' : 'var(--bg-subtle)',
                 color: period === item.key ? '#fff' : 'var(--text-2)',
                 borderRadius: 999,
-                padding: '7px 14px',
-                fontSize: 13,
+                padding: '8px 16px',
+                fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
@@ -342,12 +459,12 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
 
         {period === 'custom' && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', background: 'var(--bg-page)', color: 'var(--text-1)' }} />
-            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', background: 'var(--bg-page)', color: 'var(--text-1)' }} />
+            <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: 14 }} />
+            <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: 14 }} />
           </div>
         )}
 
-        <div style={{ marginTop: 12, fontSize: 13, color: 'var(--text-3)' }}>
+        <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text-3)' }}>
           Active range: {from} to {to}
         </div>
       </section>
@@ -407,7 +524,7 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
         )}
       </section>
 
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 16 }}>
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 16 }}>
         {[
           { label: 'Avg Calories', value: Math.round(avg.energy_kcal || 0), unit: 'kcal/day', color: '#1f6b2a' },
           { label: 'Avg Protein', value: Math.round(avg.protein || 0), unit: 'g/day', color: '#2563eb' },
@@ -415,10 +532,10 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
           { label: 'Avg Fat', value: Math.round(avg.fat_total || 0), unit: 'g/day', color: '#be185d' },
           { label: 'Logged Days', value: loggedDays, unit: 'days', color: '#334155' },
         ].map(card => (
-          <div key={card.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 14 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 8 }}>{card.label}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: card.color, lineHeight: 1 }}>{card.value}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{card.unit}</div>
+          <div key={card.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-4)', marginBottom: 10, fontWeight: 600 }}>{card.label}</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: card.color, lineHeight: 1 }}>{card.value}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 4 }}>{card.unit}</div>
           </div>
         ))}
       </section>
@@ -472,6 +589,176 @@ export default function StatisticsClient({ initialData, nutritionFields }) {
           )}
         </section>
       )}
+
+      {/* AI Analysis */}
+      <section style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: analysisResult || analysisError ? 20 : 0 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)' }}>Nutrition Analysis</div>
+            <div style={{ fontSize: 14, color: 'var(--text-3)', marginTop: 3 }}>
+              Identifies nutrient gaps and suggests recipes from your catalogue
+            </div>
+          </div>
+          {isPro ? (
+            <button
+              onClick={runAnalysis}
+              disabled={analysisLoading}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0,
+                background: analysisLoading ? '#6b7280' : 'var(--primary)',
+                color: 'white', border: 'none', borderRadius: 10,
+                padding: '9px 16px', fontSize: 14, fontWeight: 600,
+                cursor: analysisLoading ? 'default' : 'pointer',
+              }}
+            >
+              <Sparkles size={14} />
+              {analysisLoading ? 'Analysing…' : analysisResult ? 'Re-analyse' : 'Analyse'}
+            </button>
+          ) : (
+            <div style={{
+              background: 'var(--bg-subtle)', border: '1px solid var(--border)',
+              borderRadius: 10, padding: '9px 14px', fontSize: 14, color: 'var(--text-3)',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <span>🔒</span> Premium feature — <a href="/pricing" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Upgrade</a>
+            </div>
+          )}
+        </div>
+
+        {analysisError && (
+          <div style={{ background: '#FEF2F2', borderRadius: 8, padding: 12, fontSize: 14, color: '#DC2626' }}>
+            Analysis failed: {analysisError}
+          </div>
+        )}
+
+        {analysisLoading && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[80, 100, 60].map((w, i) => (
+              <div key={i} style={{ height: 14, borderRadius: 7, background: 'var(--bg-subtle)', width: `${w}%`, animation: 'pulse 1.5s ease-in-out infinite' }} />
+            ))}
+          </div>
+        )}
+
+        {analysisResult && !analysisLoading && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            {analysisResult.score != null && (
+              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                  <div style={{
+                    width: 68, height: 68, borderRadius: '50%', border: '3px solid',
+                    borderColor: analysisResult.score >= 70 ? 'var(--primary)' : analysisResult.score >= 50 ? '#b45309' : '#b91c1c',
+                    background: analysisResult.score >= 70 ? '#f0fdf4' : analysisResult.score >= 50 ? '#FFFBEB' : '#FEF2F2',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: analysisResult.score >= 70 ? 'var(--primary)' : analysisResult.score >= 50 ? '#b45309' : '#b91c1c', lineHeight: 1 }}>
+                      {analysisResult.score}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-4)' }}>/ 100</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 4 }}>Diet Score</div>
+                </div>
+                <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.65, margin: 0 }}>
+                  {analysisResult.summary}
+                </p>
+              </div>
+            )}
+
+            {analysisResult.deficiencies?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#DC2626', marginBottom: 8 }}>Nutrient Gaps</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {analysisResult.deficiencies.map((d, i) => (
+                    <div key={i} style={{ background: '#FEF2F2', borderRadius: 10, padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#DC2626' }}>{d.nutrient}</span>
+                        <span style={{ fontSize: 13, color: '#6b7280' }}>{d.pct}% of RDA</span>
+                      </div>
+                      <p style={{ fontSize: 14, color: '#374151', margin: 0, lineHeight: 1.55 }}>{d.advice}</p>
+                      {d.foods?.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                          {d.foods.map(f => (
+                            <span key={f} style={{ background: '#FECACA', color: '#991B1B', padding: '2px 9px', borderRadius: 100, fontSize: 13, fontWeight: 500 }}>{f}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {analysisResult.excesses?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#B45309', marginBottom: 8 }}>Consuming Too Much</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {analysisResult.excesses.map((e, i) => (
+                    <div key={i} style={{ background: '#FFFBEB', borderRadius: 10, padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#B45309' }}>{e.nutrient}</span>
+                        <span style={{ fontSize: 13, color: '#6b7280' }}>{e.pct}% of RDA</span>
+                      </div>
+                      <p style={{ fontSize: 14, color: '#374151', margin: 0, lineHeight: 1.55 }}>{e.advice}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {analysisResult.recipeSuggestions?.length > 0 && (
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#166534', marginBottom: 8 }}>
+                  Recommended Recipes From Your Catalogue
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {analysisResult.recipeSuggestions.map((s, i) => {
+                    const recipe = (allRecipes || []).find(r => r.id === s.id)
+                    return (
+                      <div key={i} style={{
+                        background: '#F0FDF4', border: '1px solid #BBF7D0',
+                        borderRadius: 10, padding: '12px 14px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          {(recipe?.image_thumb_url || recipe?.image_url) && (
+                            <img src={recipe.image_thumb_url || recipe.image_url} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: '#166534' }}>{s.title}</div>
+                            <div style={{ fontSize: 13, color: '#374151', marginTop: 2, lineHeight: 1.4 }}>{s.reason}</div>
+                          </div>
+                        </div>
+                        {recipe?.nutrition?.perServing && (
+                          <div style={{ display: 'flex', gap: 10, marginTop: 6, fontSize: 13, color: 'var(--text-4)', flexWrap: 'wrap' }}>
+                            <span>{Math.round(recipe.nutrition.perServing.energy_kcal || 0)} kcal</span>
+                            <span>{Math.round(recipe.nutrition.perServing.protein || 0)}g protein</span>
+                            <span>{Math.round(recipe.nutrition.perServing.fiber || 0)}g fiber</span>
+                          </div>
+                        )}
+                        {recipe?.slug && (
+                          <a href={`/recipes/${recipe.slug}`} style={{
+                            display: 'inline-block', marginTop: 8,
+                            background: 'var(--primary)', color: 'white', border: 'none',
+                            borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600,
+                            cursor: 'pointer', textDecoration: 'none',
+                          }}>
+                            View Recipe →
+                          </a>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {analysisResult.generalAdvice && (
+              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 10, padding: 16 }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#166534', marginBottom: 6 }}>Daily Advice</div>
+                <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.65, margin: 0 }}>{analysisResult.generalAdvice}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <section style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 16 }}>
         <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-1)', marginBottom: 10 }}>Nutrient Breakdown</h2>

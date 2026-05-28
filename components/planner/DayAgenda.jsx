@@ -5,12 +5,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
-import { computeMemberNutrition } from '@/lib/nutrition/portionCalc'
+import { computeMemberNutrition, getMemberBMIFraction } from '@/lib/nutrition/portionCalc'
+import { scaleNutrition } from '@/lib/nutrition/nutrition'
 import RecipePickerModal from './RecipePickerModal'
 import JournalEntryForm from './JournalEntryForm'
 import ActivityForm from './ActivityForm'
 
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
+const MEAL_SHORT = { breakfast: 'Bkfst', snack: 'Snack 1', lunch: 'Lunch', snack2: 'Snack 2', dinner: 'Dinner' }
 const MEAL_LABELS = {
   breakfast: 'Breakfast',
   snack: 'Morning Snack',
@@ -27,6 +29,8 @@ export default function DayAgenda({
   journals = {},
   members,
   activeMembers,
+  enabledMealTypes,
+  onToggleDayMeal,
   userId,
   familyId,
   onBack,
@@ -92,11 +96,13 @@ export default function DayAgenda({
   async function handleAddRecipe(recipe, mealType) {
     const supabase = createClient()
     if (!supabase) return
-    // One row per (slot, recipe). Eaters live in consumer_member_ids — same
-    // pattern as PlannerClient.saveRecipeToDay (post-mig 049). Per-member
-    // nutrition is computed at read time by DayStatsPanel, not stored as
-    // separate rows.
     const targetMembers = (activeMembers && activeMembers.length > 0) ? activeMembers : members
+    // Pre-compute personal_nutrition scaled by combined BMI fraction
+    const combinedFraction = targetMembers.reduce((s, m) => s + getMemberBMIFraction(m, members), 0)
+    const totals = recipe.nutrition?.totals
+    const personalNutrition = (totals && combinedFraction > 0 && combinedFraction !== 1)
+      ? scaleNutrition(totals, combinedFraction, 1)
+      : totals
     const row = {
       profile_id: userId,
       family_id: familyId || null,
@@ -106,7 +112,7 @@ export default function DayAgenda({
       recipe_name: recipe.title || '',
       member_id: null,
       consumer_member_ids: targetMembers.map(m => m.id),
-      personal_nutrition: recipe.nutrition?.totals || recipe.nutrition?.perServing || null,
+      personal_nutrition: personalNutrition || null,
       origin: 'planned',
     }
     await supabase
@@ -127,7 +133,22 @@ export default function DayAgenda({
         </button>
       )}
 
-      <h2 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-1)', marginBottom: '1.5rem' }}>{dayLabel}</h2>
+      <h2 style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--text-1)', marginBottom: '0.25rem' }}>{dayLabel}</h2>
+
+      {/* Meal type toggles for this day */}
+      {onToggleDayMeal && (
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '1.5rem', overflowX: 'auto', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+          {MEAL_TYPES.map(mt => {
+            const enabled = (enabledMealTypes || MEAL_TYPES).includes(mt)
+            return (
+              <label key={mt} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', cursor: 'pointer', color: enabled ? 'var(--text-1)' : 'var(--text-4)', opacity: enabled ? 1 : 0.5, flexShrink: 0 }}>
+                <input type="checkbox" checked={enabled} onChange={() => onToggleDayMeal(mt)} style={{ width: 14, height: 14, accentColor: 'var(--primary)', cursor: 'pointer' }} />
+                {MEAL_SHORT[mt]}
+              </label>
+            )
+          })}
+        </div>
+      )}
 
       <section style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem' }}>
@@ -161,6 +182,8 @@ export default function DayAgenda({
       </section>
 
       {MEAL_TYPES.map(mealType => {
+        // Hide sections for disabled meal types
+        if (enabledMealTypes && !enabledMealTypes.includes(mealType)) return null
         const slotEntries = entries[mealType] || []
         return (
           <section key={mealType} style={{ marginBottom: '1.5rem' }}>
