@@ -4,10 +4,12 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { calculateMacroPercentages } from '@/lib/nutrition/dailyTotals'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
-import { computeFamilyBMI } from '@/lib/nutrition/portionCalc'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
-
-const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
+import {
+  computeMealBudgetDayBreakdown,
+  computeMealBudgetDayNutrition,
+  MEAL_TYPES,
+} from '@/lib/nutrition/mealBudget'
 
 const NUTRIENT_GROUPS = [
   { label: 'Energy',         color: '#5BB830', keys: ['energy_kcal', 'energy_kj'] },
@@ -62,77 +64,19 @@ function MacroDonut({ protein, carbs, fat }) {
   )
 }
 
-/**
- * Sum what each member actually consumed today.
- *
- * Each member's contribution = recipe.totals × their BMI fraction × activity
- * factor. Uses RAW recipe totals (from joined recipes table) so per-member
- * values are independent — unchecking a member removes only THEIR share,
- * others stay the same (matches single recipe view behavior).
- *
- * personal_nutrition is a fallback for legacy rows without recipe join data.
- */
-function computeDayBreakdown(entries, activities, members, enabledMealTypes) {
-  const meals = enabledMealTypes && enabledMealTypes.length ? enabledMealTypes : MEAL_TYPES
-  const { familyWithBMI, totalBMI } = computeFamilyBMI(members)
-  const bmiFraction = (memberId) => {
-    const e = familyWithBMI.find(x => x.id === memberId)
-    const n = members.length || 1
-    if (e && totalBMI > 0) {
-      const nBmi = familyWithBMI.length
-      if (nBmi === n) return e.bmi / totalBMI
-      return (e.bmi / totalBMI) * (nBmi / n)
-    }
-    return 1 / n
-  }
-  const activityFactor = (memberId) => {
-    const acts = activities[memberId] || []
-    const burned = acts.reduce((s, a) => s + (a.calories_burned || a.calories || 0), 0)
-    const member = members.find(m => m.id === memberId)
-    if (burned > 0 && member?.baseDailyCalories) {
-      return 1 + burned / member.baseDailyCalories
-    }
-    return 1
-  }
-
-  const perMember = {}
-  for (const m of members) perMember[m.id] = { kcal: 0, protein: 0, carbs: 0, fat: 0 }
-
-  for (const meal of MEAL_TYPES) {
-    for (const entry of entries[meal] || []) {
-      // Per-member scaling uses RAW recipe totals (from joined recipes table)
-      // so each member's contribution = totals_raw × bmiFraction — independent
-      // of which other members are checked (same behavior as single recipe view).
-      // personal_nutrition (pre-scaled at write time) is a fallback for legacy
-      // rows where the recipe join is missing.
-      const rawTotals = entry.recipes?.nutrition?.totals
-        || (entry.recipes?.nutrition?.perServing && {
-              ...entry.recipes.nutrition.perServing,
-            })
-        || entry.personal_nutrition
-      if (!rawTotals) continue
-
-      const consumers = entry.consumer_member_ids
-        || (entry.member_id ? [entry.member_id] : members.map(m => m.id))
-
-      for (const memberId of consumers) {
-        if (!perMember[memberId]) continue
-        const scale = bmiFraction(memberId) * activityFactor(memberId)
-        perMember[memberId].kcal    += (rawTotals.energy_kcal || 0) * scale
-        perMember[memberId].protein += (rawTotals.protein || 0) * scale
-        perMember[memberId].carbs   += (rawTotals.carbs_total || 0) * scale
-        perMember[memberId].fat     += (rawTotals.fat_total || 0) * scale
-      }
-    }
-  }
-
-  return perMember
-}
-
 export default function DayStatsPanel({ date, dateKey, entries, activities, members, enabledMealTypes, selectedMemberIds, onToggleMember }) {
-  const breakdown = computeDayBreakdown(entries, activities, members, enabledMealTypes)
   const isChecked = (id) => selectedMemberIds ? selectedMemberIds.has(id) : true
-  const mealCount = (enabledMealTypes && enabledMealTypes.length) || MEAL_TYPES.length
+  const meals = (enabledMealTypes && enabledMealTypes.length) ? enabledMealTypes : MEAL_TYPES
+
+  const breakdown = useMemo(() =>
+    computeMealBudgetDayBreakdown(entries, members, meals, selectedMemberIds),
+    [entries, members, meals, selectedMemberIds]
+  )
+
+  const dayNutrition = useMemo(() =>
+    computeMealBudgetDayNutrition(entries, members, meals, selectedMemberIds),
+    [entries, members, meals, selectedMemberIds]
+  )
 
   // Top donut = sum across CHECKED members only
   const donutTotals = members.reduce(
@@ -158,60 +102,6 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
   const netCalories = Math.round(donutTotals.kcal - activityCalories)
   const [showAllNutrients, setShowAllNutrients] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState(new Set(['Energy', 'Macronutrients']))
-
-  // Daily nutrition totals across all 47 nutrients for checked members
-  const dayNutrition = useMemo(() => {
-    const meals = enabledMealTypes && enabledMealTypes.length ? enabledMealTypes : MEAL_TYPES
-    const { familyWithBMI, totalBMI } = computeFamilyBMI(members)
-    const bmi = (id) => {
-      const e = familyWithBMI.find(x => x.id === id)
-      const n = members.length || 1
-      if (e && totalBMI > 0) {
-        const nBmi = familyWithBMI.length
-        if (nBmi === n) return e.bmi / totalBMI
-        return (e.bmi / totalBMI) * (nBmi / n)
-      }
-      return 1 / n
-    }
-    const act = (id) => {
-      const acts = activities[id] || []
-      const burned = acts.reduce((s, a) => s + (a.calories_burned || a.calories || 0), 0)
-      const m = members.find(x => x.id === id)
-      if (burned > 0 && m?.baseDailyCalories) return 1 + burned / m.baseDailyCalories
-      return 1
-    }
-
-    const consumed = {}
-    const targets = {}
-
-    for (const m of members) {
-      if (!isChecked(m.id)) continue
-      const needs = computeMemberDailyNeeds(m)
-      if (!needs) continue
-      for (const [k, v] of Object.entries(needs)) {
-        if (typeof v === 'number') targets[k] = (targets[k] || 0) + v
-      }
-    }
-
-  for (const meal of meals) {
-      for (const entry of entries[meal] || []) {
-        const rawTotals = entry.recipes?.nutrition?.totals
-          || entry.personal_nutrition
-        if (!rawTotals) continue
-        const consumers = entry.consumer_member_ids
-          || (entry.member_id ? [entry.member_id] : members.map(m => m.id))
-        for (const memberId of consumers) {
-          if (!isChecked(memberId)) continue
-          const scale = bmi(memberId) * act(memberId)
-          for (const [k, v] of Object.entries(rawTotals)) {
-            if (typeof v === 'number') consumed[k] = (consumed[k] || 0) + v * scale
-          }
-        }
-      }
-    }
-
-    return { consumed, targets }
-  }, [entries, members, activities, selectedMemberIds])
 
   const KEY_KEYS = ['energy_kcal', 'protein', 'carbs_total', 'fat_total', 'fiber']
   const keyFields = NUTRITION_FIELDS.filter(f => KEY_KEYS.includes(f.key))
@@ -288,7 +178,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
         </div>
       )}
 
-      {/* Day nutrition breakdown */}
+      {/* Day nutrition breakdown — daily totals vs daily targets (no meal count division) */}
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem' }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
           Nutrition & % of daily needs
@@ -296,8 +186,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: showAllNutrients ? 12 : 0 }}>
           {keyFields.map(f => {
             const val = dayNutrition.consumed[f.key] || 0
-            const rawTarget = dayNutrition.targets[f.key] || f.rda
-            const target = mealCount > 0 ? rawTarget / mealCount : rawTarget
+            const target = dayNutrition.targets[f.key] || f.rda
             if (!target) return null
             const pct = target ? Math.min(100, (val / target) * 100) : null
             const barColor = pct == null ? '#9ca3af'
@@ -362,8 +251,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
                     <div style={{ paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       {groupFields.map(f => {
                         const val = dayNutrition.consumed[f.key] || 0
-                        const rawTarget = dayNutrition.targets[f.key] || f.rda
-                        const target = mealCount > 0 ? rawTarget / mealCount : rawTarget
+                        const target = dayNutrition.targets[f.key] || f.rda
                         if (!target) return null
                         const pct = target ? Math.min(100, (val / target) * 100) : null
                         const barColor = pct == null ? '#9ca3af'

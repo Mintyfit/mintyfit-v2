@@ -3,8 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { computeFamilyBMI, getMemberBMIFraction } from '@/lib/nutrition/portionCalc'
-import { scaleNutrition } from '@/lib/nutrition/nutrition'
+import { computeMealBudget } from '@/lib/nutrition/mealBudget'
 import WeekOverview from './WeekOverview'
 import DayAgenda from './DayAgenda'
 import DayStatsPanel from './DayStatsPanel'
@@ -421,11 +420,12 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     setAddingToMeal(true)
     const supabase = createClient()
     if (!supabase) { setAddingToMeal(false); return }
-    // Compute combined BMI fraction of checked members to pre-scale nutrition
-    const combinedFraction = activeMembers.reduce((s, m) => s + getMemberBMIFraction(m, members), 0)
+    // Compute personal_nutrition using calorie-budgeted meal distribution.
+    // personal_nutrition = recipeTotals × batchScale (combined for all eaters).
+    const mealsPerDay = 3
     const totals = recipe.nutrition?.totals
-    const personalNutrition = (totals && combinedFraction > 0 && combinedFraction !== 1)
-      ? scaleNutrition(totals, combinedFraction, 1)
+    const personalNutrition = (totals && activeMembers.length > 0)
+      ? computeMealBudget(activeMembers, totals, mealType, null, mealsPerDay).personalNutrition
       : totals
     const row = {
       profile_id: userId,

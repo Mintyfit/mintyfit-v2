@@ -5,8 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
-import { computeMemberNutrition, getMemberBMIFraction } from '@/lib/nutrition/portionCalc'
-import { scaleNutrition } from '@/lib/nutrition/nutrition'
+import { computeMealBudget } from '@/lib/nutrition/mealBudget'
 import RecipePickerModal from './RecipePickerModal'
 import JournalEntryForm from './JournalEntryForm'
 import ActivityForm from './ActivityForm'
@@ -97,11 +96,10 @@ export default function DayAgenda({
     const supabase = createClient()
     if (!supabase) return
     const targetMembers = (activeMembers && activeMembers.length > 0) ? activeMembers : members
-    // Pre-compute personal_nutrition scaled by combined BMI fraction
-    const combinedFraction = targetMembers.reduce((s, m) => s + getMemberBMIFraction(m, members), 0)
+    // Pre-compute personal_nutrition using calorie-budgeted meal distribution.
     const totals = recipe.nutrition?.totals
-    const personalNutrition = (totals && combinedFraction > 0 && combinedFraction !== 1)
-      ? scaleNutrition(totals, combinedFraction, 1)
+    const personalNutrition = (totals && targetMembers.length > 0)
+      ? computeMealBudget(targetMembers, totals, mealType, null, 3).personalNutrition
       : totals
     const row = {
       profile_id: userId,

@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { NUTRITION_FIELDS, scaleNutrition } from '@/lib/nutrition/nutrition'
-import { getMemberBMIFraction } from '@/lib/nutrition/portionCalc'
+import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
+import { computeMealBudget } from '@/lib/nutrition/mealBudget'
 import { enrichMember } from '@/lib/member/enrichMember'
 import { createClient } from '@/lib/supabase/client'
 
@@ -503,6 +503,12 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
   const [guestCount, setGuestCount] = useState(2)
   const [guestCalories, setGuestCalories] = useState(200)
   const [showGuests, setShowGuests] = useState(false)
+  const [mealsPerDay, setMealsPerDay] = useState(() => {
+    try { return parseInt(localStorage.getItem('mintyfit:mealsPerDay') || '3', 10) } catch { return 3 }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('mintyfit:mealsPerDay', String(mealsPerDay)) } catch {}
+  }, [mealsPerDay])
 
   // Sync server-provided members when navigating between recipes (Next.js reuses
   // the client component, so useState won't re-initialize on prop change).
@@ -767,18 +773,19 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
     })
   }
 
-  // ── Active-eaters portion scaling ──────────────────────────────────────────
-  // Each checked member contributes their BMI fraction × activity factor of the
-  // whole recipe. Guests add a calorie-based scaling factor. With nothing checked
-  // or added → base recipe shown. Guests scale ingredients + displayed nutrition
-  // but are excluded from personal_nutrition saved to plan/statistics.
+  // ── Active-eaters portion scaling (calorie-budgeted meal distribution) ─────
+  // Each checked member gets a personal meal target = dailyTarget × mealWeight.
+  // The family meal target = sum of personal targets → batchScale = target / recipeKcal.
+  // Each member's share = their personal target / family target.
+  // Guests add a calorie-based scaling factor but are excluded from saved nutrition.
   const eatingMembers = members.filter(m => activeEaters.has(m.id))
   const hasMembers = eatingMembers.length > 0
   const hasGuests = showGuests && guestCount > 0
 
-  const memberFraction = hasMembers
-    ? eatingMembers.reduce((s, m) => s + getMemberBMIFraction(m, members), 0)
-    : 0
+  const mealType = recipe.meal_type || 'dinner'
+  const memberBudget = hasMembers
+    ? computeMealBudget(eatingMembers, recipe.nutrition?.totals, mealType, null, mealsPerDay)
+    : null
 
   const recipeTotalCal = recipe.nutrition?.totals?.energy_kcal
     || (recipe.nutrition?.perServing?.energy_kcal * (recipe.base_servings || 1))
@@ -789,11 +796,11 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
     : 0
 
   const isScaled = hasMembers || hasGuests
-  const combinedFraction = memberFraction + guestFraction
+  const combinedFraction = (memberBudget?.batchScale ?? 0) + guestFraction
 
   // Multiplier applied to nutrition.perServing in the donut / RDA bars.
   const memberMultiplier = isScaled
-    ? combinedFraction * (recipe.base_servings || 1)
+    ? (memberBudget?.batchScale || 0) * (recipe.base_servings || 1)
     : 1
 
   // Personal daily nutrient needs for RDA denominators — sum across checked members
@@ -841,17 +848,18 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
 
       const now = new Date()
       const dateKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-      const mealType = recipe.meal_type || 'dinner'
 
       const eaterIds = activeEaters.size > 0
         ? members.filter(m => activeEaters.has(m.id)).map(m => m.id)
         : members.map(m => m.id)
 
-      // Pre-compute personal_nutrition scaled by member BMI fraction only
-      // (guests excluded so their nutrition doesn't appear in stats).
+      // Pre-compute personal_nutrition using calorie-budgeted meal distribution.
+      // personal_nutrition = recipeTotals × batchScale (combined for all eaters).
+      // Guests excluded so their nutrition doesn't appear in plan/statistics.
       const totals = recipe.nutrition?.totals
-      const personalNutrition = (totals && hasMembers)
-        ? scaleNutrition(totals, memberFraction, 1)
+      const eaterMembers = members.filter(m => eaterIds.includes(m.id))
+      const personalNutrition = (totals && eaterMembers.length > 0)
+        ? computeMealBudget(eaterMembers, totals, mealType, null, mealsPerDay).personalNutrition
         : totals
 
       const row = {
@@ -1818,12 +1826,41 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
                   )
                 })}
               </div>
-              {isScaled ? (
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
-                  Showing {Math.round(combinedFraction * 100)}% of the recipe
-                  {' '}for {eatingMembers.map(m => m.display_name).join(', ')}
-                  {hasGuests && ` + ${guestCount} guest${guestCount > 1 ? 's' : ''}`}.
-                </p>
+
+              {/* ── Meals per day ── */}
+              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
+                  <span style={{ color: 'var(--text-2)', fontWeight: 600 }}>Meals today</span>
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => setMealsPerDay(n)}
+                        style={{
+                          padding: '0.2rem 0.6rem', borderRadius: '6px',
+                          border: `1px solid ${mealsPerDay === n ? 'var(--primary)' : 'var(--border)'}`,
+                          background: mealsPerDay === n ? 'var(--primary)' : 'transparent',
+                          color: mealsPerDay === n ? '#fff' : 'var(--text-3)',
+                          fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {isScaled && memberBudget ? (
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                  <span>Batch scale: {Math.round(memberBudget.batchScale * 100)}% · Total: {Math.round(memberBudget.familyMealTarget)} kcal</span>
+                  {memberBudget.eaters.map(e => (
+                    <span key={e.member.id}>
+                      {e.member.display_name}: {Math.round(e.personShare * 100)}% · {Math.round(e.personMealTarget)} kcal
+                    </span>
+                  ))}
+                  {hasGuests && <span>+ {guestCount} guest{guestCount > 1 ? 's' : ''}</span>}
+                </div>
               ) : (
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
                   Showing full recipe ({recipe.base_servings || 1} serving{(recipe.base_servings || 1) === 1 ? '' : 's'}).

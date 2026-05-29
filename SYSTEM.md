@@ -6,7 +6,7 @@
 
 ## What is MintyFit?
 
-MintyFit (mintyfit.com) is a family nutrition and meal planning platform. Users generate AI-powered recipes, track 47+ micronutrients with personal targets based on each family member's body parameters, plan weekly meals with BMI-scaled portions, log food via manual entry, AI description, or barcode scan, and review nutrition history in Statistics.
+MintyFit (mintyfit.com) is a family nutrition and meal planning platform. Users generate AI-powered recipes, track 47+ micronutrients with personal targets based on each family member's body parameters, plan weekly meals with calorie-budgeted meal distribution, log food via manual entry, AI description, or barcode scan, and review nutrition history in Statistics.
 
 Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabase.
 
@@ -37,51 +37,45 @@ Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabas
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ 1. RECIPE CREATION                                          │
-│    Ingredients → Claude Haiku / USDA → 47-nutrient profile  │
-│    Stored on recipe as { totals, perServing }               │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────┐
-│ 2. FAMILY MEMBER                                            │
-│    Sex + Age + Weight + Height                              │
-│    → BMR (Mifflin-St Jeor) → TDEE (BMR × 1.2)             │
-│    → computeMemberDailyNeeds() → 47 personal daily targets  │
-│    Source: lib/nutrition/portionCalc.js (BMR)               │
-│            lib/nutrition/memberRDA.js (daily needs)         │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────┐
 │ 3. SINGLE RECIPE VIEW                                       │
-│    User selects family members + logs activity              │
-│    → BMI fraction × activity factor → personal portion      │
-│    → Ingredient amounts scaled per member                   │
+│    User selects family members + meals per day (3/4/5)     │
+│    → Each member gets personal meal target:                 │
+│      dailyTarget × mealWeight (normalized over day's meals) │
+│    → familyMealTarget = Σ personMealTargets                 │
+│    → batchScale = familyMealTarget / recipeTotals.kcal      │
+│    → personShare = personMealTarget / familyMealTarget      │
+│    → personNutrition = recipeTotals × batchScale × share    │
+│    → Ingredient amounts scaled by combinedFraction          │
 │    → RDA% bars show personal targets from memberRDA.js      │
-│    Source: lib/nutrition/portionCalc.js (scaling)           │
+│    Source: lib/nutrition/mealBudget.js (meal distribution)  │
 └─────────────────────┬───────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────────┐
 │ 4. CALENDAR (calendar_entries table)                        │
-│    Recipe added to plan → one row per member saved          │
-│    Each row: member_id + personal_nutrition (JSONB)         │
-│    = pre-computed scaled nutrition snapshot                  │
-│    Historical data is IMMUTABLE                             │
+│    Recipe added to plan → one row per entry saved           │
+│    Entry: consumer_member_ids + personal_nutrition (JSONB)  │
+│    personal_nutrition = recipeTotals × batchScale           │
+│    (combined nutrition for all eaters, IMMUTABLE)           │
 │                                                             │
 │    Journal entries → food_journal table                     │
 │    Each entry: member_id + nutrition (exact amount eaten)   │
-│    No BMI scaling — journal is a fact, not a plan           │
+│    No scaling — journal is a fact, not a plan               │
 └─────────────────────┬───────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────────┐
-│ 5. STATISTICS                                               │
-│    Reads personal_nutrition from calendar — NO calculations │
-│    Sums stored values, filters by date/member/meal type     │
-│    Compares against computeMemberDailyNeeds() targets       │
+│ 5. PLAN SIDEBAR / STATISTICS                                │
+│    Reads entries with recipe join (preferred) or            │
+│    personal_nutrition fallback.                             │
+│    Recomputes per-member breakdown via meal budget model    │
+│    (personMealTarget / familyMealTarget).                   │
+│    Compares daily consumed against daily targets from       │
+│    computeMemberDailyNeeds().                                │
+│    Does NOT divide daily targets by meal count.             │
 │    Flags deficiencies (<70%) and excesses (>150%)           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Single source of truth:** Nutrition is calculated ONCE at save time. Statistics only reads and sums stored values. No nutrition calculation logic in Statistics or any read-path component.
+**Single source of truth:** BMR computed in `portionCalc.js`. Daily targets in `memberRDA.js`. Meal budget distribution in `mealBudget.js`. Nutrition is calculated at save time using the meal budget model; reads can recompute per-member breakdown using the same model.
 
 ---
 
@@ -89,7 +83,8 @@ Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabas
 
 | File | Purpose |
 |---|---|
-| `lib/nutrition/portionCalc.js` | `computeBMR()`, `computeTDEE()`, `computeFamilyBMI()`, `getMemberBMIFraction()`, `getMemberActivityFactor()`, `computeMemberNutrition()` — SINGLE SOURCE OF TRUTH for portion scaling and BMR |
+| `lib/nutrition/portionCalc.js` | `computeBMR()`, `computeTDEE()`, `computeFamilyBMI()`, `getMemberBMIFraction()`, `getMemberActivityFactor()`, `computeMemberNutrition()` — SINGLE SOURCE OF TRUTH for BMR and BMI fraction (used only for legacy fallback now) |
+| `lib/nutrition/mealBudget.js` | `computeMealBudget()`, `computeMealBudgetDayBreakdown()`, `computeMealBudgetDayNutrition()`, `getMealWeight()`, `getPersonMealTarget()` — SINGLE SOURCE OF TRUTH for meal budget/portion calculation. Replaces BMI fraction scaling for all new entries. |
 | `lib/nutrition/memberRDA.js` | `computeMemberDailyNeeds(member)` — 47 personal daily nutrient targets. Metabolic-health focused (low carb, higher protein) |
 | `lib/nutrition/nutrition.js` | `NUTRITION_FIELDS` array (47 nutrients), `getNutritionData()`, `scaleNutrition()`, `sumNutrition()` |
 | `lib/member/syncFamily.js` | `syncFamilyMembers(userId)` — loads family from Supabase with measurements, computes BMR/TDEE |
@@ -145,7 +140,8 @@ AprillBuild/
 │   │   ├── client.js                 # Browser client
 │   │   └── server.js                 # Server clients (SSR, public, admin)
 │   ├── nutrition/
-│   │   ├── portionCalc.js            # BMR, TDEE, portion scaling
+│   │   ├── portionCalc.js            # BMR, TDEE, legacy BMI fraction
+│   │   ├── mealBudget.js             # Calorie-budgeted meal distribution (new model)
 │   │   ├── nutrition.js              # NUTRITION_FIELDS, getNutritionData
 │   │   ├── memberRDA.js              # 47-nutrient daily targets
 │   │   ├── glycemicLoad.js           # GL estimation
