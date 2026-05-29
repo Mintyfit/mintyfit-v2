@@ -821,7 +821,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
       if (!supabase) throw new Error('no client')
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        window.location.href = '/?auth=login'
+        window.location.href = '/onboarding'
         return
       }
 
@@ -1029,6 +1029,10 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
 
   async function handleShoppingListClick() {
     if (shoppingState === 'loading') return
+    const supabase = createClient()
+    if (!supabase) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { window.location.href = '/onboarding'; return }
     try {
       const res = await fetch('/api/shopping-list/count')
       const { count } = await res.json()
@@ -1046,6 +1050,10 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
 
   async function addSelectedToShoppingList() {
     if (selectedShoppingState === 'loading') return
+    const supabase = createClient()
+    if (!supabase) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { window.location.href = '/onboarding'; return }
     try {
       const res = await fetch('/api/shopping-list/count')
       const { count } = await res.json()
@@ -1214,23 +1222,28 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
     <>
       <style>{`
         .rd-content {
-          display: grid;
-          grid-template-columns: 1fr;
+          display: flex;
+          flex-direction: column;
           gap: 28px;
-          align-items: start;
         }
         @media (min-width: 781px) {
           .rd-content {
-            grid-template-columns: minmax(320px, 1fr) minmax(280px, 380px);
+            flex-direction: row;
+            align-items: flex-start;
           }
-          .rd-section-image { grid-column: 1; }
-          .rd-section-eaters { grid-column: 2; grid-row: 1; }
-          .rd-section-prepcook { grid-column: 2; }
-          .rd-section-intro { grid-column: 1; }
-          .rd-section-instructions { grid-column: 1; }
-          .rd-section-actions { grid-column: 1; }
-          .rd-section-nutrition { grid-column: 2; }
-          .rd-section-edit { grid-column: 1 / -1; }
+          .rd-main { flex: 1; min-width: 0; }
+          .rd-sidebar {
+            width: min(380px, 35vw);
+            flex-shrink: 0;
+            position: sticky;
+            top: 1rem;
+            align-self: start;
+          }
+        }
+        @media (max-width: 780px) {
+          .rd-sidebar {
+            order: -1;
+          }
         }
         .rd-card {
           background: var(--bg-card, #fff);
@@ -1367,6 +1380,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
 
 
       <div className="rd-content">
+        <div className="rd-main">
         {/* ── Image ── */}
         <div className="rd-section-image">
           {recipe.image && (
@@ -1376,151 +1390,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
           )}
         </div>
 
-        {/* ── Who's eating ── */}
-        <div className="rd-section-eaters">
-          {members.length > 0 && (
-            <div className="rd-card">
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Who&apos;s eating?</h3>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-4)' }}>
-                  {activeEaters.size}/{members.length} checked
-                </span>
-              </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', margin: '0 0 0.6rem' }}>
-                Check members to sum their portions. None checked = base recipe.
-              </p>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {members.map(m => {
-                  const isEating = activeEaters.has(m.id)
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      role="checkbox"
-                      aria-checked={isEating}
-                      onClick={() => toggleEater(m.id)}
-                      title={isEating ? `${m.display_name} is eating — click to uncheck` : `Click to add ${m.display_name}`}
-                      style={{
-                        padding: '0.35rem 0.875rem', borderRadius: '20px',
-                        border: `1.5px solid ${isEating ? 'var(--primary)' : 'var(--border)'}`,
-                        background: isEating ? 'var(--primary)' : 'transparent',
-                        color: isEating ? '#fff' : 'var(--text-3)',
-                        fontSize: '0.8125rem', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '0.4rem',
-                        opacity: isEating ? 1 : 0.7,
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                          border: `1.5px solid ${isEating ? '#fff' : 'var(--text-4)'}`,
-                          background: isEating ? '#fff' : 'transparent',
-                          color: 'var(--primary)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 10, fontWeight: 800, lineHeight: 1,
-                        }}
-                      >
-                        {isEating ? '✓' : ''}
-                      </span>
-                      {m.display_name}
-                    </button>
-                  )
-                })}
-              </div>
-              {isScaled ? (
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
-                  Showing {Math.round(combinedFraction * 100)}% of the recipe
-                  {' '}for {eatingMembers.map(m => m.display_name).join(', ')}
-                  {hasGuests && ` + ${guestCount} guest${guestCount > 1 ? 's' : ''}`}.
-                </p>
-              ) : (
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
-                  Showing full recipe ({recipe.base_servings || 1} serving{(recipe.base_servings || 1) === 1 ? '' : 's'}).
-                </p>
-              )}
 
-              {/* ── Guests toggle ── */}
-              <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
-                <button
-                  onClick={() => setShowGuests(v => !v)}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-2)', padding: '0.25rem 0',
-                  }}
-                >
-                  <span>Add guests</span>
-                  <span style={{ color: 'var(--text-4)', fontSize: '0.75rem' }}>{showGuests ? '▲' : '▼'}</span>
-                </button>
-                {showGuests && (
-                  <div style={{ paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '0.25rem' }}>
-                        <span>Number of guests</span>
-                        <strong style={{ color: 'var(--text-1)' }}>{guestCount}</strong>
-                      </div>
-                      <input
-                        type="range" min="1" max="20" value={guestCount}
-                        onChange={e => setGuestCount(parseInt(e.target.value, 10))}
-                        style={{ width: '100%', accentColor: 'var(--primary)' }}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-4)' }}>
-                        <span>1</span>
-                        <span>20</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '0.25rem' }}>
-                        <span>Calories per guest</span>
-                        <strong style={{ color: 'var(--text-1)' }}>{guestCalories} kcal</strong>
-                      </div>
-                      <input
-                        type="range" min="100" max="500" step="10" value={guestCalories}
-                        onChange={e => setGuestCalories(parseInt(e.target.value, 10))}
-                        style={{ width: '100%', accentColor: 'var(--primary)' }}
-                      />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-4)' }}>
-                        <span>100</span>
-                        <span>500</span>
-                      </div>
-                    </div>
-                    <p style={{ fontSize: '0.6875rem', color: 'var(--text-4)', margin: 0 }}>
-                      Guests scale ingredient amounts but their nutrition is not saved to your Plan statistics.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Prep/Cook time ── */}
-        <div className="rd-section-prepcook">
-          {(recipe.prep_time > 0 || recipe.cook_time > 0) && (
-            <div className="rd-card">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                {recipe.prep_time > 0 && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Prep Time</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1, #111)' }}>
-                      {recipe.prep_time}<span style={{ fontSize: 13, fontWeight: 500 }}> Min</span>
-                    </div>
-                  </div>
-                )}
-                {recipe.cook_time > 0 && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Cook Time</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1, #111)' }}>
-                      {recipe.cook_time}<span style={{ fontSize: 13, fontWeight: 500 }}> Min</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* ── Short description / Intro ── */}
         <div className="rd-section-intro">
@@ -1600,6 +1470,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
                     <li key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                       <button
                         onClick={() => toggleIngredient(item.key)}
+                        title={checked ? 'Remove from shopping list selection' : 'Add to shopping list selection'}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '0.4rem',
                           fontSize: '0.8125rem',
@@ -1741,6 +1612,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
                           {/* Main pill */}
                           <button
                             onClick={() => toggleIngredient(checkKey)}
+                            title={checked ? 'Remove from shopping list selection' : 'Add to shopping list selection'}
                             style={{
                               display: 'flex', alignItems: 'center', gap: '0.4rem',
                               fontSize: '0.8125rem',
@@ -1824,6 +1696,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
             <button
               onClick={handleAddToPlan}
               disabled={addingToPlan}
+              title={currentUserId ? 'Add to today\'s meal plan' : 'Create a free account to plan meals'}
               style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: addingToPlan ? 'wait' : 'pointer', opacity: addingToPlan ? 0.7 : 1 }}
             >
               {addingToPlan ? '⏳ Adding…' : '📅 Add to Plan'}
@@ -1831,6 +1704,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
             <button
               onClick={handleShoppingListClick}
               disabled={shoppingState === 'loading'}
+              title={currentUserId ? 'Add ingredients to shopping list' : 'Create a free account to build shopping lists'}
               style={{
                 padding: '0.625rem 1.25rem', borderRadius: '10px',
                 background: shoppingState === 'success' ? 'rgba(61,138,62,0.1)' : 'transparent',
@@ -1847,8 +1721,195 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
           )}
         </div>
 
-        {/* ── Nutritional data ── */}
-        <div className="rd-section-nutrition">
+        {/* ── Edit recipe (author only) / Save & Cancel (when editing) ── */}
+        <div className="rd-section-edit" style={{ textAlign: 'center' }}>
+          {isOwner && (
+            <>
+              {!isEditing ? (
+                <button
+                  onClick={startEditing}
+                  style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+                >
+                  ✏️ Edit Recipe
+                </button>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={saveEditing}
+                    disabled={isSavingEdit}
+                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: isSavingEdit ? 'wait' : 'pointer', opacity: isSavingEdit ? 0.7 : 1 }}
+                  >
+                    {isSavingEdit ? '⏳ Saving…' : '✅ Save Changes'}
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    disabled={isSavingEdit}
+                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
+                    disabled={isSavingEdit}
+                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid #ef4444', color: '#ef4444', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
+                  >
+                    🗑️ Delete Recipe
+                  </button>
+                  {saveEditError && (
+                    <span style={{ width: '100%', textAlign: 'center', color: '#ef4444', fontSize: '0.875rem' }}>{saveEditError}</span>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        </div>
+
+        <div className="rd-sidebar">
+          {/* ── Who's eating ── */}
+          {members.length > 0 && (
+            <div className="rd-card">
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Who&apos;s eating?</h3>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-4)' }}>
+                  {activeEaters.size}/{members.length} checked
+                </span>
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', margin: '0 0 0.6rem' }}>
+                Check members to sum their portions. None checked = base recipe.
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {members.map(m => {
+                  const isEating = activeEaters.has(m.id)
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={isEating}
+                      onClick={() => toggleEater(m.id)}
+                      title={isEating ? `${m.display_name} is eating — click to uncheck` : `Click to add ${m.display_name}`}
+                      style={{
+                        padding: '0.35rem 0.875rem', borderRadius: '20px',
+                        border: `1.5px solid ${isEating ? 'var(--primary)' : 'var(--border)'}`,
+                        background: isEating ? 'var(--primary)' : 'transparent',
+                        color: isEating ? '#fff' : 'var(--text-3)',
+                        fontSize: '0.8125rem', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                        opacity: isEating ? 1 : 0.7,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                          border: `1.5px solid ${isEating ? '#fff' : 'var(--text-4)'}`,
+                          background: isEating ? '#fff' : 'transparent',
+                          color: 'var(--primary)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 10, fontWeight: 800, lineHeight: 1,
+                        }}
+                      >
+                        {isEating ? '✓' : ''}
+                      </span>
+                      {m.display_name}
+                    </button>
+                  )
+                })}
+              </div>
+              {isScaled ? (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
+                  Showing {Math.round(combinedFraction * 100)}% of the recipe
+                  {' '}for {eatingMembers.map(m => m.display_name).join(', ')}
+                  {hasGuests && ` + ${guestCount} guest${guestCount > 1 ? 's' : ''}`}.
+                </p>
+              ) : (
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
+                  Showing full recipe ({recipe.base_servings || 1} serving{(recipe.base_servings || 1) === 1 ? '' : 's'}).
+                </p>
+              )}
+
+              {/* ── Guests toggle ── */}
+              <div style={{ marginTop: '0.75rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+                <button
+                  onClick={() => setShowGuests(v => !v)}
+                  title={showGuests ? 'Collapse guest settings' : 'Add guest eaters to scale portions'}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-2)', padding: '0.25rem 0',
+                  }}
+                >
+                  <span>Add guests</span>
+                  <span style={{ color: 'var(--text-4)', fontSize: '0.75rem' }}>{showGuests ? '▲' : '▼'}</span>
+                </button>
+                {showGuests && (
+                  <div style={{ paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '0.25rem' }}>
+                        <span>Number of guests</span>
+                        <strong style={{ color: 'var(--text-1)' }}>{guestCount}</strong>
+                      </div>
+                      <input
+                        type="range" min="1" max="20" value={guestCount}
+                        onChange={e => setGuestCount(parseInt(e.target.value, 10))}
+                        style={{ width: '100%', accentColor: 'var(--primary)' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-4)' }}>
+                        <span>1</span>
+                        <span>20</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '0.25rem' }}>
+                        <span>Calories per guest</span>
+                        <strong style={{ color: 'var(--text-1)' }}>{guestCalories} kcal</strong>
+                      </div>
+                      <input
+                        type="range" min="100" max="500" step="10" value={guestCalories}
+                        onChange={e => setGuestCalories(parseInt(e.target.value, 10))}
+                        style={{ width: '100%', accentColor: 'var(--primary)' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-4)' }}>
+                        <span>100</span>
+                        <span>500</span>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.6875rem', color: 'var(--text-4)', margin: 0 }}>
+                      Guests scale ingredient amounts but their nutrition is not saved to your Plan statistics.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Prep/Cook time ── */}
+          {(recipe.prep_time > 0 || recipe.cook_time > 0) && (
+            <div className="rd-card">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {recipe.prep_time > 0 && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Prep Time</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1, #111)' }}>
+                      {recipe.prep_time}<span style={{ fontSize: 13, fontWeight: 500 }}> Min</span>
+                    </div>
+                  </div>
+                )}
+                {recipe.cook_time > 0 && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Cook Time</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-1, #111)' }}>
+                      {recipe.cook_time}<span style={{ fontSize: 13, fontWeight: 500 }}> Min</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Nutritional data ── */}
           {/* Donut chart + Glycemic Load */}
           {activeNutrition?.perServing && (() => {
             const ps = {}
@@ -1884,6 +1945,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
                 <button
                   onClick={() => handleToggleRawCooked()}
                   disabled={isLoadingRaw}
+                  title={showRawNutrition ? 'Switch to prepared nutrition' : 'Switch to raw ingredient nutrition'}
                   style={{
                     width: 44, height: 24, borderRadius: 12, padding: 2,
                     backgroundColor: showRawNutrition ? 'var(--primary)' : '#d1d5db',
@@ -1958,49 +2020,6 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
             memberGoal={memberGoal}
             memberDailyNeeds={memberDailyNeeds}
           />
-        </div>
-
-        {/* ── Edit recipe (author only) / Save & Cancel (when editing) ── */}
-        <div className="rd-section-edit" style={{ textAlign: 'center' }}>
-          {isOwner && (
-            <>
-              {!isEditing ? (
-                <button
-                  onClick={startEditing}
-                  style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
-                >
-                  ✏️ Edit Recipe
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: '0.625rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={saveEditing}
-                    disabled={isSavingEdit}
-                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, fontSize: '0.9375rem', cursor: isSavingEdit ? 'wait' : 'pointer', opacity: isSavingEdit ? 0.7 : 1 }}
-                  >
-                    {isSavingEdit ? '⏳ Saving…' : '✅ Save Changes'}
-                  </button>
-                  <button
-                    onClick={cancelEditing}
-                    disabled={isSavingEdit}
-                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '1.5px solid var(--border)', color: 'var(--text-2)', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
-                    disabled={isSavingEdit}
-                    style={{ padding: '0.625rem 1.25rem', borderRadius: '10px', background: 'transparent', border: '2px solid #ef4444', color: '#ef4444', fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer' }}
-                  >
-                    🗑️ Delete Recipe
-                  </button>
-                  {saveEditError && (
-                    <span style={{ width: '100%', textAlign: 'center', color: '#ef4444', fontSize: '0.875rem' }}>{saveEditError}</span>
-                  )}
-                </div>
-              )}
-            </>
-          )}
         </div>
       </div>
 

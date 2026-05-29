@@ -932,7 +932,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
               )}
             </div>
 
-            {/* Day view (col 2 + col 3) — only in week mode */}
+            {/* Day view (col 2 + col 3) — week mode only */}
             {viewMode === 'week' && selectedDate && (
               <div className="plan-day">
                 <div className="plan-col2">

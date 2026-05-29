@@ -9,6 +9,16 @@ import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
 
+const NUTRIENT_GROUPS = [
+  { label: 'Energy',         color: '#5BB830', keys: ['energy_kcal', 'energy_kj'] },
+  { label: 'Macronutrients', color: '#3B82F6', keys: ['protein', 'carbs_total', 'carbs_absorbed', 'fiber'] },
+  { label: 'Sugars',         color: '#14B8A6', keys: ['sucrose', 'glucose', 'fructose'] },
+  { label: 'Fats',           color: '#6B7280', keys: ['fat_total', 'fat_saturated', 'fat_monounsaturated', 'fat_polyunsaturated', 'fat_trans', 'fat_palmitic', 'fat_stearic', 'fat_linoleic', 'fat_linolenic', 'cholesterol'] },
+  { label: 'Minerals',       color: '#6d28d9', keys: ['sodium', 'potassium', 'calcium', 'magnesium', 'phosphorus', 'iron', 'zinc', 'copper', 'manganese', 'iodine', 'selenium', 'chrome', 'salt_equiv'] },
+  { label: 'Vitamins',       color: '#EC4899', keys: ['vit_a', 'retinol', 'vit_d', 'vit_d3', 'vit_e', 'vit_k', 'vit_b1', 'vit_b2', 'niacin', 'niacin_tryptophan', 'pantothenic_acid', 'vit_b6', 'biotin', 'folates', 'vit_b12', 'vit_c'] },
+  { label: 'Other',          color: '#6b7280', keys: ['water'] },
+]
+
 function MacroDonut({ protein, carbs, fat }) {
   const { proteinPct, carbsPct, fatPct } = calculateMacroPercentages(protein, carbs, fat)
   const r = 44
@@ -147,6 +157,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
   }
   const netCalories = Math.round(donutTotals.kcal - activityCalories)
   const [showAllNutrients, setShowAllNutrients] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState(new Set(['Energy', 'Macronutrients']))
 
   // Daily nutrition totals across all 47 nutrients for checked members
   const dayNutrition = useMemo(() => {
@@ -326,33 +337,60 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, memb
           {showAllNutrients ? '▲ Show less' : `▼ All ${allNutrientFields.length} nutrients`}
         </button>
         {showAllNutrients && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {allNutrientFields.map(f => {
-              const val = dayNutrition.consumed[f.key] || 0
-              const rawTarget = dayNutrition.targets[f.key] || f.rda
-              const target = mealCount > 0 ? rawTarget / mealCount : rawTarget
-              if (!target || !val && val !== 0) return null
-              const pct = target ? Math.min(100, (val / target) * 100) : null
-              const barColor = pct == null ? '#9ca3af'
-                : pct >= 80 ? '#10B981'
-                : pct >= 50 ? '#f59e0b'
-                : '#9ca3af'
+          <div style={{ marginTop: 8 }}>
+            {NUTRIENT_GROUPS.map(group => {
+              const groupFields = group.keys
+                .map(k => NUTRITION_FIELDS.find(f => f.key === k))
+                .filter(f => f && dayNutrition.consumed[f.key] != null)
+              if (groupFields.length === 0) return null
+              const isExpanded = expandedGroups.has(group.label)
               return (
-                <div key={f.key}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ color: 'var(--text-3, #666)' }}>{f.label}</span>
-                    <span style={{ fontWeight: 600, color: 'var(--text-1, #111)', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {val < 1 && val > 0 ? val.toFixed(2) : Math.round(val * 10) / 10}{' '}{f.unit}
-                      {target && (
-                        <span style={{ color: '#bbb', fontWeight: 400, fontSize: 10 }}>
-                          {' '}· {Math.round((val / target) * 100)}%
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  {pct != null && (
-                    <div style={{ height: 5, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden', flex: 1, marginTop: 2 }}>
-                      <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 3 }} />
+                <div key={group.label} style={{ marginBottom: 10 }}>
+                  <button
+                    onClick={() => {
+                      const next = new Set(expandedGroups)
+                      if (next.has(group.label)) next.delete(group.label)
+                      else next.add(group.label)
+                      setExpandedGroups(next)
+                    }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', border: 'none', background: 'none', cursor: 'pointer', borderBottom: `2px solid ${group.color}30`, fontSize: 13, fontWeight: 700, color: group.color }}
+                  >
+                    <span>{group.label}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-4)' }}>{isExpanded ? '▲' : '▼'}</span>
+                  </button>
+                  {isExpanded && (
+                    <div style={{ paddingTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {groupFields.map(f => {
+                        const val = dayNutrition.consumed[f.key] || 0
+                        const rawTarget = dayNutrition.targets[f.key] || f.rda
+                        const target = mealCount > 0 ? rawTarget / mealCount : rawTarget
+                        if (!target) return null
+                        const pct = target ? Math.min(100, (val / target) * 100) : null
+                        const barColor = pct == null ? '#9ca3af'
+                          : pct >= 80 ? '#10B981'
+                          : pct >= 50 ? '#f59e0b'
+                          : '#9ca3af'
+                        return (
+                          <div key={f.key}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, alignItems: 'baseline', gap: 4 }}>
+                              <span style={{ color: 'var(--text-3, #666)' }}>{f.label}</span>
+                              <span style={{ fontWeight: 600, color: 'var(--text-1, #111)', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                {val < 1 && val > 0 ? val.toFixed(2) : Math.round(val * 10) / 10}{' '}{f.unit}
+                                {target && (
+                                  <span style={{ color: '#bbb', fontWeight: 400, fontSize: 10 }}>
+                                    {' '}· {Math.round((val / target) * 100)}%
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            {pct != null && (
+                              <div style={{ height: 5, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden', flex: 1, marginTop: 2 }}>
+                                <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 3 }} />
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

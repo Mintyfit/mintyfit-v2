@@ -12,7 +12,7 @@ import JournalEntryForm from './JournalEntryForm'
 import ActivityForm from './ActivityForm'
 
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
-const MEAL_SHORT = { breakfast: 'Bkfst', snack: 'Snack 1', lunch: 'Lunch', snack2: 'Snack 2', dinner: 'Dinner' }
+const MEAL_SHORT = { breakfast: 'Brkfst', snack: 'Snack1', lunch: 'Lunch', snack2: 'Snack2', dinner: 'Dinner' }
 const MEAL_LABELS = {
   breakfast: 'Breakfast',
   snack: 'Morning Snack',
@@ -141,7 +141,7 @@ export default function DayAgenda({
           {MEAL_TYPES.map(mt => {
             const enabled = (enabledMealTypes || MEAL_TYPES).includes(mt)
             return (
-              <label key={mt} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', cursor: 'pointer', color: enabled ? 'var(--text-1)' : 'var(--text-4)', opacity: enabled ? 1 : 0.5, flexShrink: 0 }}>
+              <label key={mt} title={MEAL_LABELS[mt]} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', cursor: 'pointer', color: enabled ? 'var(--text-1)' : 'var(--text-4)', opacity: enabled ? 1 : 0.5, flexShrink: 0 }}>
                 <input type="checkbox" checked={enabled} onChange={() => onToggleDayMeal(mt)} style={{ width: 14, height: 14, accentColor: 'var(--primary)', cursor: 'pointer' }} />
                 {MEAL_SHORT[mt]}
               </label>
