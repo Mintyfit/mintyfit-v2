@@ -1,5 +1,4 @@
 ﻿import { redirect } from 'next/navigation'
-import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 import StatisticsClient from '@/components/statistics/StatisticsClient'
@@ -154,16 +153,6 @@ async function getStatisticsData(userId, supabase) {
   }
 }
 
-// Server-side cache: keeps Supabase results for 2 minutes per user
-const getCachedStats = unstable_cache(
-  async (userId) => {
-    const supabase = await createClient()
-    return getStatisticsData(userId, supabase)
-  },
-  ['statistics-page-data'],
-  { revalidate: 120 }
-)
-
 export default async function StatisticsPage() {
   let supabase
   try {
@@ -182,7 +171,7 @@ export default async function StatisticsPage() {
 
   if (!user) redirect('/?auth=login')
 
-  const initialData = await getCachedStats(user.id)
+  const initialData = await getStatisticsData(user.id, supabase)
 
   return (
     <StatisticsClient
