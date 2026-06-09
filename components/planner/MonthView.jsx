@@ -40,7 +40,7 @@ export default function MonthView({ entries, activities, members, userId, onRefr
   const month = viewDate.getMonth()
   const daysInMonth = getDaysInMonth(year, month)
   const firstDay = getFirstDayOfMonth(year, month)
-  const monthName = viewDate.toLocaleString('default', { month: 'long', year: 'numeric' })
+  const monthName = viewDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })
 
   const getDay = (dateStr) => entries[dateStr] || {}
   const getMealCount = (dateStr) => MEAL_TYPES.reduce((s, mt) => s + (getDay(dateStr)[mt]?.length || 0), 0)

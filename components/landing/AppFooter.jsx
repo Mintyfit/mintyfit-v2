@@ -44,11 +44,16 @@ export default function AppFooter() {
       color: 'rgba(255,255,255,0.65)',
       borderTop: '1px solid rgba(255,255,255,0.06)',
     }}>
+      <style>{`
+        @media (max-width: 600px) {
+          .mf-footer-bottom { flex-direction: column; text-align: center; gap: 4px; }
+        }
+      `}</style>
       <div style={{
         maxWidth: 1200, margin: '0 auto',
         padding: '48px 24px 36px',
         display: 'grid',
-        gridTemplateColumns: '1.4fr 1fr 1fr',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
         gap: 40,
       }}>
         {/* Column 1 — Brand */}
@@ -163,7 +168,7 @@ export default function AppFooter() {
       </div>
 
       {/* Bottom bar */}
-      <div style={{
+      <div className="mf-footer-bottom" style={{
         borderTop: '1px solid rgba(255,255,255,0.08)',
         padding: '16px 24px 80px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
