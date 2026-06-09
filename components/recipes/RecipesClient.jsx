@@ -12,14 +12,6 @@ const LIST_COLUMNS = 'id,slug,title,description,image_url,image_thumb_url,meal_t
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
 const FOOD_TYPES = ['omnivore', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'paleo']
 const CUISINES = ['Italian', 'Asian', 'Mediterranean', 'Mexican', 'American', 'Indian', 'Middle Eastern', 'French']
-const GL_OPTIONS = ['low', 'medium', 'high']
-const CAL_RANGES = [
-  { label: 'Any', min: 0, max: Infinity },
-  { label: 'Under 300', min: 0, max: 300 },
-  { label: '300–500', min: 300, max: 500 },
-  { label: '500–700', min: 500, max: 700 },
-  { label: '700+', min: 700, max: Infinity },
-]
 // Total time = prep + cook (minutes)
 const TIME_RANGES = [
   { label: 'Any', min: 0, max: Infinity },
@@ -28,6 +20,7 @@ const TIME_RANGES = [
   { label: '30–60 min', min: 30, max: 61 },
   { label: '60+ min', min: 60, max: Infinity },
 ]
+const COOKING_TECHNIQUES = ['baked', 'fried', 'grilled', 'raw', 'steamed', 'stir-fried', 'roasted', 'sautéed']
 const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest first' },
   { value: 'oldest', label: 'Oldest first' },
@@ -81,8 +74,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
   const [mealType, setMealType] = useState('')
   const [foodType, setFoodType] = useState('')
   const [cuisine, setCuisine] = useState('')
-  const [gl, setGl] = useState('')
-  const [calRange, setCalRange] = useState(0)
+  const [cookingTechnique, setCookingTechnique] = useState('')
   const [timeRange, setTimeRange] = useState(0)
   const [sort, setSort] = useState('newest')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -111,18 +103,11 @@ export default function RecipesClient({ initialRecipes = [] }) {
     if (mealType) list = list.filter(r => r.meal_type === mealType)
     if (foodType) list = list.filter(r => r.food_type === foodType)
     if (cuisine) list = list.filter(r => r.cuisine_type?.toLowerCase().includes(cuisine.toLowerCase()))
-    if (gl) list = list.filter(r => r.glycemic_load === gl)
-    const { min, max } = CAL_RANGES[calRange]
-    if (min > 0 || max < Infinity) {
-      list = list.filter(r => {
-        const kcal = r.nutrition?.perServing?.energy_kcal ?? 0
-        return kcal >= min && kcal < max
-      })
-    }
+    if (cookingTechnique) list = list.filter(r => r.cooking_technique === cookingTechnique)
     const { min: tMin, max: tMax } = TIME_RANGES[timeRange]
     if (tMin > 0 || tMax < Infinity) {
       list = list.filter(r => {
-        const total = (r.prep_time_minutes || 0) + (r.cook_time_minutes || 0)
+        const total = (r.prep_time || 0) + (r.cook_time || 0)
         return total >= tMin && total < tMax
       })
     }
@@ -133,7 +118,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
     else if (sort === 'calories-desc') list.sort((a, b) => (b.nutrition?.perServing?.energy_kcal || 0) - (a.nutrition?.perServing?.energy_kcal || 0))
 
     return list
-  }, [allRecipes, search, mealType, foodType, cuisine, gl, calRange, timeRange, sort])
+  }, [allRecipes, search, mealType, foodType, cuisine, cookingTechnique, timeRange, sort])
 
   const visible = filtered.slice(0, visibleCount)
   const hasMore = visibleCount < filtered.length
@@ -143,14 +128,13 @@ export default function RecipesClient({ initialRecipes = [] }) {
     setMealType('')
     setFoodType('')
     setCuisine('')
-    setGl('')
-    setCalRange(0)
+    setCookingTechnique('')
     setTimeRange(0)
     setSort('newest')
     setVisibleCount(PAGE_SIZE)
   }, [])
 
-  const hasActiveFilters = mealType || foodType || cuisine || gl || calRange > 0 || timeRange > 0
+  const hasActiveFilters = mealType || foodType || cuisine || cookingTechnique || timeRange > 0
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.5rem 1.25rem 5rem' }}>
@@ -290,7 +274,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
             </div>
           </div>
 
-          {/* Food type */}
+          {/* Food type (diet) */}
           <div>
             <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>Diet</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
@@ -336,25 +320,26 @@ export default function RecipesClient({ initialRecipes = [] }) {
             </select>
           </div>
 
-          {/* Calories */}
+          {/* Cooking technique */}
           <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>Calories / Serving</label>
+            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>Cooking Method</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-              {CAL_RANGES.map((r, i) => (
+              {['', ...COOKING_TECHNIQUES].map(c => (
                 <button
-                  key={i}
-                  onClick={() => { setCalRange(i); setVisibleCount(PAGE_SIZE) }}
+                  key={c || 'all'}
+                  onClick={() => { setCookingTechnique(c); setVisibleCount(PAGE_SIZE) }}
                   style={{
                     padding: '0.3rem 0.7rem',
                     borderRadius: '20px',
-                    border: `1px solid ${calRange === i ? 'var(--primary)' : 'var(--border)'}`,
-                    background: calRange === i ? 'var(--primary)' : 'transparent',
-                    color: calRange === i ? '#fff' : 'var(--text-2)',
+                    border: `1px solid ${cookingTechnique === c ? 'var(--primary)' : 'var(--border)'}`,
+                    background: cookingTechnique === c ? 'var(--primary)' : 'transparent',
+                    color: cookingTechnique === c ? '#fff' : 'var(--text-2)',
                     fontSize: '0.8125rem',
                     cursor: 'pointer',
+                    textTransform: 'capitalize',
                   }}
                 >
-                  {r.label}
+                  {c || 'All'}
                 </button>
               ))}
             </div>
@@ -379,31 +364,6 @@ export default function RecipesClient({ initialRecipes = [] }) {
                   }}
                 >
                   {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Glycemic load */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>Glycemic Load</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-              {['', ...GL_OPTIONS].map(g => (
-                <button
-                  key={g || 'all'}
-                  onClick={() => { setGl(g); setVisibleCount(PAGE_SIZE) }}
-                  style={{
-                    padding: '0.3rem 0.7rem',
-                    borderRadius: '20px',
-                    border: `1px solid ${gl === g ? 'var(--primary)' : 'var(--border)'}`,
-                    background: gl === g ? 'var(--primary)' : 'transparent',
-                    color: gl === g ? '#fff' : 'var(--text-2)',
-                    fontSize: '0.8125rem',
-                    cursor: 'pointer',
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  {g || 'Any'}
                 </button>
               ))}
             </div>
@@ -447,9 +407,9 @@ export default function RecipesClient({ initialRecipes = [] }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
           {visible.map(recipe => {
             const slug = recipe.slug || recipe.id
-            const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0)
+            const totalTime = (recipe.prep_time || 0) + (recipe.cook_time || 0)
             const calories = recipe.nutrition?.perServing?.energy_kcal
-            const imageSrc = recipe.image_thumb_url || recipe.image_url
+            const imageSrc = recipe.image_thumb || recipe.image
             return (
               <Link key={recipe.id} href={`/recipes/${slug}`} style={{ textDecoration: 'none' }}>
                 <div style={{
