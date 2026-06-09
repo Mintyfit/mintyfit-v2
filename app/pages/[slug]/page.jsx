@@ -47,6 +47,7 @@ const STATIC_PAGES = {
 <h3>6. Third-Party Services</h3>
 <ul>
   <li>Supabase (database, auth)</li>
+  <li>Firebase (push notifications on Android)</li>
   <li>Anthropic Claude (AI recipe generation)</li>
   <li>Stripe (payment processing — we never see your full card number)</li>
   <li>Vercel (hosting)</li>

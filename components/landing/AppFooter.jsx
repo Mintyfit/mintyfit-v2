@@ -85,9 +85,10 @@ export default function AppFooter() {
           </h4>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[
-              { label: 'Recipes',    href: '/recipes' },
+              { label: 'Recipes',     href: '/recipes' },
               { label: 'Meal Planner', href: '/plan' },
-              { label: 'Blog',       href: '/blog' },
+              { label: 'Pricing',     href: '/pricing' },
+              { label: 'Blog',        href: '/blog' },
             ].map(link => (
               <li key={link.href}>
                 <Link

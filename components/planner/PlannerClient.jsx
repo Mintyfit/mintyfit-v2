@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { computeMealBudget } from '@/lib/nutrition/mealBudget'
@@ -33,6 +34,21 @@ function getWeekDates(anchorDate) {
 
 function toDateKey(date) {
   return date.toISOString().split('T')[0]
+}
+
+const CACHE_PREFIX = 'mintyfit:plan:'
+
+function cacheGet(key) {
+  try {
+    const raw = sessionStorage.getItem(CACHE_PREFIX + key)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function cacheSet(key, data) {
+  try {
+    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data))
+  } catch {}
 }
 
 export default function PlannerClient({ userId, familyId, profile, members }) {
@@ -166,10 +182,21 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   // Load week's calendar entries + activities
   useEffect(() => {
     if (!userId) return
-    const supabase = createClient()
-    if (!supabase) return
     const startKey = toDateKey(weekStart)
     const endKey = toDateKey(weekEnd)
+    const weekKey = `${userId}:${familyId || 'solo'}:${startKey}:${endKey}`
+
+    // Use sessionStorage cache if available (survives full page reloads)
+    const cached = cacheGet('week:' + weekKey)
+    if (cached?.entries && cached?.activities) {
+      setEntries(cached.entries)
+      setActivities(cached.activities)
+      if (cached.journals) setJournals(cached.journals)
+      return
+    }
+
+    const supabase = createClient()
+    if (!supabase) return
     setLoading(true)
     // Family-scoped read (mig 049): if user is in a family, see the family's
     // whole plan including siblings' variant rows. Solo users fall back to
@@ -192,6 +219,9 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           if (!map[entry.date_str][entry.meal_type]) map[entry.date_str][entry.meal_type] = []
           map[entry.date_str][entry.meal_type].push(entry)
         }
+        // Store in cache alongside any existing data
+        const existing = cacheGet('week:' + weekKey) || {}
+        cacheSet('week:' + weekKey, { ...existing, entries: map, weekKey })
         setEntries(map)
         setLoading(false)
       })
@@ -208,6 +238,8 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           if (!actMap[act.date_str][act.member_id]) actMap[act.date_str][act.member_id] = []
           actMap[act.date_str][act.member_id].push(act)
         }
+        const existing = cacheGet('week:' + weekKey) || {}
+        cacheSet('week:' + weekKey, { ...existing, activities: actMap })
         setActivities(actMap)
       })
     // food_journal is a separate table (no FK to calendar_entries); load
@@ -226,6 +258,8 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           if (!jMap[dk][j.meal_type]) jMap[dk][j.meal_type] = []
           jMap[dk][j.meal_type].push(j)
         }
+        const existing = cacheGet('week:' + weekKey) || {}
+        cacheSet('week:' + weekKey, { ...existing, journals: jMap })
         setJournals(jMap)
       })
   }, [userId, weekOffset])
@@ -233,13 +267,21 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   // Fetch month-wide entries when in month view
   useEffect(() => {
     if (viewMode !== 'month' || !userId) return
-    const supabase = createClient()
-    if (!supabase) return
     const now = new Date()
     const start = new Date(now.getFullYear(), now.getMonth() - 2, 1)
     const end = new Date(now.getFullYear(), now.getMonth() + 3, 0)
     const startKey = toDateKey(start)
     const endKey = toDateKey(end)
+    const monthKey = `${userId}:${familyId || 'solo'}:m:${startKey}:${endKey}`
+
+    const cached = cacheGet('month:' + monthKey)
+    if (cached?.entries) {
+      setMonthEntries(cached.entries)
+      return
+    }
+
+    const supabase = createClient()
+    if (!supabase) return
     const baseSelect = `
         id, date_str, meal_type, member_id, consumer_member_ids,
         family_id, origin,
@@ -258,6 +300,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           if (!map[entry.date_str][entry.meal_type]) map[entry.date_str][entry.meal_type] = []
           map[entry.date_str][entry.meal_type].push(entry)
         }
+        cacheSet('month:' + monthKey, { entries: map })
         setMonthEntries(map)
       })
   }, [viewMode, userId, familyId])
@@ -507,6 +550,11 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   const refreshDay = useCallback(async (dateKey) => {
     const supabase = createClient()
     if (!supabase || !userId) return
+    // Invalidate sessionStorage cache for current week so re-navigation gets fresh data
+    const wStart = toDateKey(weekStart)
+    const wEnd = toDateKey(weekEnd)
+    const wk = `${userId}:${familyId || 'solo'}:${wStart}:${wEnd}`
+    try { sessionStorage.removeItem(CACHE_PREFIX + 'week:' + wk) } catch {}
     const daySelect = `
         id, date_str, meal_type, member_id, consumer_member_ids,
         family_id, origin,
@@ -548,7 +596,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       jMap[j.meal_type].push(j)
     }
     setJournals(prev => ({ ...prev, [dateKey]: jMap }))
-  }, [userId])
+  }, [userId, weekOffset, familyId])
 
   const removeEntry = useCallback(async (entryId, dateKey) => {
     const supabase = createClient()

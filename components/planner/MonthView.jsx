@@ -10,7 +10,9 @@ import DayStatsPanel from './DayStatsPanel'
 const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
 const MEAL_LABEL = { breakfast: 'Breakfast', snack: 'Snack', lunch: 'Lunch', snack2: 'Snack 2', dinner: 'Dinner' }
 const MEAL_ICONS = { breakfast: '🌅', snack: '🍎', lunch: '☀️', snack2: '🍊', dinner: '🌙' }
-const MEAL_DOT_COLORS = { breakfast: '#b91c1c', lunch: '#3B82F6', dinner: '#6d28d9', snack: '#10B981', snack2: '#10B981' }
+const DOT_MEAL = '#2d6e2e'
+const DOT_JOURNAL = '#6B7280'
+const DOT_ACTIVITY = '#3B82F6'
 
 
 function formatDate(d) {
@@ -42,10 +44,12 @@ export default function MonthView({ entries, activities, members, userId, onRefr
 
   const getDay = (dateStr) => entries[dateStr] || {}
   const getMealCount = (dateStr) => MEAL_TYPES.reduce((s, mt) => s + (getDay(dateStr)[mt]?.length || 0), 0)
+  const hasMeal = (dateStr) => MEAL_TYPES.some(mt => (getDay(dateStr)[mt]?.length || 0) > 0)
   const hasJournal = (dateStr) => {
     const day = getDay(dateStr)
     return MEAL_TYPES.some(mt => (day[mt] || []).some(e => e.journal_entries?.length > 0))
   }
+  const hasActivity = (dateStr) => !!activities?.[dateStr] && Object.keys(activities[dateStr]).length > 0
 
   const toggleDay = (d) => {
     const dateStr = formatDate(new Date(year, month, d))
@@ -211,12 +215,10 @@ const chipStyle = (active) => ({
                     justifyContent: 'flex-start', padding: '6px 4px', cursor: 'pointer', minHeight: 'auto',
                   }}>
                     <span style={{ fontSize: 14, fontWeight: isToday || isSelected ? 800 : 400, color: isSelected ? '#fff' : isToday ? '#2d6e2e' : 'var(--text-2)' }}>{d}</span>
-                    <div style={{ display: 'flex', gap: 2, justifyContent: 'center', marginTop: 3, flexWrap: 'wrap' }}>
-                      {MEAL_TYPES.map(mt => dayData[mt]?.length > 0
-                        ? <div key={mt} style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : MEAL_DOT_COLORS[mt] }} />
-                        : null
-                      )}
-                      {hasJournal(dateStr) && <div style={{ width: 6, height: 6, borderRadius: 2, backgroundColor: isSelected ? 'rgba(255,255,255,0.6)' : '#6B7280' }} />}
+                    <div style={{ display: 'flex', gap: 2, justifyContent: 'center', marginTop: 3 }}>
+                      {hasMeal(dateStr) && <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: isSelected ? 'rgba(255,255,255,0.85)' : DOT_MEAL }} />}
+                      {hasJournal(dateStr) && <div style={{ width: 5, height: 5, borderRadius: 2, backgroundColor: isSelected ? 'rgba(255,255,255,0.6)' : DOT_JOURNAL }} />}
+                      {hasActivity(dateStr) && <div style={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: isSelected ? 'rgba(255,255,255,0.6)' : DOT_ACTIVITY }} />}
                     </div>
                   </button>
                 )
@@ -227,15 +229,17 @@ const chipStyle = (active) => ({
             </div>
             {/* Dot legend */}
             <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {MEAL_TYPES.map(mt => (
-                <span key={mt} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-3)' }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: MEAL_DOT_COLORS[mt], display: 'inline-block', flexShrink: 0 }} />
-                  {MEAL_SHORT_MV[mt]}
-                </span>
-              ))}
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-3)' }}>
-                <span style={{ width: 7, height: 7, borderRadius: 2, backgroundColor: '#6B7280', display: 'inline-block', flexShrink: 0 }} />
+                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: DOT_MEAL, display: 'inline-block', flexShrink: 0 }} />
+                meal
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-3)' }}>
+                <span style={{ width: 6, height: 6, borderRadius: 2, backgroundColor: DOT_JOURNAL, display: 'inline-block', flexShrink: 0 }} />
                 journal
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-3)' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: DOT_ACTIVITY, display: 'inline-block', flexShrink: 0 }} />
+                activity
               </span>
             </div>
           </div>

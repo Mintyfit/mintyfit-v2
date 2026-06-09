@@ -1,9 +1,10 @@
 ﻿import { redirect } from 'next/navigation'
+import { unstable_cache } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 import StatisticsClient from '@/components/statistics/StatisticsClient'
 
-const HISTORY_DAYS = 120
+const HISTORY_DAYS = 60
 
 export const metadata = {
   title: 'Nutrition Statistics - MintyFit',
@@ -25,18 +26,51 @@ async function getStatisticsData(userId, supabase) {
     historyFrom.setDate(today.getDate() - HISTORY_DAYS)
     const fromKey = toDateKey(historyFrom)
 
-    const { data: me } = await supabase
-      .from('profiles')
-      .select('id, display_name, full_name, name, role, gender, date_of_birth, weight, weight_kg, height, height_cm, subscription_tier')
-      .eq('id', userId)
-      .maybeSingle()
+    // Batch 1: All independent queries run in parallel
+    const [meResult, membershipsResult, calendarResult, journalResult, recipesResult, weightLogsResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id, display_name, full_name, name, role, gender, date_of_birth, weight, weight_kg, height, height_cm, subscription_tier')
+        .eq('id', userId)
+        .maybeSingle(),
+      supabase
+        .from('family_memberships')
+        .select('family_id, role, status')
+        .eq('profile_id', userId)
+        .eq('status', 'active')
+        .limit(1),
+      supabase
+        .from('calendar_entries')
+        .select(`
+          id, date_str, meal_type, member_id, personal_nutrition,
+          recipe_id, recipe_name,
+          recipes(id, title, slug, image_url, image_thumb_url, nutrition, servings)
+        `)
+        .eq('profile_id', userId)
+        .gte('date_str', fromKey)
+        .order('date_str', { ascending: false }),
+      supabase
+        .from('food_journal')
+        .select('id, logged_date, meal_type, member_id, food_name, amount, unit, nutrition')
+        .eq('profile_id', userId)
+        .gte('logged_date', fromKey)
+        .order('logged_date', { ascending: false }),
+      supabase
+        .from('recipes')
+        .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
+        .or(`is_public.eq.true,profile_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(50),
+      supabase
+        .from('weight_logs')
+        .select('*')
+        .eq('profile_id', userId)
+        .order('logged_date', { ascending: false })
+        .limit(60),
+    ])
 
-    const { data: memberships } = await supabase
-      .from('family_memberships')
-      .select('family_id, role, status')
-      .eq('profile_id', userId)
-      .eq('status', 'active')
-      .limit(1)
+    const me = meResult?.data
+    const memberships = membershipsResult?.data
 
     let linkedMembers = []
     let managedMembers = []
@@ -44,13 +78,20 @@ async function getStatisticsData(userId, supabase) {
     if (memberships?.length) {
       const familyId = memberships[0].family_id
 
-      const { data: linked } = await supabase
-        .from('family_memberships')
-        .select('profile_id, role, status, profiles(id, display_name, full_name, name, gender, date_of_birth, weight, weight_kg, height, height_cm)')
-        .eq('family_id', familyId)
-        .eq('status', 'active')
+      // Batch 2: Family-scoped queries in parallel
+      const [linkedResult, managedResult] = await Promise.all([
+        supabase
+          .from('family_memberships')
+          .select('profile_id, role, status, profiles(id, display_name, full_name, name, gender, date_of_birth, weight, weight_kg, height, height_cm)')
+          .eq('family_id', familyId)
+          .eq('status', 'active'),
+        supabase
+          .from('managed_members')
+          .select('id, name, gender, date_of_birth, weight_kg, height_cm')
+          .eq('family_id', familyId),
+      ])
 
-      linkedMembers = (linked || [])
+      linkedMembers = (linkedResult?.data || [])
         .filter(r => r?.profiles?.id)
         .map(r => ({
           id: r.profiles.id,
@@ -63,12 +104,7 @@ async function getStatisticsData(userId, supabase) {
           height: r.profiles.height ?? r.profiles.height_cm ?? null,
         }))
 
-      const { data: managed } = await supabase
-        .from('managed_members')
-        .select('id, name, gender, date_of_birth, weight_kg, height_cm')
-        .eq('family_id', familyId)
-
-      managedMembers = (managed || []).map(m => ({
+      managedMembers = (managedResult?.data || []).map(m => ({
         id: m.id,
         name: m.name || 'Child',
         type: 'managed',
@@ -100,49 +136,12 @@ async function getStatisticsData(userId, supabase) {
 
     const members = Array.from(membersById.values())
 
-    const { data: calendarEntries } = await supabase
-      .from('calendar_entries')
-      .select(`
-        id,
-        date_str,
-        meal_type,
-        member_id,
-        personal_nutrition,
-        recipe_id,
-        recipe_name,
-        recipes(id, title, slug, image_url, image_thumb_url, nutrition, servings)
-      `)
-      .eq('profile_id', userId)
-      .gte('date_str', fromKey)
-      .order('date_str', { ascending: false })
-
-    const { data: journalEntries } = await supabase
-      .from('food_journal')
-      .select('id, logged_date, meal_type, member_id, food_name, amount, unit, nutrition')
-      .eq('profile_id', userId)
-      .gte('logged_date', fromKey)
-      .order('logged_date', { ascending: false })
-
-    const { data: recipes } = await supabase
-      .from('recipes')
-      .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
-      .or(`is_public.eq.true,profile_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-      .limit(50)
-
-    const { data: weightLogs } = await supabase
-      .from('weight_logs')
-      .select('*')
-      .eq('profile_id', userId)
-      .order('logged_date', { ascending: false })
-      .limit(60)
-
     return {
       members,
-      calendarEntries: calendarEntries || [],
-      journalEntries: journalEntries || [],
-      weightLogs: weightLogs || [],
-      allRecipes: recipes || [],
+      calendarEntries: calendarResult?.data || [],
+      journalEntries: journalResult?.data || [],
+      weightLogs: weightLogsResult?.data || [],
+      allRecipes: recipesResult?.data || [],
     }
   } catch (error) {
     console.error('Statistics data error:', error)
@@ -154,6 +153,16 @@ async function getStatisticsData(userId, supabase) {
     }
   }
 }
+
+// Server-side cache: keeps Supabase results for 2 minutes per user
+const getCachedStats = unstable_cache(
+  async (userId) => {
+    const supabase = await createClient()
+    return getStatisticsData(userId, supabase)
+  },
+  ['statistics-page-data'],
+  { revalidate: 120 }
+)
 
 export default async function StatisticsPage() {
   let supabase
@@ -173,7 +182,7 @@ export default async function StatisticsPage() {
 
   if (!user) redirect('/?auth=login')
 
-  const initialData = await getStatisticsData(user.id, supabase)
+  const initialData = await getCachedStats(user.id)
 
   return (
     <StatisticsClient

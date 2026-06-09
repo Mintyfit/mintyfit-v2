@@ -23,6 +23,7 @@ import localFont from 'next/font/local'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import NavbarWrapper from '@/components/shared/NavbarWrapper'
+import AppFooter from '@/components/landing/AppFooter'
 import './globals.css'
 
 const montserrat = localFont({
@@ -81,6 +82,7 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <NavbarWrapper />
             <main style={{ minHeight: '100vh' }}>{children}</main>
+            <AppFooter />
           </AuthProvider>
         </ThemeProvider>
       </body>

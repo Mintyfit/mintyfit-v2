@@ -8,7 +8,6 @@ import HeroCTA from './HeroCTA'
 import FAQAccordion from './FAQAccordion'
 import AuthModal from './AuthModal'
 import CarouselSlider from './CarouselSlider'
-import AppFooter from './AppFooter'
 
 const SECTIONS = [
   {
@@ -281,7 +280,6 @@ export default function LandingClient() {
         {/* FAQ */}
         <FAQAccordion />
 
-        <AppFooter />
       </main>
 
       <AuthModal

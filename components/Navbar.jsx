@@ -130,10 +130,18 @@ export default function Navbar() {
 
         .mf-bottom-link {
           flex: 1; display: flex; flex-direction: column; align-items: center;
-          justify-content: center; gap: 3px; padding: 8px 4px;
+          justify-content: center; gap: 2px; padding: 6px 2px;
           color: var(--text-3); text-decoration: none; min-height: 56px;
-          border-top: 2px solid transparent;
+          border-top: 2px solid transparent; min-width: 0; overflow: hidden;
           transition: color 0.15s ease, background 0.15s ease;
+        }
+        .mf-bottom-link span {
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+          max-width: 100%; font-size: 11px;
+        }
+        @media (max-width: 380px) {
+          .mf-bottom-link span { font-size: 10px; }
+          .mf-bottom-link { gap: 1px; padding: 6px 1px; }
         }
         .mf-bottom-link:active { background: rgba(61,138,62,0.10); }
         .mf-bottom-link--active {

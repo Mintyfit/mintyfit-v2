@@ -47,6 +47,17 @@ export default function RecipesClient({ initialRecipes = [] }) {
     if (!supabase) return
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return
+      // Check sessionStorage cache first
+      const cacheKey = 'mintyfit:recipes:user:' + user.id
+      let cached
+      try { cached = JSON.parse(sessionStorage.getItem(cacheKey)) } catch {}
+      if (cached?.length) {
+        setAllRecipes(prev => {
+          const ids = new Set(prev.map(r => r.id))
+          return [...prev, ...cached.filter(r => !ids.has(r.id))]
+        })
+        return
+      }
       supabase
         .from('recipes')
         .select(LIST_COLUMNS)
@@ -57,6 +68,7 @@ export default function RecipesClient({ initialRecipes = [] }) {
         .then(({ data }) => {
           if (!data?.length) return
           const normalized = data.map(normalizeRecipe).filter(Boolean)
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(normalized)) } catch {}
           setAllRecipes(prev => {
             const ids = new Set(prev.map(r => r.id))
             return [...prev, ...normalized.filter(r => !ids.has(r.id))]
