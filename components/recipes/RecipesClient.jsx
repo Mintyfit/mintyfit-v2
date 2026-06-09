@@ -87,6 +87,15 @@ export default function RecipesClient({ initialRecipes = [] }) {
   const [sort, setSort] = useState('newest')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [showFilters, setShowFilters] = useState(false)
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window === 'undefined') return 'grid'
+    try { return sessionStorage.getItem('mintyfit:recipes:view') || 'grid' } catch { return 'grid' }
+  })
+
+  function setView(mode) {
+    setViewMode(mode)
+    try { sessionStorage.setItem('mintyfit:recipes:view', mode) } catch {}
+  }
 
   const filtered = useMemo(() => {
     let list = [...allRecipes]
@@ -222,6 +231,25 @@ export default function RecipesClient({ initialRecipes = [] }) {
           }}
         >
           ⚙️ Filters {hasActiveFilters ? '●' : ''}
+        </button>
+
+        {/* View toggle */}
+        <button
+          onClick={() => setView(viewMode === 'grid' ? 'list' : 'grid')}
+          title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            padding: '0.625rem 0.875rem',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            background: 'var(--bg-card)',
+            color: 'var(--text-2)',
+            cursor: 'pointer',
+            fontSize: '0.9375rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {viewMode === 'grid' ? '📋 List' : '🔲 Grid'}
         </button>
       </div>
 
@@ -403,8 +431,8 @@ export default function RecipesClient({ initialRecipes = [] }) {
         </div>
       )}
 
-      {/* Recipe grid */}
-      {visible.length > 0 ? (
+      {/* Recipe grid / list */}
+      {visible.length > 0 ? viewMode === 'grid' ? (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -414,6 +442,54 @@ export default function RecipesClient({ initialRecipes = [] }) {
           {visible.map(recipe => (
             <RecipeCard key={recipe.id} recipe={recipe} />
           ))}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
+          {visible.map(recipe => {
+            const slug = recipe.slug || recipe.id
+            const totalTime = (recipe.prep_time_minutes || 0) + (recipe.cook_time_minutes || 0)
+            const calories = recipe.nutrition?.perServing?.energy_kcal
+            const imageSrc = recipe.image_thumb_url || recipe.image_url
+            return (
+              <Link key={recipe.id} href={`/recipes/${slug}`} style={{ textDecoration: 'none' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '0.625rem 0.875rem',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '10px',
+                  transition: 'background 0.12s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-card)'}
+                >
+                  {imageSrc ? (
+                    <img src={imageSrc} alt={recipe.title}
+                      style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div style={{ width: 48, height: 48, borderRadius: 8, background: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 20 }}>🍽️</div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-1)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {recipe.title}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.8125rem', color: 'var(--text-3)', flexWrap: 'wrap' }}>
+                      {recipe.meal_type && (
+                        <span style={{ textTransform: 'capitalize' }}>{recipe.meal_type.replace('snack2', 'snack')}</span>
+                      )}
+                      {calories != null && <span>{Math.round(calories)} kcal</span>}
+                      {totalTime > 0 && <span>{totalTime} min</span>}
+                      {recipe.cuisine_type && <span>{recipe.cuisine_type}</span>}
+                      {recipe.food_type && <span style={{ textTransform: 'capitalize' }}>{recipe.food_type}</span>}
+                    </div>
+                  </div>
+                  <span style={{ color: 'var(--text-4)', fontSize: '1.125rem' }}>→</span>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       ) : (
         <div style={{
