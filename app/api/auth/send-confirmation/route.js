@@ -47,8 +47,22 @@ export async function POST(request) {
     const authUrl = `${supabaseUrl.trim().replace(/\/+$/, '')}/auth/v1`
 
     // Find user by email
-    const usersRes = await fetch(`${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`, { headers: authHeaders })
-    const usersData = await usersRes.json()
+    const usersUrl = `${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`
+    console.log('[send-confirmation] Fetching:', usersUrl)
+    console.log('[send-confirmation] Auth header prefix:', serviceKey.substring(0, 20) + '...')
+    const usersRes = await fetch(usersUrl, { headers: authHeaders })
+    const usersText = await usersRes.text()
+    console.log('[send-confirmation] Users response status:', usersRes.status)
+    console.log('[send-confirmation] Users response body length:', usersText.length)
+    console.log('[send-confirmation] Users response body:', usersText.substring(0, 500))
+    let usersData
+    try { usersData = JSON.parse(usersText) } catch (e) {
+      return NextResponse.json({
+        error: 'Failed to parse users response',
+        status: usersRes.status,
+        body: usersText.substring(0, 500),
+      }, { status: 500 })
+    }
     const user = usersData?.users?.[0]
 
     if (!user) {
