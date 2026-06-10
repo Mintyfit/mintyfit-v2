@@ -55,16 +55,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Auto-confirm the user's email
-    await fetch(`${authUrl}/admin/users/${user.id}`, {
+    // Auto-confirm the user's email — swallow JSON parse error, it may return empty body
+    const confirmRes = await fetch(`${authUrl}/admin/users/${user.id}`, {
       method: 'PUT',
       headers: authHeaders,
       body: JSON.stringify({ email_confirm: true }),
     })
+    let confirmBody
+    try { confirmBody = await confirmRes.json() } catch { confirmBody = '(non-JSON)' }
 
     // Generate magic link
     const linkRes = await fetch(`${authUrl}/admin/generate_link`, {
@@ -76,7 +74,15 @@ export async function POST(request) {
         redirect_to: 'https://mintyfit.com/auth/callback',
       }),
     })
-    const linkData = await linkRes.json()
+    let linkData
+    try { linkData = await linkRes.json() } catch {
+      const linkText = await linkRes.text()
+      return NextResponse.json({
+        error: 'Generate link failed',
+        status: linkRes.status,
+        body: linkText.substring(0, 500),
+      }, { status: 500 })
+    }
     const magicLink = linkData.action_link
 
     if (!magicLink) {
