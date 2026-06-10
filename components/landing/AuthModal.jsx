@@ -115,6 +115,11 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
         return
       }
       setMessage('Check your email for a confirmation link!')
+      fetch('/api/auth/send-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      }).catch(() => {})
     } else {
       console.log('[AuthModal] Signin - calling onSuccess and onClose')
       onSuccess?.()
