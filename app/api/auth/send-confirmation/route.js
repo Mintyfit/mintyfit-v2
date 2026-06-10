@@ -47,27 +47,12 @@ export async function POST(request) {
     const authUrl = `${supabaseUrl.replace(/\/+$/, '')}/auth/v1`
 
     // Find user by email
-    const usersUrl = `${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`
-    const usersRes = await fetch(usersUrl, { headers: authHeaders })
-    const usersResText = await usersRes.text()
-    let usersData, usersParseError
-    try { usersData = JSON.parse(usersResText) } catch (e) { usersParseError = e.message }
+    const usersRes = await fetch(`${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`, { headers: authHeaders })
+    const usersData = await usersRes.json()
     const user = usersData?.users?.[0]
 
     if (!user) {
-      return NextResponse.json({
-        error: 'User not found',
-        debug: {
-          email,
-          usersUrl: usersUrl.replace(supabaseUrl.replace(/\/+$/, ''), 'https://SUPABASE_PROJECT'),
-          usersHttpStatus: usersRes.status,
-          usersResponseLength: usersResText.length,
-          usersResponsePreview: usersResText.substring(0, 300),
-          usersParseError,
-          supabaseUrl: `"${supabaseUrl}"`,
-          supabaseUrlTrimmed: `"${supabaseUrl.trim()}"`,
-        },
-      }, { status: 404 })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     if (!user) {
@@ -104,6 +89,10 @@ export async function POST(request) {
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[send-confirmation] Error:', err)
-    return NextResponse.json({ error: 'Failed to send confirmation email' }, { status: 500 })
+    return NextResponse.json({
+      error: 'Failed to send confirmation email',
+      detail: err?.message || String(err),
+      stack: err?.stack?.split('\n').slice(0, 5).join(' | '),
+    }, { status: 500 })
   }
 }
