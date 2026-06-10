@@ -119,7 +119,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
-      }).catch(() => {})
+      })
+        .then(r => r.json())
+        .then(d => { if (!d.success) console.error('[AuthModal] send-confirmation failed:', d.error) })
+        .catch(e => console.error('[AuthModal] send-confirmation error:', e))
     } else {
       console.log('[AuthModal] Signin - calling onSuccess and onClose')
       onSuccess?.()
