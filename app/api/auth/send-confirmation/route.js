@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email/sendEmail'
 
 function welcomeEmail({ magicLink }) {
@@ -38,31 +37,44 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 })
     }
 
-    const admin = createAdminClient()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !serviceKey) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+    }
 
-    const existing = await admin.auth.admin.listUsers({ page: 1, perPage: 100 })
-    const user = existing.data?.users?.find(u => u.email === email)
+    const authHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' }
+    const authUrl = `${supabaseUrl}/auth/v1`
+
+    // Find user by email
+    const usersRes = await fetch(`${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`, { headers: authHeaders })
+    const usersData = await usersRes.json()
+    const user = usersData.users?.[0]
+
     if (!user) {
-      console.error('[send-confirmation] User not found for email:', email, 'total users:', existing.data?.users?.length)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    await admin.auth.admin.updateUserById(user.id, { email_confirm: true })
-
-    const { data, error } = await admin.auth.admin.generateLink({
-      type: 'magiclink',
-      email,
-      options: {
-        redirectTo: `https://mintyfit.com/auth/callback`,
-      },
+    // Auto-confirm the user's email
+    await fetch(`${authUrl}/admin/users/${user.id}`, {
+      method: 'PUT',
+      headers: authHeaders,
+      body: JSON.stringify({ email_confirm: true }),
     })
 
-    if (error) {
-      console.error('[send-confirmation] generateLink error:', error)
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
+    // Generate magic link
+    const linkRes = await fetch(`${authUrl}/admin/generate_link`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        type: 'magiclink',
+        email,
+        redirect_to: 'https://mintyfit.com/auth/callback',
+      }),
+    })
+    const linkData = await linkRes.json()
+    const magicLink = linkData.action_link
 
-    const magicLink = data?.properties?.action_link
     if (!magicLink) {
       return NextResponse.json({ error: 'Failed to generate magic link' }, { status: 500 })
     }
