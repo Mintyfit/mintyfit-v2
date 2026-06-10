@@ -41,8 +41,9 @@ export async function POST(request) {
     const admin = createAdminClient()
 
     const existing = await admin.auth.admin.listUsers({ page: 1, perPage: 100 })
-    const user = existing.users?.find(u => u.email === email)
+    const user = existing.data?.users?.find(u => u.email === email)
     if (!user) {
+      console.error('[send-confirmation] User not found for email:', email, 'total users:', existing.data?.users?.length)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
