@@ -73,58 +73,67 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
     setError(null)
     console.log('[AuthModal] Starting auth with email:', email)
 
-    let result
-    try {
-      if (tab === 'signup') {
-        console.log('[AuthModal] Calling signUp...')
-        result = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback${redirectAfter ? `?next=${encodeURIComponent(redirectAfter)}` : ''}`,
-            data: { onboarding_pending: true },
-          },
-        })
-        console.log('[AuthModal] signUp result:', result)
-      } else {
-        console.log('[AuthModal] Calling signInWithPassword...')
-        result = await supabase.auth.signInWithPassword({ email, password })
-        console.log('[AuthModal] signIn result:', result)
-      }
-    } catch (err) {
-      console.error('[AuthModal] Auth error:', err)
-      setLoading(false)
-      setError(err?.message || 'Network error. Check your connection and try again.')
-      return
-    }
-
-    setLoading(false)
-
-    if (!result || result.error) {
-      console.error('[AuthModal] Auth failed:', result?.error)
-      setError(result?.error?.message || 'Something went wrong. Please try again.')
-      return
-    }
-
-    console.log('[AuthModal] Auth successful')
     if (tab === 'signup') {
-      if (result.data?.session) {
-        console.log('[AuthModal] Auto-confirmed — redirecting')
-        onSuccess?.()
-        onClose()
+      // Signup via server-side API (Admin API — no default confirmation email sent)
+      console.log('[AuthModal] Calling /api/auth/signup...')
+      let signupRes
+      try {
+        signupRes = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password, fullName: '' }),
+        })
+      } catch (err) {
+        console.error('[AuthModal] Network error:', err)
+        setLoading(false)
+        setError('Network error. Check your connection and try again.')
         return
       }
-      setMessage('Check your email for a confirmation link!')
-      fetch('/api/auth/send-confirmation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
-      })
-        .then(r => r.json())
-        .then(d => { if (!d.success) console.error('[AuthModal] send-confirmation failed:', d.error) })
-        .catch(e => console.error('[AuthModal] send-confirmation error:', e))
+
+      setLoading(false)
+      const data = await signupRes.json()
+
+      if (!signupRes.ok) {
+        console.error('[AuthModal] Signup failed:', data)
+        setError(data.detail || data.error || 'Something went wrong. Please try again.')
+        return
+      }
+
+      console.log('[AuthModal] Signup successful')
+      setMessage('Check your email for a sign-in link!')
     } else {
-      console.log('[AuthModal] Signin - calling onSuccess and onClose')
+      console.log('[AuthModal] Calling signInWithPassword...')
+      let result
+      try {
+        result = await supabase.auth.signInWithPassword({ email, password })
+      } catch (err) {
+        console.error('[AuthModal] Auth error:', err)
+        setLoading(false)
+        setError(err?.message || 'Network error. Check your connection and try again.')
+        return
+      }
+
+      setLoading(false)
+
+      if (!result || result.error) {
+        console.error('[AuthModal] Auth failed:', result?.error)
+        setError(result?.error?.message || 'Something went wrong. Please try again.')
+        return
+      }
+
+      console.log('[AuthModal] Signin successful')
+      // Check if user needs onboarding before completing sign-in
+      if (result.data?.user) {
+        const { data: profileCheck } = await supabase
+          .from('profiles')
+          .select('onboarding_pending')
+          .eq('id', result.data.user.id)
+          .single()
+        if (profileCheck?.onboarding_pending) {
+          window.location.href = '/onboarding'
+          return
+        }
+      }
       onSuccess?.()
       onClose()
     }

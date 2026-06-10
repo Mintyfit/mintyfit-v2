@@ -10,10 +10,8 @@ export async function GET(request) {
   const errorDescription = requestUrl.searchParams.get('error_description')
   let next = requestUrl.searchParams.get('next') ?? '/'
 
-  // Handle auth errors from Supabase
   if (error) {
     console.error('Auth callback error:', error, errorDescription)
-    // Redirect to login with error message
     return NextResponse.redirect(
       new URL(`/login?error=${encodeURIComponent(errorDescription || error)}`, requestUrl.origin)
     )
@@ -39,31 +37,42 @@ export async function GET(request) {
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
       
       if (exchangeError) {
-        console.error('Failed to exchange code for session:', exchangeError)
-        return NextResponse.redirect(
-          new URL(`/login?error=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
-        )
+        // exchangeCodeForSession can fail for Admin API magic links (no PKCE verifier).
+        // Fall back to: user may have a session set by Supabase's hosted verify page.
+        // Check if they're already logged in via getUser before giving up.
+        const { data: { user: fallbackUser } } = await supabase.auth.getUser()
+        if (!fallbackUser) {
+          return NextResponse.redirect(
+            new URL(`/login?error=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin)
+          )
+        }
       }
 
-      // Only redirect to onboarding when no explicit destination was requested
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        // Ensure profile row exists (no-op if already present, creates it for new users)
         const admin = createAdminClient()
         const fullName = user.user_metadata?.full_name || user.user_metadata?.name || null
-        await admin.from('profiles').upsert(
-          { id: user.id, email: user.email, ...(fullName ? { full_name: fullName } : {}) },
-          { onConflict: 'id', ignoreDuplicates: true }
-        )
+
+        const { data: existingProfile } = await admin
+          .from('profiles')
+          .select('id, onboarding_pending')
+          .eq('id', user.id)
+          .single()
+
+        if (!existingProfile) {
+          await admin.from('profiles').upsert(
+            { id: user.id, email: user.email, ...(fullName ? { full_name: fullName } : {}), onboarding_pending: true },
+            { onConflict: 'id', ignoreDuplicates: true }
+          )
+        }
 
         if (next === '/') {
-          const { data: profile } = await admin
-            .from('profiles')
-            .select('onboarding_pending')
-            .eq('id', user.id)
-            .single()
+          const needsOnboarding =
+            !existingProfile ||
+            existingProfile?.onboarding_pending ||
+            user.user_metadata?.onboarding_pending
 
-          if (profile?.onboarding_pending || user.user_metadata?.onboarding_pending) {
+          if (needsOnboarding) {
             next = '/onboarding'
           }
         }

@@ -255,7 +255,7 @@ All tables in Supabase PostgreSQL. RLS enabled on everything.
 ### Core Tables
 
 **`profiles`** — User accounts
-- id (uuid, PK = auth.uid()), email, full_name, role, subscription_tier (free|pro|family), stripe_customer_id, units_preference
+- id (uuid, PK = auth.uid()), email, full_name, role, subscription_tier (free|pro|family), stripe_customer_id, units_preference, onboarding_pending (bool), weight, height, gender, date_of_birth, dietary_type, primary_goal, goals (text[])
 
 **`families`** — Family groups
 - id (uuid PK), name, created_by (FK→profiles), created_at
@@ -337,6 +337,20 @@ No `VITE_` prefixed variables. All browser-safe vars use `NEXT_PUBLIC_`.
 - `middleware.js` refreshes Supabase session on every request
 - Protected routes: `/dashboard`, `/recipes`, `/generate`, `/plan`, `/journal`, `/stats`, `/family`, `/account`
 
+### Onboarding Flow (New Users)
+
+**Email signup:** `POST /api/auth/signup` creates user via Admin API (no default Supabase email). Extracts token from Admin API-generated magic link. Sends welcome email with link to `/auth/verify?token=xxx&email=yyy` (not Supabase-hosted URL — avoids PKCE issues).
+
+**Magic link verification:** `/auth/verify` calls `supabase.auth.verifyOtp({ email, token, type: 'magiclink' })` which creates the session server-side without needing a browser PKCE verifier. Then creates profile with `onboarding_pending: true` and redirects to `/onboarding`.
+
+**Google OAuth:** Goes through `/auth/callback` which exchanges the OAuth code for a session. Creates profile with `onboarding_pending: true` for new users. Redirects to `/onboarding`.
+
+**Direct password sign-in:** AuthModal checks `profiles.onboarding_pending` after successful `signInWithPassword()` and redirects to `/onboarding` if pending.
+
+**Onboarding wizard** (`/onboarding/page.jsx`) is auth-aware:
+- Unauthenticated users: 4-step wizard, step 4 shows "Create account" CTA
+- Authenticated users: step 4 shows "Save & start planning" — saves family data via `POST /api/onboarding/complete`, clears `onboarding_pending`
+
 ---
 
 ## Food Journal Entry Methods
@@ -372,6 +386,8 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 | Public | `/`, `/recipes`, `/recipes/[slug]`, `/recipes/generate`, `/menus`, `/menus/[slug]`, `/blog`, `/blog/[slug]`, `/pricing`, `/pages/[slug]` |
 | Authenticated | `/plan`, `/statistics`, `/my-account`, `/my-family`, `/shopping-list`, `/nutritionist`, `/family-invite/[token]` |
 | Admin | `/admin`, `/blog/new`, `/blog/[slug]/edit` |
+| Auth | `/auth/callback`, `/auth/verify`, `/auth/reset-callback`, `/onboarding` |
+| API | `/api/onboarding/complete` — saves family data and clears onboarding |
 | SEO | `/sitemap.xml`, `/robots.txt` |
 
 ### Environment Variables Required for Production
