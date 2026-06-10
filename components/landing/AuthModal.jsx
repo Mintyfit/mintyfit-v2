@@ -12,6 +12,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
   const [error, setError] = useState(null)
   const [message, setMessage] = useState(null)
   const [forgotMode, setForgotMode] = useState(false)
+  const [resending, setResending] = useState(false)
 
   // Reset state when modal opens
   useEffect(() => {
@@ -107,12 +108,40 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
 
     console.log('[AuthModal] Auth successful')
     if (tab === 'signup') {
-      console.log('[AuthModal] Signup - showing message')
+      if (result.data?.session) {
+        console.log('[AuthModal] Auto-confirmed — redirecting')
+        onSuccess?.()
+        onClose()
+        return
+      }
       setMessage('Check your email for a confirmation link!')
     } else {
       console.log('[AuthModal] Signin - calling onSuccess and onClose')
       onSuccess?.()
       onClose()
+    }
+  }
+
+  async function handleResendConfirmation() {
+    if (!email.trim()) return
+    setResending(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/auth/send-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Failed to resend. Try again.')
+      } else {
+        setMessage('Confirmation email resent! Check your inbox.')
+      }
+    } catch {
+      setError('Network error. Please try again.')
+    } finally {
+      setResending(false)
     }
   }
 
@@ -226,7 +255,21 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
             padding: '1rem', borderRadius: '10px', background: '#f0fdf4',
             color: '#15803d', border: '1px solid #bbf7d0', fontSize: '0.9375rem',
           }}>
-            {message}
+            <p style={{ margin: 0 }}>{message}</p>
+            {tab === 'signup' && (
+              <button
+                onClick={handleResendConfirmation}
+                disabled={resending}
+                style={{
+                  marginTop: '0.75rem', background: 'none', border: '1px solid #86efac',
+                  color: '#15803d', borderRadius: '8px', padding: '0.5rem 1rem',
+                  cursor: resending ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: 600,
+                  width: '100%',
+                }}
+              >
+                {resending ? 'Sending…' : 'Resend confirmation email'}
+              </button>
+            )}
           </div>
         ) : (
           <form onSubmit={handleEmailSubmit}>
