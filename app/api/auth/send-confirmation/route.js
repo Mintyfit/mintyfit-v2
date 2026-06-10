@@ -44,7 +44,7 @@ export async function POST(request) {
     }
 
     const authHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' }
-    const authUrl = `${supabaseUrl.replace(/\/+$/, '')}/auth/v1`
+    const authUrl = `${supabaseUrl.trim().replace(/\/+$/, '')}/auth/v1`
 
     // Find user by email
     const usersRes = await fetch(`${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`, { headers: authHeaders })
