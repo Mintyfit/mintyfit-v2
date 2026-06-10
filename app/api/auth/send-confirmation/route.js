@@ -37,68 +37,42 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 })
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/\/+$/, '')
+    const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
     if (!supabaseUrl || !serviceKey) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
     }
 
     const authHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' }
-    const authUrl = `${supabaseUrl.trim().replace(/\/+$/, '')}/auth/v1`
+    const authUrl = `${supabaseUrl}/auth/v1`
 
-    // Find user by email
-    const usersUrl = `${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`
-    console.log('[send-confirmation] Fetching:', usersUrl)
-    console.log('[send-confirmation] Auth header prefix:', serviceKey.substring(0, 20) + '...')
-    const usersRes = await fetch(usersUrl, { headers: authHeaders })
-    const usersText = await usersRes.text()
-    console.log('[send-confirmation] Users response status:', usersRes.status)
-    console.log('[send-confirmation] Users response body length:', usersText.length)
-    console.log('[send-confirmation] Users response body:', usersText.substring(0, 500))
-    let usersData
-    try { usersData = JSON.parse(usersText) } catch (e) {
-      return NextResponse.json({
-        error: 'Failed to parse users response',
-        status: usersRes.status,
-        body: usersText.substring(0, 500),
-      }, { status: 500 })
+    const usersRes = await fetch(`${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`, { headers: authHeaders })
+    if (!usersRes.ok) {
+      return NextResponse.json({ error: 'Auth service error' }, { status: 502 })
     }
+    const usersData = await usersRes.json()
     const user = usersData?.users?.[0]
-
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Auto-confirm the user's email — swallow JSON parse error, it may return empty body
-    const confirmRes = await fetch(`${authUrl}/admin/users/${user.id}`, {
+    await fetch(`${authUrl}/admin/users/${user.id}`, {
       method: 'PUT',
       headers: authHeaders,
       body: JSON.stringify({ email_confirm: true }),
     })
-    let confirmBody
-    try { confirmBody = await confirmRes.json() } catch { confirmBody = '(non-JSON)' }
 
-    // Generate magic link
     const linkRes = await fetch(`${authUrl}/admin/generate_link`, {
       method: 'POST',
       headers: authHeaders,
-      body: JSON.stringify({
-        type: 'magiclink',
-        email,
-        redirect_to: 'https://mintyfit.com/auth/callback',
-      }),
+      body: JSON.stringify({ type: 'magiclink', email, redirect_to: 'https://mintyfit.com/auth/callback' }),
     })
-    let linkData
-    try { linkData = await linkRes.json() } catch {
-      const linkText = await linkRes.text()
-      return NextResponse.json({
-        error: 'Generate link failed',
-        status: linkRes.status,
-        body: linkText.substring(0, 500),
-      }, { status: 500 })
+    if (!linkRes.ok) {
+      const text = await linkRes.text()
+      return NextResponse.json({ error: 'Failed to generate magic link', detail: text.substring(0, 200) }, { status: 502 })
     }
+    const linkData = await linkRes.json()
     const magicLink = linkData.action_link
-
     if (!magicLink) {
       return NextResponse.json({ error: 'Failed to generate magic link' }, { status: 500 })
     }
@@ -109,10 +83,6 @@ export async function POST(request) {
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[send-confirmation] Error:', err)
-    return NextResponse.json({
-      error: 'Failed to send confirmation email',
-      detail: err?.message || String(err),
-      stack: err?.stack?.split('\n').slice(0, 5).join(' | '),
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to send confirmation email', detail: err?.message?.substring(0, 200) }, { status: 500 })
   }
 }
