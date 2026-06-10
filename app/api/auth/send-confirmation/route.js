@@ -46,10 +46,28 @@ export async function POST(request) {
     const authHeaders = { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' }
     const authUrl = `${supabaseUrl}/auth/v1`
 
+    // Debug: check auth endpoint
+    const settingsRes = await fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: serviceKey } })
+    const settings = await settingsRes.json()
+
     // Find user by email
     const usersRes = await fetch(`${authUrl}/admin/users?filter%5Bemail%5D=${encodeURIComponent(email)}`, { headers: authHeaders })
     const usersData = await usersRes.json()
     const user = usersData.users?.[0]
+
+    if (!user) {
+      return NextResponse.json({
+        error: 'User not found',
+        debug: {
+          email,
+          usersCount: usersData.users?.length,
+          totalUsers: usersData.total,
+          supabaseUrl: supabaseUrl.replace(/\/\/[^@]+@/, '//***@'),
+          external_email_enabled: settings?.external?.email,
+          disable_signup: settings?.disable_signup,
+        },
+      }, { status: 404 })
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
