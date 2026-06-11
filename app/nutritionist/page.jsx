@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import NutritionistClient from '@/components/nutritionist/NutritionistClient'
 
 export const metadata = {
@@ -8,15 +8,29 @@ export const metadata = {
 }
 
 async function getNutritionistData(userId, supabase) {
+  const adminClient = createAdminClient()
   try {
-    // Get all active client links
+    // Get all client links (without join — profiles RLS blocks cross-user reads)
     const { data: links } = await supabase
       .from('nutritionist_client_links')
-      .select('id, client_id, status, created_at, profiles(id, full_name, subscription_tier)')
+      .select('id, client_id, status, created_at')
       .eq('nutritionist_id', userId)
       .order('created_at', { ascending: false })
 
     const activeLinks = (links || []).filter(l => l.status === 'active')
+
+    // Fetch client profiles via admin client (bypasses RLS)
+    const clientIds = activeLinks.map(l => l.client_id)
+    let profilesMap = {}
+    if (clientIds.length > 0) {
+      const { data: profiles } = await adminClient
+        .from('profiles')
+        .select('id, full_name, subscription_tier')
+        .in('id', clientIds)
+      for (const p of (profiles || [])) {
+        profilesMap[p.id] = p
+      }
+    }
 
     // Get recent nutrition data for each client (last 7 days summary)
     const clientData = []
@@ -25,7 +39,8 @@ async function getNutritionistData(userId, supabase) {
       const today = new Date().toISOString().slice(0, 10)
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-      const { data: calEntries } = await supabase
+      // Use admin client for calendar entries (RLS may block cross-user reads)
+      const { data: calEntries } = await adminClient
         .from('calendar_entries')
         .select('date_str, meal_type, personal_nutrition')
         .eq('member_id', clientId)
@@ -51,7 +66,7 @@ async function getNutritionistData(userId, supabase) {
 
       clientData.push({
         link,
-        profile: link.profiles,
+        profile: profilesMap[clientId] || null,
         calendarEntries: calEntries || [],
         avgCalories,
         recentNotes: recentNotes || [],
