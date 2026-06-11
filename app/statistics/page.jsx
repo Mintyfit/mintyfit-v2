@@ -18,24 +18,23 @@ function normalizeName(row) {
   return row?.display_name || row?.full_name || row?.name || 'Member'
 }
 
-async function getStatisticsData(userId, supabase) {
+async function getStatisticsData(effectiveUserId, supabase) {
   try {
     const today = new Date()
     const historyFrom = new Date(today)
     historyFrom.setDate(today.getDate() - HISTORY_DAYS)
     const fromKey = toDateKey(historyFrom)
 
-    // Batch 1: All independent queries run in parallel
     const [meResult, membershipsResult, calendarResult, journalResult, recipesResult, weightLogsResult] = await Promise.all([
       supabase
         .from('profiles')
         .select('id, display_name, full_name, name, role, gender, date_of_birth, weight, weight_kg, height, height_cm, subscription_tier')
-        .eq('id', userId)
+        .eq('id', effectiveUserId)
         .maybeSingle(),
       supabase
         .from('family_memberships')
         .select('family_id, role, status')
-        .eq('profile_id', userId)
+        .eq('profile_id', effectiveUserId)
         .eq('status', 'active')
         .limit(1),
       supabase
@@ -45,25 +44,25 @@ async function getStatisticsData(userId, supabase) {
           recipe_id, recipe_name,
           recipes(id, title, slug, image_url, image_thumb_url, nutrition, servings)
         `)
-        .eq('profile_id', userId)
+        .eq('profile_id', effectiveUserId)
         .gte('date_str', fromKey)
         .order('date_str', { ascending: false }),
       supabase
         .from('food_journal')
         .select('id, logged_date, meal_type, member_id, food_name, amount, unit, nutrition')
-        .eq('profile_id', userId)
+        .eq('profile_id', effectiveUserId)
         .gte('logged_date', fromKey)
         .order('logged_date', { ascending: false }),
       supabase
         .from('recipes')
         .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
-        .or(`is_public.eq.true,profile_id.eq.${userId}`)
+        .or(`is_public.eq.true,profile_id.eq.${effectiveUserId}`)
         .order('created_at', { ascending: false })
         .limit(50),
       supabase
         .from('weight_logs')
         .select('*')
-        .eq('profile_id', userId)
+        .eq('profile_id', effectiveUserId)
         .order('logged_date', { ascending: false })
         .limit(60),
     ])
@@ -77,7 +76,6 @@ async function getStatisticsData(userId, supabase) {
     if (memberships?.length) {
       const familyId = memberships[0].family_id
 
-      // Batch 2: Family-scoped queries in parallel
       const [linkedResult, managedResult] = await Promise.all([
         supabase
           .from('family_memberships')
@@ -153,7 +151,7 @@ async function getStatisticsData(userId, supabase) {
   }
 }
 
-export default async function StatisticsPage() {
+export default async function StatisticsPage({ searchParams }) {
   let supabase
   try {
     supabase = await createClient()
@@ -171,6 +169,62 @@ export default async function StatisticsPage() {
 
   if (!user) redirect('/?auth=login')
 
+  const resolved = await searchParams
+  const clientId = resolved?.clientId
+  let viewingClient = false
+  let clientName = null
+
+  if (clientId) {
+    const { data: link } = await supabase
+      .from('nutritionist_client_links')
+      .select('id, status')
+      .eq('nutritionist_id', user.id)
+      .eq('client_id', clientId)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (!link) {
+      return redirect('/statistics')
+    }
+
+    viewingClient = true
+    const { data: cp } = await supabase
+      .from('profiles')
+      .select('full_name, display_name')
+      .eq('id', clientId)
+      .maybeSingle()
+    clientName = cp?.display_name || cp?.full_name || 'client'
+
+    const initialData = await getStatisticsData(clientId, supabase)
+    return (
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.25rem 1.25rem 5rem' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
+          padding: '0.75rem 1rem', marginBottom: '1rem',
+          background: 'rgba(59,130,246,0.1)', border: '1px solid #93c5fd',
+          borderRadius: '10px', fontSize: '0.875rem', color: '#1e40af',
+        }}>
+          <span style={{ fontWeight: 600 }}>Viewing {clientName}'s statistics</span>
+          <a href="/statistics" style={{
+            marginLeft: 'auto', background: 'transparent', border: '1px solid #93c5fd',
+            borderRadius: '6px', padding: '0.25rem 0.75rem', cursor: 'pointer',
+            fontSize: '0.8125rem', color: '#1e40af', textDecoration: 'none',
+          }}>
+            Back to my stats
+          </a>
+        </div>
+        <StatisticsClient
+          userId={clientId}
+          initialData={initialData}
+          nutritionFields={NUTRITION_FIELDS}
+          allRecipes={initialData.allRecipes}
+          viewingClient={true}
+          clientName={clientName}
+        />
+      </div>
+    )
+  }
+
   const initialData = await getStatisticsData(user.id, supabase)
 
   return (
@@ -179,6 +233,7 @@ export default async function StatisticsPage() {
       initialData={initialData}
       nutritionFields={NUTRITION_FIELDS}
       allRecipes={initialData.allRecipes}
+      viewingClient={false}
     />
   )
 }

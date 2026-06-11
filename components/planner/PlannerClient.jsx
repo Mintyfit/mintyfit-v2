@@ -51,7 +51,9 @@ function cacheSet(key, data) {
   } catch {}
 }
 
-export default function PlannerClient({ userId, familyId, profile, members }) {
+export default function PlannerClient({ userId, familyId, profile, members, clientId, clientProfile, viewingClient, ownProfile }) {
+  const effectiveUserId = clientId || userId
+  const isViewingClient = !!clientId && viewingClient
   const [today] = useState(() => new Date())
   const [weekOffset, setWeekOffset] = useState(0)
   const [viewMode, setViewMode] = useState('week') // 'week' | 'month'
@@ -184,7 +186,8 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     if (!userId) return
     const startKey = toDateKey(weekStart)
     const endKey = toDateKey(weekEnd)
-    const weekKey = `${userId}:${familyId || 'solo'}:${startKey}:${endKey}`
+    const qUserId = effectiveUserId
+    const weekKey = `${qUserId}:${isViewingClient ? 'client' : (familyId || 'solo')}:${startKey}:${endKey}`
 
     // Use sessionStorage cache if available (survives full page reloads)
     const cached = cacheGet('week:' + weekKey)
@@ -198,17 +201,14 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     const supabase = createClient()
     if (!supabase) return
     setLoading(true)
-    // Family-scoped read (mig 049): if user is in a family, see the family's
-    // whole plan including siblings' variant rows. Solo users fall back to
-    // legacy per-profile rows (family_id IS NULL).
     const baseSelect = `
         id, date_str, meal_type, member_id, consumer_member_ids,
         family_id, origin,
         recipes(id, title, slug, image_url, nutrition, servings)
       `
-    const weekQuery = familyId
+    const weekQuery = (familyId && !isViewingClient)
       ? supabase.from('calendar_entries').select(baseSelect).eq('family_id', familyId)
-      : supabase.from('calendar_entries').select(baseSelect).eq('profile_id', userId).is('family_id', null)
+      : supabase.from('calendar_entries').select(baseSelect).eq('profile_id', qUserId).is('family_id', null)
     weekQuery
       .gte('date_str', startKey)
       .lte('date_str', endKey)
@@ -219,50 +219,49 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
           if (!map[entry.date_str][entry.meal_type]) map[entry.date_str][entry.meal_type] = []
           map[entry.date_str][entry.meal_type].push(entry)
         }
-        // Store in cache alongside any existing data
         const existing = cacheGet('week:' + weekKey) || {}
         cacheSet('week:' + weekKey, { ...existing, entries: map, weekKey })
         setEntries(map)
         setLoading(false)
       })
-    supabase
-      .from('daily_activities')
-      .select('*')
-      .eq('profile_id', userId)
-      .gte('date_str', startKey)
-      .lte('date_str', endKey)
-      .then(({ data }) => {
-        const actMap = {}
-        for (const act of data || []) {
-          if (!actMap[act.date_str]) actMap[act.date_str] = {}
-          if (!actMap[act.date_str][act.member_id]) actMap[act.date_str][act.member_id] = []
-          actMap[act.date_str][act.member_id].push(act)
-        }
-        const existing = cacheGet('week:' + weekKey) || {}
-        cacheSet('week:' + weekKey, { ...existing, activities: actMap })
-        setActivities(actMap)
-      })
-    // food_journal is a separate table (no FK to calendar_entries); load
-    // independently and key by date_str + meal_type so DayAgenda can render.
-    supabase
-      .from('food_journal')
-      .select('*')
-      .eq('profile_id', userId)
-      .gte('logged_date', startKey)
-      .lte('logged_date', endKey)
-      .then(({ data }) => {
-        const jMap = {}
-        for (const j of data || []) {
-          const dk = j.logged_date
-          if (!jMap[dk]) jMap[dk] = {}
-          if (!jMap[dk][j.meal_type]) jMap[dk][j.meal_type] = []
-          jMap[dk][j.meal_type].push(j)
-        }
-        const existing = cacheGet('week:' + weekKey) || {}
-        cacheSet('week:' + weekKey, { ...existing, journals: jMap })
-        setJournals(jMap)
-      })
-  }, [userId, weekOffset])
+    if (!isViewingClient) {
+      supabase
+        .from('daily_activities')
+        .select('*')
+        .eq('profile_id', userId)
+        .gte('date_str', startKey)
+        .lte('date_str', endKey)
+        .then(({ data }) => {
+          const actMap = {}
+          for (const act of data || []) {
+            if (!actMap[act.date_str]) actMap[act.date_str] = {}
+            if (!actMap[act.date_str][act.member_id]) actMap[act.date_str][act.member_id] = []
+            actMap[act.date_str][act.member_id].push(act)
+          }
+          const existing = cacheGet('week:' + weekKey) || {}
+          cacheSet('week:' + weekKey, { ...existing, activities: actMap })
+          setActivities(actMap)
+        })
+      supabase
+        .from('food_journal')
+        .select('*')
+        .eq('profile_id', userId)
+        .gte('logged_date', startKey)
+        .lte('logged_date', endKey)
+        .then(({ data }) => {
+          const jMap = {}
+          for (const j of data || []) {
+            const dk = j.logged_date
+            if (!jMap[dk]) jMap[dk] = {}
+            if (!jMap[dk][j.meal_type]) jMap[dk][j.meal_type] = []
+            jMap[dk][j.meal_type].push(j)
+          }
+          const existing = cacheGet('week:' + weekKey) || {}
+          cacheSet('week:' + weekKey, { ...existing, journals: jMap })
+          setJournals(jMap)
+        })
+    }
+  }, [userId, weekOffset, effectiveUserId, isViewingClient, familyId])
 
   // Fetch month-wide entries when in month view
   useEffect(() => {
@@ -272,7 +271,8 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     const end = new Date(now.getFullYear(), now.getMonth() + 3, 0)
     const startKey = toDateKey(start)
     const endKey = toDateKey(end)
-    const monthKey = `${userId}:${familyId || 'solo'}:m:${startKey}:${endKey}`
+    const qUserId = effectiveUserId
+    const monthKey = `${qUserId}:${isViewingClient ? 'client' : (familyId || 'solo')}:m:${startKey}:${endKey}`
 
     const cached = cacheGet('month:' + monthKey)
     if (cached?.entries) {
@@ -287,9 +287,9 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
         family_id, origin,
         recipes(id, title, slug, image_url, nutrition, servings)
       `
-    const mQuery = familyId
+    const mQuery = (familyId && !isViewingClient)
       ? supabase.from('calendar_entries').select(baseSelect).eq('family_id', familyId)
-      : supabase.from('calendar_entries').select(baseSelect).eq('profile_id', userId).is('family_id', null)
+      : supabase.from('calendar_entries').select(baseSelect).eq('profile_id', qUserId).is('family_id', null)
     mQuery
       .gte('date_str', startKey)
       .lte('date_str', endKey)
@@ -303,7 +303,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
         cacheSet('month:' + monthKey, { entries: map })
         setMonthEntries(map)
       })
-  }, [viewMode, userId, familyId])
+  }, [viewMode, userId, effectiveUserId, isViewingClient, familyId])
 
   function applySidebarFilter(query) {
     if (sidebarFilter === 'snack') return query.in('meal_type', ['snack', 'snack2'])
@@ -471,8 +471,8 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
       ? computeMealBudget(activeMembers, totals, mealType, null, mealsPerDay).personalNutrition
       : totals
     const row = {
-      profile_id: userId,
-      family_id: familyId || null,
+      profile_id: effectiveUserId,
+      family_id: isViewingClient ? null : (familyId || null),
       date_str: dateKey,
       meal_type: mealType,
       recipe_id: recipe.id,
@@ -550,19 +550,20 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   const refreshDay = useCallback(async (dateKey) => {
     const supabase = createClient()
     if (!supabase || !userId) return
+    const qUserId = effectiveUserId
     // Invalidate sessionStorage cache for current week so re-navigation gets fresh data
     const wStart = toDateKey(weekStart)
     const wEnd = toDateKey(weekEnd)
-    const wk = `${userId}:${familyId || 'solo'}:${wStart}:${wEnd}`
+    const wk = `${qUserId}:${isViewingClient ? 'client' : (familyId || 'solo')}:${wStart}:${wEnd}`
     try { sessionStorage.removeItem(CACHE_PREFIX + 'week:' + wk) } catch {}
     const daySelect = `
         id, date_str, meal_type, member_id, consumer_member_ids,
         family_id, origin,
         recipes(id, title, slug, image_url, nutrition, servings)
       `
-    const dayQuery = familyId
+    const dayQuery = (familyId && !isViewingClient)
       ? supabase.from('calendar_entries').select(daySelect).eq('family_id', familyId)
-      : supabase.from('calendar_entries').select(daySelect).eq('profile_id', userId).is('family_id', null)
+      : supabase.from('calendar_entries').select(daySelect).eq('profile_id', qUserId).is('family_id', null)
     const { data } = await dayQuery.eq('date_str', dateKey)
     const mealMap = {}
     for (const entry of data || []) {
@@ -571,32 +572,34 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     }
     setEntries(prev => ({ ...prev, [dateKey]: mealMap }))
 
-    // also refresh activities for this day
-    const { data: actData } = await supabase
-      .from('daily_activities')
-      .select('*')
-      .eq('profile_id', userId)
-      .eq('date_str', dateKey)
-    const actMap = {}
-    for (const act of actData || []) {
-      if (!actMap[act.member_id]) actMap[act.member_id] = []
-      actMap[act.member_id].push(act)
-    }
-    setActivities(prev => ({ ...prev, [dateKey]: actMap }))
+    if (!isViewingClient) {
+      // also refresh activities for this day
+      const { data: actData } = await supabase
+        .from('daily_activities')
+        .select('*')
+        .eq('profile_id', userId)
+        .eq('date_str', dateKey)
+      const actMap = {}
+      for (const act of actData || []) {
+        if (!actMap[act.member_id]) actMap[act.member_id] = []
+        actMap[act.member_id].push(act)
+      }
+      setActivities(prev => ({ ...prev, [dateKey]: actMap }))
 
-    // refresh food_journal for the day
-    const { data: jData } = await supabase
-      .from('food_journal')
-      .select('*')
-      .eq('profile_id', userId)
-      .eq('logged_date', dateKey)
-    const jMap = {}
-    for (const j of jData || []) {
-      if (!jMap[j.meal_type]) jMap[j.meal_type] = []
-      jMap[j.meal_type].push(j)
+      // refresh food_journal for the day
+      const { data: jData } = await supabase
+        .from('food_journal')
+        .select('*')
+        .eq('profile_id', userId)
+        .eq('logged_date', dateKey)
+      const jMap = {}
+      for (const j of jData || []) {
+        if (!jMap[j.meal_type]) jMap[j.meal_type] = []
+        jMap[j.meal_type].push(j)
+      }
+      setJournals(prev => ({ ...prev, [dateKey]: jMap }))
     }
-    setJournals(prev => ({ ...prev, [dateKey]: jMap }))
-  }, [userId, weekOffset, familyId])
+  }, [userId, weekOffset, effectiveUserId, isViewingClient, familyId])
 
   const removeEntry = useCallback(async (entryId, dateKey) => {
     const supabase = createClient()
@@ -606,21 +609,21 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
   }, [refreshDay])
 
   async function clearDay() {
-    if (!selectedKey || clearing) return
+    if (!selectedKey || clearing || isViewingClient) return
     if (!confirm('Clear all meals for this day?')) return
     setClearing(true)
     const supabase = createClient()
     if (!supabase) { setClearing(false); return }
     const query = familyId
       ? supabase.from('calendar_entries').delete().eq('family_id', familyId).eq('date_str', selectedKey)
-      : supabase.from('calendar_entries').delete().eq('profile_id', userId).is('family_id', null).eq('date_str', selectedKey)
+      : supabase.from('calendar_entries').delete().eq('profile_id', effectiveUserId).is('family_id', null).eq('date_str', selectedKey)
     await query
     await refreshDay(selectedKey)
     setClearing(false)
   }
 
   async function clearWeek() {
-    if (clearing) return
+    if (clearing || isViewingClient) return
     if (!confirm(`Clear all meals for ${weekLabel}?`)) return
     setClearing(true)
     const supabase = createClient()
@@ -628,7 +631,7 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
     const dateKeys = weekDates.map(d => toDateKey(d))
     const query = familyId
       ? supabase.from('calendar_entries').delete().eq('family_id', familyId).in('date_str', dateKeys)
-      : supabase.from('calendar_entries').delete().eq('profile_id', userId).is('family_id', null).in('date_str', dateKeys)
+      : supabase.from('calendar_entries').delete().eq('profile_id', effectiveUserId).is('family_id', null).in('date_str', dateKeys)
     await query
     for (const dk of dateKeys) await refreshDay(dk)
     setClearing(false)
@@ -673,6 +676,26 @@ export default function PlannerClient({ userId, familyId, profile, members }) {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
+        {/* Nutritionist viewing client banner */}
+        {isViewingClient && clientProfile && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
+            padding: '0.75rem 1rem', marginBottom: '1rem',
+            background: 'rgba(59,130,246,0.1)', border: '1px solid #93c5fd',
+            borderRadius: '10px', fontSize: '0.875rem', color: '#1e40af',
+          }}>
+            <span style={{ fontWeight: 600 }}>Viewing {clientProfile.display_name || clientProfile.full_name || 'client'}'s meal plan</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Changes you make will save to their plan</span>
+            <a href="/plan" style={{
+              marginLeft: 'auto', background: 'transparent', border: '1px solid #93c5fd',
+              borderRadius: '6px', padding: '0.25rem 0.75rem', cursor: 'pointer',
+              fontSize: '0.8125rem', color: '#1e40af', textDecoration: 'none',
+            }}>
+              Back to my plan
+            </a>
+          </div>
+        )}
+
         {/* Pending recipe banner */}
         {pendingRecipe && (
           <div style={{

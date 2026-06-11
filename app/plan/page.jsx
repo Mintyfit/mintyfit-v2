@@ -8,9 +8,7 @@ export const metadata = {
   description: 'Plan your family meals for the week. See nutrition at a glance for every member.',
 }
 
-
-
-async function getPlannerData() {
+async function getPlannerData(searchParams) {
   let supabase
   try {
     supabase = await createClient()
@@ -26,93 +24,153 @@ async function getPlannerData() {
 
   if (!user) redirect('/?auth=login')
 
-  // Get profile
-  const { data: profile } = await supabase
+  // Check if nutritionist is viewing a client's plan
+  const clientId = searchParams?.clientId
+  let clientProfile = null
+  let viewingClient = false
+
+  if (clientId) {
+    // Verify active nutritionist-client link
+    const { data: link } = await supabase
+      .from('nutritionist_client_links')
+      .select('id, status')
+      .eq('nutritionist_id', user.id)
+      .eq('client_id', clientId)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (!link) {
+      // No active link — redirect to own plan
+      const url = new URL('/plan', process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+      return redirect('/plan')
+    }
+
+    viewingClient = true
+
+    // Fetch client profile
+    const { data: cp } = await supabase
+      .from('profiles')
+      .select('id, full_name, display_name')
+      .eq('id', clientId)
+      .maybeSingle()
+
+    if (cp) {
+      const { data: logs } = await supabase
+        .from('weight_logs')
+        .select('weight')
+        .eq('profile_id', clientId)
+        .order('logged_date', { ascending: false })
+        .limit(1)
+      cp.weight = cp.weight ?? logs?.[0]?.weight ?? null
+      clientProfile = enrichMember({ ...cp, type: 'linked' })
+    }
+  }
+
+  // Get own profile (needed for banner display when viewing client)
+  const { data: ownProfile } = await supabase
     .from('profiles')
-    .select('id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target')
+    .select('id, full_name, role')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (profile) {
-    const { data: logs } = await supabase
-      .from('weight_logs')
-      .select('weight')
-      .eq('profile_id', user.id)
-      .order('logged_date', { ascending: false })
-      .limit(1)
-    profile.weight = profile.weight ?? logs?.[0]?.weight ?? null
-  }
+  if (!viewingClient) {
+    // Normal flow: get own profile + family data
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target')
+      .eq('id', user.id)
+      .maybeSingle()
 
-  // Get family members + family scope. familyId flows to PlannerClient so
-  // calendar reads/writes are family-wide (mig 049): every member sees the
-  // same plan, and per-member recipe variants share a slot.
-  let members = []
-  let familyId = null
-  try {
-    const { data: memberships } = await supabase
-      .from('family_memberships')
-      .select('family_id, role')
-      .eq('profile_id', user.id)
-      .limit(1)
+    if (profile) {
+      const { data: logs } = await supabase
+        .from('weight_logs')
+        .select('weight')
+        .eq('profile_id', user.id)
+        .order('logged_date', { ascending: false })
+        .limit(1)
+      profile.weight = profile.weight ?? logs?.[0]?.weight ?? null
+    }
 
-    if (memberships?.length) {
-      familyId = memberships[0].family_id
+    let members = []
+    let familyId = null
+    try {
+      const { data: memberships } = await supabase
+        .from('family_memberships')
+        .select('family_id, role')
+        .eq('profile_id', user.id)
+        .limit(1)
 
-      const [{ data: linked }, { data: managed }] = await Promise.all([
-        supabase
-          .from('family_memberships')
-          .select('profile_id, role, profiles(id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target)')
-          .eq('family_id', familyId),
-        supabase
-          .from('managed_members')
-          .select('id, name, date_of_birth, weight_kg, height_cm, gender')
-          .eq('family_id', familyId),
-      ])
+      if (memberships?.length) {
+        familyId = memberships[0].family_id
 
-      // Fetch latest weight_log for each linked member (weight lives in weight_logs, not on profiles)
-      const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
-      let weightByProfile = new Map()
-      if (linkedProfileIds.length > 0) {
-        const { data: logs } = await supabase
-          .from('weight_logs')
-          .select('profile_id, weight')
-          .in('profile_id', linkedProfileIds)
-          .order('logged_date', { ascending: false })
-        if (logs) {
-          for (const log of logs) {
-            if (!weightByProfile.has(log.profile_id)) {
-              weightByProfile.set(log.profile_id, log.weight)
+        const [{ data: linked }, { data: managed }] = await Promise.all([
+          supabase
+            .from('family_memberships')
+            .select('profile_id, role, profiles(id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target)')
+            .eq('family_id', familyId),
+          supabase
+            .from('managed_members')
+            .select('id, name, date_of_birth, weight_kg, height_cm, gender')
+            .eq('family_id', familyId),
+        ])
+
+        const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
+        let weightByProfile = new Map()
+        if (linkedProfileIds.length > 0) {
+          const { data: logs } = await supabase
+            .from('weight_logs')
+            .select('profile_id, weight')
+            .in('profile_id', linkedProfileIds)
+            .order('logged_date', { ascending: false })
+          if (logs) {
+            for (const log of logs) {
+              if (!weightByProfile.has(log.profile_id)) {
+                weightByProfile.set(log.profile_id, log.weight)
+              }
             }
           }
         }
-      }
 
-      members = [
-        ...(linked || []).map(l => enrichMember({
-          ...l.profiles,
-          type: 'linked',
-          role: l.role,
-          weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
-        })),
-        ...(managed || []).map(m => enrichMember({
-          ...m,
-          display_name: m.name,
-          type: 'managed',
-          weight: m.weight_kg ?? null,
-          height: m.height_cm ?? null,
-        })),
-      ].filter(Boolean)
-    } else {
+        members = [
+          ...(linked || []).map(l => enrichMember({
+            ...l.profiles,
+            type: 'linked',
+            role: l.role,
+            weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
+          })),
+          ...(managed || []).map(m => enrichMember({
+            ...m,
+            display_name: m.name,
+            type: 'managed',
+            weight: m.weight_kg ?? null,
+            height: m.height_cm ?? null,
+          })),
+        ].filter(Boolean)
+      } else {
+        members = profile ? [enrichMember({ ...profile, type: 'linked' })] : []
+      }
+    } catch {
       members = profile ? [enrichMember({ ...profile, type: 'linked' })] : []
     }
-  } catch {
-    members = profile ? [enrichMember({ ...profile, type: 'linked' })] : []
+
+    return { userId: user.id, familyId, profile: enrichMember(profile), members, ownProfile, viewingClient: false, clientProfile: null }
   }
 
-  return { userId: user.id, familyId, profile: enrichMember(profile), members }
+  // Viewing client: no family, single member = client
+  return {
+    userId: user.id,
+    familyId: null,
+    profile: clientProfile,
+    members: clientProfile ? [clientProfile] : [],
+    ownProfile,
+    viewingClient: true,
+    clientProfile,
+    clientId,
+  }
 }
 
-export default async function PlanPage() {
-  const { userId, familyId, profile, members } = await getPlannerData()
-  return <PlannerClient userId={userId} familyId={familyId} profile={profile} members={members} />
+export default async function PlanPage({ searchParams }) {
+  const resolved = await searchParams
+  const data = await getPlannerData(resolved)
+  return <PlannerClient {...data} />
 }
