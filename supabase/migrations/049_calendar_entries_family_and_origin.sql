@@ -22,6 +22,9 @@ CREATE INDEX IF NOT EXISTS calendar_entries_family_date_idx
 
 -- Backfill: for each entry, pick the author's first family membership.
 -- Safe because every existing entry was authored by a single profile.
+-- Drop the unique index first in case it already exists from a prior partial run
+DROP INDEX IF EXISTS public.calendar_entries_family_slot_unique;
+DROP INDEX IF EXISTS public.calendar_entries_profile_slot_unique;
 UPDATE public.calendar_entries ce
 SET family_id = fm.family_id
 FROM public.family_memberships fm

@@ -76,7 +76,7 @@ export async function POST(request) {
 
     const [{ data: family }, { data: inviterProfile }] = await Promise.all([
       supabase.from('families').select('name').eq('id', membership.family_id).single(),
-      supabase.from('profiles').select('name').eq('id', user.id).single(),
+      supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     ])
 
     // Remove any existing pending invites for this email so we start fresh
@@ -105,7 +105,7 @@ export async function POST(request) {
       to: email,
       inviteUrl,
       familyName: family?.name || 'the family',
-      inviterName: inviterProfile?.name || 'Someone',
+      inviterName: inviterProfile?.full_name || 'Someone',
     })
 
     return NextResponse.json({

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AuthModal from '@/components/landing/AuthModal'
+import { createClient } from '@/lib/supabase/client'
 
 export default function BecomeNutritionistClient({ user, profile, alreadyApplied, isNutritionist }) {
   const router = useRouter()
@@ -17,6 +18,31 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '')
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const fileRef = useRef(null)
+
+  async function handleAvatarUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingAvatar(true)
+    const supabase = createClient()
+    if (!supabase) { setUploadingAvatar(false); return }
+    const ext = file.name.split('.').pop()
+    const path = `avatars/${user?.id}_nutritionist.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    if (!error) {
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+      const url = data?.publicUrl
+      setAvatarUrl(url)
+      await fetch('/api/nutritionist/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar_url: url }),
+      })
+    }
+    setUploadingAvatar(false)
+  }
 
   const inputStyle = {
     width: '100%', padding: '12px 14px',
@@ -31,7 +57,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
       setShowAuthModal(true)
       return
     }
-    if (!formData.gdpr) {
+    if (!isNutritionist && !formData.gdpr) {
       setError('Please agree to the terms to continue.')
       return
     }
@@ -43,8 +69,10 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
     setSubmitting(true)
     setError(null)
     try {
-      const res = await fetch('/api/nutritionist/apply', {
-        method: 'POST',
+      const endpoint = isNutritionist ? '/api/nutritionist/profile' : '/api/nutritionist/apply'
+      const method = isNutritionist ? 'PATCH' : 'POST'
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           display_name: formData.display_name,
@@ -55,6 +83,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setSuccess(true)
+      if (isNutritionist) setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -64,24 +93,166 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
 
   if (isNutritionist) {
     return (
-      <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center', padding: '40px 20px' }}>
-        <div style={{ fontSize: '64px', marginBottom: '20px' }}>🩺</div>
-        <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
-          You're already a nutritionist
-        </h1>
-        <p style={{ color: 'var(--text-3)', fontSize: '15px', marginBottom: '24px' }}>
-          You have access to the nutritionist dashboard.
-        </p>
-        <Link
-          href="/nutritionist"
-          style={{
-            display: 'inline-block', padding: '12px 24px',
-            background: 'var(--primary)', color: '#fff',
-            borderRadius: '10px', textDecoration: 'none', fontWeight: '600',
-          }}
-        >
-          Open your dashboard
-        </Link>
+      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 20px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🩺</div>
+          <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '8px' }}>
+            Your Nutritionist Profile
+          </h1>
+          <p style={{ color: 'var(--text-3)', fontSize: '15px', lineHeight: 1.6 }}>
+            Manage your public profile that clients see when they connect with you.
+          </p>
+        </div>
+
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: '12px', padding: '24px', marginBottom: '20px',
+        }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '20px' }}>
+            Edit profile
+          </h2>
+
+          {error && (
+            <div style={{
+              background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px',
+              padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '14px',
+            }}>
+              {error}
+            </div>
+          )}
+          {success && (
+            <div style={{
+              background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px',
+              padding: '12px', marginBottom: '16px', color: '#2d6e2e', fontSize: '14px',
+            }}>
+              Profile updated successfully.
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div style={{
+                width: '72px', height: '72px', borderRadius: '50%',
+                background: avatarUrl ? 'transparent' : 'var(--primary)',
+                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '28px', fontWeight: '700', overflow: 'hidden', flexShrink: 0,
+              }}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  (formData.display_name || user?.email || 'N')[0].toUpperCase()
+                )}
+              </div>
+              <div>
+                <input
+                  type="file"
+                  ref={fileRef}
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  style={{
+                    padding: '8px 16px', borderRadius: '8px',
+                    border: '1px solid var(--border)', background: 'var(--bg-card)',
+                    color: 'var(--text-2)', cursor: 'pointer', fontSize: '13px',
+                    opacity: uploadingAvatar ? 0.6 : 1,
+                  }}
+                >
+                  {uploadingAvatar ? 'Uploading…' : avatarUrl ? 'Change photo' : 'Upload photo'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+                Display name
+              </label>
+              <input
+                type="text"
+                value={formData.display_name}
+                onChange={e => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
+                placeholder="Dr. Jane Smith"
+                style={inputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+                Email
+              </label>
+              <input
+                type="email"
+                value={user?.email || ''}
+                disabled
+                style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+                Bio
+              </label>
+              <textarea
+                value={formData.bio}
+                onChange={e => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                placeholder="Tell clients about your qualifications and experience (max 500 characters)"
+                rows={4}
+                maxLength={500}
+                style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
+              />
+              <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px', textAlign: 'right' }}>
+                {formData.bio.length}/500
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+                Credentials URL
+              </label>
+              <input
+                type="url"
+                value={formData.credentials_url}
+                onChange={e => setFormData(prev => ({ ...prev, credentials_url: e.target.value }))}
+                placeholder="https://linkedin.com/in/your-profile"
+                style={inputStyle}
+              />
+              <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px' }}>
+                Link to your LinkedIn, professional website, or certification
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                width: '100%', padding: '14px',
+                background: 'var(--primary)', color: '#fff',
+                border: 'none', borderRadius: '10px', cursor: 'pointer',
+                fontWeight: '700', fontSize: '16px',
+                opacity: submitting ? 0.7 : 1,
+              }}
+            >
+              {submitting ? 'Saving…' : 'Save changes'}
+            </button>
+          </form>
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <Link
+            href="/nutritionist"
+            style={{
+              display: 'inline-block', padding: '12px 24px',
+              background: 'var(--primary)', color: '#fff',
+              borderRadius: '10px', textDecoration: 'none', fontWeight: '600',
+            }}
+          >
+            Open your dashboard
+          </Link>
+        </div>
       </div>
     )
   }

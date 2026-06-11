@@ -47,11 +47,11 @@ function ClientCard({ client, onLeaveNote }) {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontWeight: '700', fontSize: '20px', flexShrink: 0,
         }}>
-          {(profile?.name || 'C')[0].toUpperCase()}
+          {(profile?.full_name || 'C')[0].toUpperCase()}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: '600', color: 'var(--text-1)', fontSize: '16px' }}>
-            {profile?.name || 'Client'}
+            {profile?.full_name || 'Client'}
           </div>
           <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
             {daysSinceActive === null ? 'No activity' :
@@ -216,7 +216,7 @@ export default function NutritionistClient({ userId, nutritionistName, initialDa
               padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)',
               borderRadius: '8px', marginBottom: '8px', fontSize: '14px',
             }}>
-              <span style={{ color: 'var(--text-2)' }}>{link.profiles?.name}</span>
+              <span style={{ color: 'var(--text-2)' }}>{link.profiles?.full_name}</span>
               <span style={{ color: 'var(--text-3)', textTransform: 'capitalize' }}>{link.status}</span>
             </div>
           ))}

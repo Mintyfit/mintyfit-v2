@@ -12,7 +12,7 @@ async function getNutritionistData(userId, supabase) {
     // Get all active client links
     const { data: links } = await supabase
       .from('nutritionist_client_links')
-      .select('id, client_id, status, created_at, profiles(id, name, subscription_tier)')
+      .select('id, client_id, status, created_at, profiles(id, full_name, subscription_tier)')
       .eq('nutritionist_id', userId)
       .order('created_at', { ascending: false })
 
@@ -74,11 +74,11 @@ export default async function NutritionistPage() {
   // Check nutritionist role
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, name')
+    .select('role, full_name')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'nutritionist') {
+  if (profile?.role !== 'nutritionist' && profile?.role !== 'super_admin') {
     redirect('/my-account')
   }
 
@@ -87,7 +87,7 @@ export default async function NutritionistPage() {
   return (
     <NutritionistClient
       userId={user.id}
-      nutritionistName={profile.name}
+      nutritionistName={profile.full_name}
       initialData={data}
     />
   )

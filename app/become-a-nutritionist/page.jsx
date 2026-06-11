@@ -21,8 +21,9 @@ export default async function BecomeNutritionistPage() {
       .eq('id', user.id)
       .single()
     profile = data
-    alreadyApplied = data?.is_approved === false
-    isNutritionist = data?.role === 'nutritionist'
+    // Nutritionists and superadmins can both manage their nutritionist profile
+    isNutritionist = data?.role === 'nutritionist' || data?.role === 'super_admin'
+    alreadyApplied = data?.is_approved === false && data?.role !== 'super_admin'
   }
 
   return (

@@ -19,14 +19,18 @@ export async function POST(request) {
     const adminClient = createAdminClient()
     const { data: nutritionistProfile } = await adminClient
       .from('profiles')
-      .select('id, full_name, name, email, role')
+      .select('id, full_name, email, role')
       .eq('email', searchEmail)
       .single()
 
     console.log('[connect] STEP 2: Admin lookup — found:', !!nutritionistProfile, 'role:', nutritionistProfile?.role)
 
     if (!nutritionistProfile) {
-      return NextResponse.json({ error: 'No user found with that email' }, { status: 404 })
+      return NextResponse.json({
+        error: 'No user found with that email',
+        searched: searchEmail,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 40),
+      }, { status: 404 })
     }
 
     console.log('[connect] STEP 3: Found profile, role:', nutritionistProfile.role)
@@ -60,7 +64,7 @@ export async function POST(request) {
       .single()
 
     const clientName = clientProfile?.full_name || user.email?.split('@')[0] || 'A client'
-    const nutritionistName = nutritionistProfile.full_name || nutritionistProfile.name || 'Your nutritionist'
+    const nutritionistName = nutritionistProfile.full_name || 'Your nutritionist'
 
     // Send email notification to the nutritionist
     console.log('[connect] STEP 5: Sending email to:', nutritionistProfile.email)

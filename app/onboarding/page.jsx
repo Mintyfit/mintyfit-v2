@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import AuthModal from '@/components/landing/AuthModal'
 import { useAuth } from '@/contexts/AuthContext'
+import { fieldLabel, displayToDb, lbsToKg, inToCm } from '@/lib/unitConversion'
 
 const STORAGE_KEY = 'mintyfit-onboarding'
 
@@ -16,9 +17,9 @@ const STEPS = [
   { key: 'family', label: 'Family', emoji: '👨‍👩‍👧‍👦' },
 ]
 
-const DIETARY_TYPES = ['omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'pescatarian']
+const DIETARY_TYPES = ['none', 'omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'pescatarian']
 
-const ALLERGIES = ['gluten', 'dairy', 'nuts', 'shellfish', 'soy', 'eggs', 'fish', 'peanuts']
+const ALLERGIES = ['none', 'gluten', 'dairy', 'nuts', 'shellfish', 'soy', 'eggs', 'fish', 'peanuts']
 
 const GOALS = [
   { key: 'weight_loss', label: 'Weight loss' },
@@ -45,9 +46,10 @@ export default function OnboardingPage() {
   const [dob, setDob] = useState('')
   const [weight, setWeight] = useState('')
   const [height, setHeight] = useState('')
-  const [dietaryType, setDietaryType] = useState('omnivore')
+  const [dietaryType, setDietaryType] = useState('none')
   const [allergies, setAllergies] = useState([])
   const [goal, setGoal] = useState('')
+  const [units, setUnits] = useState('metric')
 
   // Family members (additional people)
   const [members, setMembers] = useState([])
@@ -66,6 +68,7 @@ export default function OnboardingPage() {
         if (d.dietaryType) setDietaryType(d.dietaryType)
         if (d.allergies) setAllergies(d.allergies)
         if (d.goal) setGoal(d.goal)
+        if (d.units) setUnits(d.units)
       if (d.members) setMembers(d.members)
       }
     } catch {}
@@ -74,12 +77,19 @@ export default function OnboardingPage() {
   // Persist to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, gender, dob, weight, height, dietaryType, allergies, goal, members, step }))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ name, gender, dob, weight, height, dietaryType, allergies, goal, units, members, step }))
     } catch {}
   }, [name, gender, dob, weight, height, dietaryType, allergies, goal, members, step])
 
   function toggleAllergy(a) {
-    setAllergies(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
+    if (a === 'none') {
+      setAllergies(prev => prev.includes('none') ? [] : ['none'])
+    } else {
+      setAllergies(prev => {
+        const next = prev.includes(a) ? prev.filter(x => x !== a) : [...prev.filter(x => x !== 'none'), a]
+        return next
+      })
+    }
   }
 
   function addMember() { setMembers(prev => [...prev, emptyMember()]) }
@@ -97,10 +107,16 @@ export default function OnboardingPage() {
   async function handleSave() {
     setSaving(true)
     try {
+      const isMetric = units === 'metric'
+      const primaryWeight = isMetric ? parseFloat(weight) : lbsToKg(parseFloat(weight))
+      const primaryHeight = isMetric ? parseFloat(height) : inToCm(parseFloat(height))
+
       const membersPayload = [
-        { id: 'primary', name: name || user?.email?.split('@')[0], gender, dob, weight: parseFloat(weight), height: parseFloat(height) },
+        { id: 'primary', name: name || user?.email?.split('@')[0], gender, dob, weight: primaryWeight, height: primaryHeight },
         ...members.filter(m => m.name.trim()).map(m => ({
-          ...m, weight: parseFloat(m.weight), height: parseFloat(m.height),
+          ...m,
+          weight: isMetric ? parseFloat(m.weight) : lbsToKg(parseFloat(m.weight)),
+          height: isMetric ? parseFloat(m.height) : inToCm(parseFloat(m.height)),
         })),
       ]
       const res = await fetch('/api/onboarding/complete', {
@@ -110,6 +126,7 @@ export default function OnboardingPage() {
           members: membersPayload,
           dietary: { [membersPayload[0].id]: [dietaryType, ...allergies] },
           goals: { [membersPayload[0].id]: goal, ...Object.fromEntries(members.filter(m => m.name.trim()).map(m => [m.id, goal])) },
+          units,
         }),
       })
       const data = await res.json()
@@ -157,6 +174,18 @@ export default function OnboardingPage() {
                   }}>{g}</button>
                 ))}
               </div>
+
+              <label style={{ ...labelStyle, marginTop: '1rem' }}>Units</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {['metric', 'imperial'].map(u => (
+                  <button key={u} onClick={() => setUnits(u)} style={{
+                    flex: 1, padding: '0.75rem', borderRadius: '10px', textTransform: 'capitalize',
+                    border: `2px solid ${units === u ? 'var(--primary)' : 'var(--border)'}`,
+                    background: units === u ? '#f0fdf4' : 'var(--bg-card)',
+                    color: units === u ? 'var(--primary)' : 'var(--text-2)', cursor: 'pointer', fontWeight: units === u ? 600 : 400,
+                  }}>{u}</button>
+                ))}
+              </div>
             </div>
             <NavButtons canNext={stepCanNext[0]} onNext={() => setStep(1)} showBack={false} />
           </div>
@@ -173,12 +202,12 @@ export default function OnboardingPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
                 <div>
-                  <label style={labelStyle}>Weight (kg)</label>
-                  <input type="number" value={weight} onChange={e => setWeight(e.target.value)} placeholder="70" min={1} style={inputStyle} />
+                  <label style={labelStyle}>{fieldLabel('weight_kg', units === 'metric')}</label>
+                  <input type="number" value={weight} onChange={e => setWeight(e.target.value)} placeholder={units === 'metric' ? '70' : '154'} min={1} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Height (cm)</label>
-                  <input type="number" value={height} onChange={e => setHeight(e.target.value)} placeholder="175" min={1} style={inputStyle} />
+                  <label style={labelStyle}>{fieldLabel('height_cm', units === 'metric')}</label>
+                  <input type="number" value={height} onChange={e => setHeight(e.target.value)} placeholder={units === 'metric' ? '175' : '69'} min={1} style={inputStyle} />
                 </div>
               </div>
             </div>
@@ -269,12 +298,12 @@ export default function OnboardingPage() {
                     </select>
                   </div>
                   <div>
-                    <label style={labelStyle}>Weight (kg)</label>
-                    <input type="number" value={m.weight} onChange={e => updateMember(m.id, 'weight', e.target.value)} placeholder="40" min={1} style={inputStyle} />
+                    <label style={labelStyle}>{fieldLabel('weight_kg', units === 'metric')}</label>
+                    <input type="number" value={m.weight} onChange={e => updateMember(m.id, 'weight', e.target.value)} placeholder={units === 'metric' ? '40' : '88'} min={1} style={inputStyle} />
                   </div>
                   <div>
-                    <label style={labelStyle}>Height (cm)</label>
-                    <input type="number" value={m.height} onChange={e => updateMember(m.id, 'height', e.target.value)} placeholder="150" min={1} style={inputStyle} />
+                    <label style={labelStyle}>{fieldLabel('height_cm', units === 'metric')}</label>
+                    <input type="number" value={m.height} onChange={e => updateMember(m.id, 'height', e.target.value)} placeholder={units === 'metric' ? '150' : '59'} min={1} style={inputStyle} />
                   </div>
                 </div>
               </div>
@@ -299,10 +328,11 @@ export default function OnboardingPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <Row label="Name" value={name || user?.email} />
                 <Row label="Gender" value={gender || 'Not set'} />
-                <Row label="Weight" value={weight ? `${weight} kg` : 'Not set'} />
-                <Row label="Height" value={height ? `${height} cm` : 'Not set'} />
+                <Row label="Weight" value={weight ? `${weight} ${units === 'metric' ? 'kg' : 'lbs'}` : 'Not set'} />
+                <Row label="Height" value={height ? `${height} ${units === 'metric' ? 'cm' : 'in'}` : 'Not set'} />
                 <Row label="Diet" value={dietaryType} />
                 {allergies.length > 0 && <Row label="Allergies" value={allergies.join(', ')} />}
+                <Row label="Units" value={units || 'metric'} />
                 <Row label="Goal" value={GOALS.find(g => g.key === goal)?.label || goal} />
                 {members.filter(m => m.name.trim()).length > 0 && (
                   <Row label="Family" value={`${members.filter(m => m.name.trim()).length} additional member(s)`} />

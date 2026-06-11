@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import AdminTabs from '@/components/admin/AdminTabs'
 
@@ -11,7 +12,8 @@ export default async function AdminLayout({ children }) {
 
   if (!user) redirect('/?auth=login')
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient()
+  const { data: profile } = await admin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
@@ -21,7 +23,6 @@ export default async function AdminLayout({ children }) {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 16px' }}>
-      {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>
           Admin Dashboard
@@ -30,11 +31,7 @@ export default async function AdminLayout({ children }) {
           Manage users, subscriptions, audit logs, and GDPR requests.
         </p>
       </div>
-
-      {/* Tab Navigation */}
       <AdminTabs />
-
-      {/* Content */}
       <div style={{ marginTop: 24 }}>
         {children}
       </div>

@@ -288,7 +288,8 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
       const d = await res.json()
       console.log('[connect-client] Response body:', d)
       if (!res.ok) {
-        throw new Error(d.error || `Server returned ${res.status}`)
+        const extra = d.supabaseUrl ? ` [DB: ${d.supabaseUrl}]` : ''
+        throw new Error((d.error || `Server returned ${res.status}`) + extra)
       }
       const nutritionistName = d.nutritionistName || 'your nutritionist'
       alert(`You are now connected to ${nutritionistName}'s account.`)

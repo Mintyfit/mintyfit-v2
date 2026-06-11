@@ -26,7 +26,7 @@ export async function POST(request) {
     }
 
     const admin = createAdminClient()
-    const { members, dietary, goals } = await request.json()
+    const { members, dietary, goals, units } = await request.json()
 
     if (!members?.length) {
       return NextResponse.json({ error: 'At least one family member required' }, { status: 400 })
@@ -35,6 +35,11 @@ export async function POST(request) {
     const primary = members[0]
     const others = members.slice(1)
 
+    // Extract dietary data for primary member
+    const primaryDietary = dietary?.[primary.id] || []
+    const primaryDietaryType = primaryDietary.length > 0 ? primaryDietary[0] : null
+    const primaryAllergies = primaryDietary.length > 1 ? primaryDietary.slice(1) : []
+
     // 1. Update user's profile with their own data
     const profileUpdates = {
       full_name: primary.name || user.email?.split('@')[0],
@@ -42,7 +47,10 @@ export async function POST(request) {
       gender: primary.gender || null,
       weight: primary.weight ? parseFloat(primary.weight) : null,
       height: primary.height ? parseFloat(primary.height) : null,
-      goals: goals?.[primary.id] ? [goals[primary.id]] : [],
+      dietary_type: primaryDietaryType,
+      allergies: primaryAllergies,
+      primary_goal: goals?.[primary.id] || null,
+      units_preference: units || 'metric',
       onboarding_pending: false,
     }
     // Preserve existing full_name if user hasn't set one in onboarding
@@ -56,6 +64,16 @@ export async function POST(request) {
     }
 
     await admin.from('profiles').update(profileUpdates).eq('id', user.id)
+
+    // 1b. Create initial weight log entry so it shows up in My Account
+    if (primary.weight) {
+      await admin.from('weight_logs').insert({
+        profile_id: user.id,
+        weight: parseFloat(primary.weight),
+        logged_date: new Date().toISOString().slice(0, 10),
+        note: 'Initial measurement',
+      }).maybeSingle()
+    }
 
     // 2. Check if user already has a family
     const { data: existingMembership } = await admin

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { generateRecipe } from '@/lib/recipe/recipeGenerator'
 import { useVoice } from '@/hooks/useVoice'
+import { useAuth } from '@/contexts/AuthContext'
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
 const SUGGESTIONS = [
@@ -130,6 +131,8 @@ function ProgressIndicator({ step, label }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function RecipeGeneratorClient() {
+  const { profile } = useAuth()
+  const isMetric = profile?.units_preference !== 'imperial'
   const router = useRouter()
   const [prompt, setPrompt] = useState('')
   const [mealType, setMealType] = useState('')
@@ -164,7 +167,7 @@ export default function RecipeGeneratorClient() {
     const fullPrompt = mealType ? `${trimmed} (${mealType})` : trimmed
 
     try {
-      const recipe = await generateRecipe(fullPrompt, null, handleProgress)
+      const recipe = await generateRecipe(fullPrompt, null, handleProgress, { isMetric })
       setResult(recipe)
       setStep(0)
     } catch (err) {

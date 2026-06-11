@@ -55,11 +55,11 @@ export async function POST(request) {
     // Get user's name for email
     const { data: profile } = await supabase
       .from('profiles')
-      .select('display_name, name, email')
+      .select('display_name, full_name, email')
       .eq('id', user.id)
       .single()
 
-    const name = profile?.display_name || profile?.name || profile?.email || 'there'
+    const name = profile?.display_name || profile?.full_name || profile?.email || 'there'
 
     // Send email — approval for superadmins, confirmation for others
     try {

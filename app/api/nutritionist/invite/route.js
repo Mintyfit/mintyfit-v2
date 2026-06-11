@@ -19,7 +19,7 @@ export async function POST(request) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, is_approved, name, email')
+      .select('role, is_approved, full_name, email')
       .eq('id', user.id)
       .single()
 
@@ -63,7 +63,7 @@ export async function POST(request) {
       invite = created
     }
 
-    const nutritionistName = profile.name || profile.email || 'A nutritionist'
+    const nutritionistName = profile.full_name || profile.email || 'A nutritionist'
     const { accept, signup } = buildLinks(invite.token, cleanEmail)
 
     let emailStatus = 'sent'
@@ -144,7 +144,7 @@ export async function PATCH(request) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, is_approved, name, email')
+      .select('role, is_approved, full_name, email')
       .eq('id', user.id)
       .single()
 
@@ -162,7 +162,7 @@ export async function PATCH(request) {
     if (!invite) return NextResponse.json({ error: 'Invite not found' }, { status: 404 })
     if (invite.status !== 'pending') return NextResponse.json({ error: 'Invite is not pending' }, { status: 400 })
 
-    const nutritionistName = profile.name || profile.email || 'A nutritionist'
+    const nutritionistName = profile.full_name || profile.email || 'A nutritionist'
     const { accept, signup } = buildLinks(invite.token, invite.email)
 
     await sendEmail({
