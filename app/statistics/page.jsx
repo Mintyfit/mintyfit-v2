@@ -1,7 +1,8 @@
 ﻿import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 import StatisticsClient from '@/components/statistics/StatisticsClient'
+import ClientViewBanner from '@/components/nutritionist/ClientViewBanner'
 
 const HISTORY_DAYS = 60
 
@@ -188,7 +189,8 @@ export default async function StatisticsPage({ searchParams }) {
     }
 
     viewingClient = true
-    const { data: cp } = await supabase
+    const adminClient = createAdminClient()
+    const { data: cp } = await adminClient
       .from('profiles')
       .select('full_name, display_name')
       .eq('id', clientId)
@@ -197,22 +199,7 @@ export default async function StatisticsPage({ searchParams }) {
 
     const initialData = await getStatisticsData(clientId, supabase)
     return (
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '1.25rem 1.25rem 5rem' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
-          padding: '0.75rem 1rem', marginBottom: '1rem',
-          background: 'rgba(59,130,246,0.1)', border: '1px solid #93c5fd',
-          borderRadius: '10px', fontSize: '0.875rem', color: '#1e40af',
-        }}>
-          <span style={{ fontWeight: 600 }}>Viewing {clientName}'s statistics</span>
-          <a href="/statistics" style={{
-            marginLeft: 'auto', background: 'transparent', border: '1px solid #93c5fd',
-            borderRadius: '6px', padding: '0.25rem 0.75rem', cursor: 'pointer',
-            fontSize: '0.8125rem', color: '#1e40af', textDecoration: 'none',
-          }}>
-            Back to my stats
-          </a>
-        </div>
+      <ClientViewBanner clientName={clientName} pageLabel="statistics" backHref="/statistics">
         <StatisticsClient
           userId={clientId}
           initialData={initialData}
@@ -221,7 +208,7 @@ export default async function StatisticsPage({ searchParams }) {
           viewingClient={true}
           clientName={clientName}
         />
-      </div>
+      </ClientViewBanner>
     )
   }
 

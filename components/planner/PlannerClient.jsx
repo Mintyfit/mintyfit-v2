@@ -206,7 +206,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
         family_id, origin,
         recipes(id, title, slug, image_url, nutrition, servings)
       `
-    const weekQuery = (familyId && !isViewingClient)
+    const weekQuery = familyId
       ? supabase.from('calendar_entries').select(baseSelect).eq('family_id', familyId)
       : supabase.from('calendar_entries').select(baseSelect).eq('profile_id', qUserId).is('family_id', null)
     weekQuery
@@ -287,7 +287,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
         family_id, origin,
         recipes(id, title, slug, image_url, nutrition, servings)
       `
-    const mQuery = (familyId && !isViewingClient)
+    const mQuery = familyId
       ? supabase.from('calendar_entries').select(baseSelect).eq('family_id', familyId)
       : supabase.from('calendar_entries').select(baseSelect).eq('profile_id', qUserId).is('family_id', null)
     mQuery
@@ -461,18 +461,48 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
 
   async function saveRecipeToDay(recipe, dateKey, mealType) {
     setAddingToMeal(true)
-    const supabase = createClient()
-    if (!supabase) { setAddingToMeal(false); return }
-    // Compute personal_nutrition using calorie-budgeted meal distribution.
-    // personal_nutrition = recipeTotals × batchScale (combined for all eaters).
     const mealsPerDay = 3
     const totals = recipe.nutrition?.totals
     const personalNutrition = (totals && activeMembers.length > 0)
       ? computeMealBudget(activeMembers, totals, mealType, null, mealsPerDay).personalNutrition
       : totals
+
+    if (isViewingClient) {
+      // Use API route with admin client (bypasses RLS for nutritionist writes)
+      console.log('[client-plan] Saving to client plan:', { clientId: effectiveUserId, dateKey, mealType, recipeId: recipe.id })
+      try {
+        const res = await fetch('/api/nutritionist/calendar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: effectiveUserId,
+            date_str: dateKey,
+            meal_type: mealType,
+            recipe_id: recipe.id,
+            recipe_name: recipe.title || '',
+            consumer_member_ids: activeMembers.map(m => m.id),
+            personal_nutrition: personalNutrition || null,
+          }),
+        })
+        const d = await res.json()
+        console.log('[client-plan] API response:', res.status, d)
+        if (!res.ok) {
+          alert('Failed to save to client plan: ' + (d.error || 'Unknown error'))
+        }
+      } catch (e) {
+        console.error('[client-plan] Save error:', e)
+        alert('Failed to save to client plan: ' + e.message)
+      }
+      await refreshDay(dateKey)
+      setAddingToMeal(false)
+      return
+    }
+
+    const supabase = createClient()
+    if (!supabase) { setAddingToMeal(false); return }
     const row = {
-      profile_id: effectiveUserId,
-      family_id: isViewingClient ? null : (familyId || null),
+      profile_id: userId,
+      family_id: familyId || null,
       date_str: dateKey,
       meal_type: mealType,
       recipe_id: recipe.id,
@@ -482,10 +512,6 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
       personal_nutrition: personalNutrition || null,
       origin: 'planned',
     }
-    // Mig 050: one non-partial unique on (family_id, date, meal, recipe,
-    // origin). For solo users (family_id=NULL), NULLS DISTINCT means duplicates
-    // won't trigger the upsert update path — that's fine; the UI never dupes
-    // intentionally for solo users.
     const { error } = await supabase
       .from('calendar_entries')
       .upsert([row], { onConflict: 'family_id,date_str,meal_type,recipe_id,origin' })
@@ -561,7 +587,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
         family_id, origin,
         recipes(id, title, slug, image_url, nutrition, servings)
       `
-    const dayQuery = (familyId && !isViewingClient)
+    const dayQuery = familyId
       ? supabase.from('calendar_entries').select(daySelect).eq('family_id', familyId)
       : supabase.from('calendar_entries').select(daySelect).eq('profile_id', qUserId).is('family_id', null)
     const { data } = await dayQuery.eq('date_str', dateKey)
@@ -602,11 +628,20 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
   }, [userId, weekOffset, effectiveUserId, isViewingClient, familyId])
 
   const removeEntry = useCallback(async (entryId, dateKey) => {
+    if (isViewingClient) {
+      try {
+        await fetch(`/api/nutritionist/calendar?id=${entryId}&clientId=${effectiveUserId}`, { method: 'DELETE' })
+      } catch (e) {
+        console.error('Client entry delete error:', e)
+      }
+      refreshDay(dateKey)
+      return
+    }
     const supabase = createClient()
     if (!supabase) return
     await supabase.from('calendar_entries').delete().eq('id', entryId)
     refreshDay(dateKey)
-  }, [refreshDay])
+  }, [refreshDay, isViewingClient, effectiveUserId])
 
   async function clearDay() {
     if (!selectedKey || clearing || isViewingClient) return
@@ -676,26 +711,6 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Nutritionist viewing client banner */}
-        {isViewingClient && clientProfile && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap',
-            padding: '0.75rem 1rem', marginBottom: '1rem',
-            background: 'rgba(59,130,246,0.1)', border: '1px solid #93c5fd',
-            borderRadius: '10px', fontSize: '0.875rem', color: '#1e40af',
-          }}>
-            <span style={{ fontWeight: 600 }}>Viewing {clientProfile.display_name || clientProfile.full_name || 'client'}'s meal plan</span>
-            <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Changes you make will save to their plan</span>
-            <a href="/plan" style={{
-              marginLeft: 'auto', background: 'transparent', border: '1px solid #93c5fd',
-              borderRadius: '6px', padding: '0.25rem 0.75rem', cursor: 'pointer',
-              fontSize: '0.8125rem', color: '#1e40af', textDecoration: 'none',
-            }}>
-              Back to my plan
-            </a>
-          </div>
-        )}
-
         {/* Pending recipe banner */}
         {pendingRecipe && (
           <div style={{

@@ -1,7 +1,8 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { enrichMember } from '@/lib/member/enrichMember'
 import PlannerClient from '@/components/planner/PlannerClient'
+import ClientViewBanner from '@/components/nutritionist/ClientViewBanner'
 
 export const metadata = {
   title: 'Meal Planner — MintyFit',
@@ -23,6 +24,13 @@ async function getPlannerData(searchParams) {
   } catch {}
 
   if (!user) redirect('/?auth=login')
+
+  // Get own profile (used in both normal and client-viewing paths)
+  const { data: ownProfile } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .eq('id', user.id)
+    .maybeSingle()
 
   // Check if nutritionist is viewing a client's plan
   const clientId = searchParams?.clientId
@@ -47,15 +55,18 @@ async function getPlannerData(searchParams) {
 
     viewingClient = true
 
-    // Fetch client profile
-    const { data: cp } = await supabase
+    // Fetch client profile + family using admin client (RLS blocks cross-role reads)
+    const adminClient = createAdminClient()
+
+    // Get client profile with full nutrition data
+    const { data: cp } = await adminClient
       .from('profiles')
-      .select('id, full_name, display_name')
+      .select('id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target')
       .eq('id', clientId)
       .maybeSingle()
 
     if (cp) {
-      const { data: logs } = await supabase
+      const { data: logs } = await adminClient
         .from('weight_logs')
         .select('weight')
         .eq('profile_id', clientId)
@@ -64,14 +75,77 @@ async function getPlannerData(searchParams) {
       cp.weight = cp.weight ?? logs?.[0]?.weight ?? null
       clientProfile = enrichMember({ ...cp, type: 'linked' })
     }
-  }
 
-  // Get own profile (needed for banner display when viewing client)
-  const { data: ownProfile } = await supabase
-    .from('profiles')
-    .select('id, full_name, role')
-    .eq('id', user.id)
-    .maybeSingle()
+    // Fetch client's family members
+    let clientMembers = clientProfile ? [clientProfile] : []
+    let clientFamilyId = null
+    const { data: clientMemberships } = await adminClient
+      .from('family_memberships')
+      .select('family_id, role')
+      .eq('profile_id', clientId)
+      .eq('status', 'active')
+      .limit(1)
+
+    if (clientMemberships?.length) {
+      clientFamilyId = clientMemberships[0].family_id
+
+      const [{ data: clinked }, { data: cmanaged }] = await Promise.all([
+        adminClient
+          .from('family_memberships')
+          .select('profile_id, role, profiles(id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target)')
+          .eq('family_id', clientFamilyId)
+          .eq('status', 'active'),
+        adminClient
+          .from('managed_members')
+          .select('id, name, date_of_birth, weight_kg, height_cm, gender')
+          .eq('family_id', clientFamilyId),
+      ])
+
+      const linkedProfileIds = (clinked || []).map(l => l.profile_id).filter(Boolean)
+      let weightByProfile = new Map()
+      if (linkedProfileIds.length > 0) {
+        const { data: wlogs } = await adminClient
+          .from('weight_logs')
+          .select('profile_id, weight')
+          .in('profile_id', linkedProfileIds)
+          .order('logged_date', { ascending: false })
+        if (wlogs) {
+          for (const log of wlogs) {
+            if (!weightByProfile.has(log.profile_id)) {
+              weightByProfile.set(log.profile_id, log.weight)
+            }
+          }
+        }
+      }
+
+      clientMembers = [
+        ...(clinked || []).map(l => enrichMember({
+          ...l.profiles,
+          type: 'linked',
+          role: l.role,
+          weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
+        })),
+        ...(cmanaged || []).map(m => enrichMember({
+          ...m,
+          display_name: m.name,
+          type: 'managed',
+          weight: m.weight_kg ?? null,
+          height: m.height_cm ?? null,
+        })),
+      ].filter(Boolean)
+    }
+
+    return {
+      userId: user.id,
+      familyId: clientFamilyId,
+      profile: clientProfile,
+      members: clientMembers,
+      ownProfile,
+      viewingClient: true,
+      clientProfile,
+      clientId,
+    }
+  }
 
   if (!viewingClient) {
     // Normal flow: get own profile + family data
@@ -155,22 +229,18 @@ async function getPlannerData(searchParams) {
 
     return { userId: user.id, familyId, profile: enrichMember(profile), members, ownProfile, viewingClient: false, clientProfile: null }
   }
-
-  // Viewing client: no family, single member = client
-  return {
-    userId: user.id,
-    familyId: null,
-    profile: clientProfile,
-    members: clientProfile ? [clientProfile] : [],
-    ownProfile,
-    viewingClient: true,
-    clientProfile,
-    clientId,
-  }
 }
 
 export default async function PlanPage({ searchParams }) {
   const resolved = await searchParams
   const data = await getPlannerData(resolved)
+  if (data.viewingClient && data.clientProfile) {
+    const name = data.clientProfile.display_name || data.clientProfile.full_name || 'client'
+    return (
+      <ClientViewBanner clientName={name} pageLabel="plan" backHref="/plan">
+        <PlannerClient {...data} />
+      </ClientViewBanner>
+    )
+  }
   return <PlannerClient {...data} />
 }
