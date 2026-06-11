@@ -10,7 +10,7 @@ export async function POST(request) {
     const { token } = await request.json()
     if (!token) return NextResponse.json({ error: 'Token required' }, { status: 400 })
 
-    // Validate invite
+    // Validate invite (RLS allows recipient to read their own invite)
     const { data: invite } = await supabase
       .from('nutritionist_invites')
       .select('id, nutritionist_id, email, status, expires_at')
@@ -25,7 +25,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invite has expired' }, { status: 400 })
     }
 
-    // Create the nutritionist_client_link
+    // Create the nutritionist_client_link (client can now manage own links via RLS)
     const { error: linkError } = await supabase
       .from('nutritionist_client_links')
       .insert({
@@ -34,13 +34,12 @@ export async function POST(request) {
         status: 'active',
         accepted_at: new Date().toISOString(),
       })
-      // Handle duplicate - update existing
       .onConflict('nutritionist_id,client_id')
       .update({ status: 'active', accepted_at: new Date().toISOString() })
 
     if (linkError) throw linkError
 
-    // Mark invite as accepted
+    // Mark invite as accepted (RLS allows recipient to update own invite)
     await supabase
       .from('nutritionist_invites')
       .update({ status: 'accepted', accepted_at: new Date().toISOString() })

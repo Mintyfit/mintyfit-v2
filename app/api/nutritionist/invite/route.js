@@ -23,7 +23,7 @@ export async function POST(request) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'nutritionist' || profile?.is_approved !== true) {
+    if ((profile?.role !== 'nutritionist' && profile?.role !== 'super_admin') || profile?.is_approved !== true) {
       return NextResponse.json({ error: 'Only approved nutritionists can invite clients' }, { status: 403 })
     }
 
@@ -148,7 +148,7 @@ export async function PATCH(request) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'nutritionist' || profile?.is_approved !== true) {
+    if ((profile?.role !== 'nutritionist' && profile?.role !== 'super_admin') || profile?.is_approved !== true) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

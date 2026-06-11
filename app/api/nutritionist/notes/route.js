@@ -14,7 +14,7 @@ export async function POST(request) {
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'nutritionist') {
+    if (profile?.role !== 'nutritionist' && profile?.role !== 'super_admin') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
 

@@ -4,9 +4,10 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { computeBMR, explainBMR } from '@/lib/nutrition/portionCalc'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
+import { formatWeight, formatHeight, fieldLabel, dbToDisplay, lbsToKg, inToCm } from '@/lib/unitConversion'
 
-const DIETARY_TYPES = ['omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'pescatarian']
-const ALLERGENS = ['gluten', 'dairy', 'nuts', 'shellfish', 'soy', 'eggs', 'fish', 'peanuts']
+const DIETARY_TYPES = ['none', 'omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'pescatarian']
+const ALLERGENS = ['none', 'gluten', 'dairy', 'nuts', 'shellfish', 'soy', 'eggs', 'fish', 'peanuts']
 const GOALS = [
   { value: 'weight_loss', label: 'Weight loss' },
   { value: 'eat_healthier', label: 'Eat healthier' },
@@ -76,7 +77,7 @@ function age(profile) {
   return null
 }
 
-function BMRBreakdown({ profile, weightLogs }) {
+function BMRBreakdown({ profile, weightLogs, isMetric }) {
   const a = age(profile)
   // Fall back to latest weight_log if profile.weight isn't set
   const latestLogged = weightLogs && weightLogs.length ? Number(weightLogs[0].weight) : null
@@ -120,16 +121,32 @@ function BMRBreakdown({ profile, weightLogs }) {
             <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>
               Equation used
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
               {explained.branch}
             </div>
+            {explained.steps && explained.steps.length > 0 && (
+              <div style={{ marginBottom: 8 }}>
+                {explained.steps.map((s, i) => (
+                  <div key={i} style={{
+                    display: 'flex', justifyContent: 'space-between', padding: '3px 0',
+                    fontSize: '12px', color: s.isTotal ? 'var(--text-2)' : 'var(--text-3)',
+                    borderTop: s.isTotal ? '1px dashed var(--border)' : 'none',
+                    fontWeight: s.isTotal ? 600 : 400,
+                    marginTop: s.isTotal ? 4 : 0, paddingTop: s.isTotal ? 7 : 3,
+                  }}>
+                    <span>{s.label}</span>
+                    <span>{s.value.toLocaleString('en-US')} kcal</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <code style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'ui-monospace, monospace' }}>
               {explained.formula} = {bmr} kcal/day
             </code>
             {explained.additions.length > 0 && (
               <div style={{ marginTop: 8, fontSize: '12px', color: 'var(--text-2)' }}>
                 {explained.additions.map((a, i) => (
-                  <div key={i}>+ {a.kcal} kcal — {a.label}</div>
+                  <div key={i}>{a.op} {a.kcal} kcal — {a.label}</div>
                 ))}
               </div>
             )}
@@ -140,8 +157,8 @@ function BMRBreakdown({ profile, weightLogs }) {
               Inputs
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '13px', color: 'var(--text-2)' }}>
-              <span>Weight</span><strong style={{ color: 'var(--text-1)' }}>{user.weight ?? '—'} kg</strong>
-              <span>Height</span><strong style={{ color: 'var(--text-1)' }}>{user.height ?? '—'} cm</strong>
+              <span>Weight</span><strong style={{ color: 'var(--text-1)' }}>{user.weight ? formatWeight(user.weight, isMetric) : '—'}</strong>
+              <span>Height</span><strong style={{ color: 'var(--text-1)' }}>{user.height ? formatHeight(user.height, isMetric) : '—'}</strong>
               <span>Age</span><strong style={{ color: 'var(--text-1)' }}>{a ?? '—'}</strong>
               <span>Sex</span><strong style={{ color: 'var(--text-1)' }}>{user.gender || '—'}</strong>
               {user.body_fat_pct ? (<><span>Body fat</span><strong style={{ color: 'var(--text-1)' }}>{user.body_fat_pct}%</strong></>) : null}
@@ -200,7 +217,8 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
   const [nutritionistEmail, setNutritionistEmail] = useState('')
   const [connectingNutritionist, setConnectingNutritionist] = useState(false)
 
-  const currentWeight = weightLogs[0]?.weight
+  const currentWeight = weightLogs[0]?.weight || profile.weight
+  const isMetric = profile.units_preference !== 'imperial'
 
   async function saveProfile() {
     setSaving(true)
@@ -237,10 +255,11 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
     if (!newWeight) return
     setLoggingWeight(true)
     try {
+      const weightKg = isMetric ? parseFloat(newWeight) : lbsToKg(parseFloat(newWeight))
       const res = await fetch('/api/weight', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ weight: parseFloat(newWeight), note: weightNote }),
+        body: JSON.stringify({ weight: Math.round(weightKg * 100) / 100, note: weightNote }),
       })
       if (!res.ok) throw new Error('Failed to log weight')
       const { log } = await res.json()
@@ -257,19 +276,26 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
   async function connectNutritionist() {
     if (!nutritionistEmail) return
     setConnectingNutritionist(true)
+    setError(null)
     try {
+      console.log('[connect-client] Fetching /api/nutritionist/connect with email:', nutritionistEmail)
       const res = await fetch('/api/nutritionist/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: nutritionistEmail }),
       })
+      console.log('[connect-client] Response status:', res.status)
+      const d = await res.json()
+      console.log('[connect-client] Response body:', d)
       if (!res.ok) {
-        const d = await res.json()
-        throw new Error(d.error || 'Failed to connect')
+        throw new Error(d.error || `Server returned ${res.status}`)
       }
+      const nutritionistName = d.nutritionistName || 'your nutritionist'
+      alert(`You are now connected to ${nutritionistName}'s account.`)
       window.location.reload()
     } catch (err) {
-      setError(err.message)
+      console.error('[connect-client] Error:', err)
+      setError(err.message || 'Unknown error')
     } finally {
       setConnectingNutritionist(false)
     }
@@ -285,10 +311,13 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
 
   function toggleAllergy(a) {
     const current = profile.allergies || []
-    setProfile(prev => ({
-      ...prev,
-      allergies: current.includes(a) ? current.filter(x => x !== a) : [...current, a],
-    }))
+    let next
+    if (a === 'none') {
+      next = current.includes('none') ? [] : ['none']
+    } else {
+      next = current.includes(a) ? current.filter(x => x !== a) : [...current.filter(x => x !== 'none'), a]
+    }
+    setProfile(prev => ({ ...prev, allergies: next }))
   }
 
   const inputStyle = {
@@ -317,10 +346,10 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '40px', fontWeight: '800', color: 'var(--primary)' }}>
-              {currentWeight ? `${currentWeight}` : '—'}
+              {currentWeight ? formatWeight(currentWeight, isMetric).replace(/ (kg|lbs)/, '') : '—'}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-              {profile.units_preference === 'imperial' ? 'lbs' : 'kg'} · current weight
+              {isMetric ? 'kg' : 'lbs'} · current weight
             </div>
           </div>
           {weightLogs.length > 1 && <WeightSparkline logs={weightLogs} />}
@@ -328,7 +357,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
           <input
-            type="number" step="0.1" placeholder="Weight (kg)"
+            type="number" step="0.1" placeholder={fieldLabel('weight_kg', isMetric)}
             value={newWeight}
             onChange={e => setNewWeight(e.target.value)}
             style={{ ...inputStyle, width: '140px' }}
@@ -370,7 +399,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
                 fontSize: '13px',
               }}>
                 <span style={{ color: 'var(--text-2)' }}>{log.logged_date}</span>
-                <span style={{ fontWeight: '600', color: 'var(--text-1)' }}>{log.weight} kg</span>
+                <span style={{ fontWeight: '600', color: 'var(--text-1)' }}>{formatWeight(log.weight, isMetric)}</span>
                 {log.note && <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>{log.note}</span>}
               </div>
             ))}
@@ -379,11 +408,14 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px' }}>
           <div>
-            <label style={labelStyle}>Height (cm)</label>
+            <label style={labelStyle}>{fieldLabel('height_cm', isMetric)}</label>
             <input
               type="number"
-              value={profile.height || ''}
-              onChange={e => setProfile(prev => ({ ...prev, height: e.target.value }))}
+              value={dbToDisplay(profile.height, 'height_cm', isMetric)}
+              onChange={e => {
+                const dv = e.target.value
+                setProfile(prev => ({ ...prev, height: isMetric ? dv : dv ? inToCm(parseFloat(dv)) : dv }))
+              }}
               style={inputStyle}
             />
           </div>
@@ -399,7 +431,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         </div>
       </Section>
 
-      <BMRBreakdown profile={profile} weightLogs={weightLogs} />
+      <BMRBreakdown profile={profile} weightLogs={weightLogs} isMetric={isMetric} />
 
       {/* Personal Info */}
       <Section title="Personal Info">

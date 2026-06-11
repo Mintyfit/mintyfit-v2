@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendEmail } from '@/lib/email/sendEmail'
-import { nutritionistApplicationReceivedEmail } from '@/lib/email/templates'
+import { nutritionistApplicationReceivedEmail, nutritionistApprovedEmail } from '@/lib/email/templates'
 import { logAudit } from '@/lib/admin/audit'
 
 export async function POST(request) {
@@ -16,12 +16,25 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Bio is required' }, { status: 400 })
     }
 
+    // Check if user is a superadmin — keep their role, auto-approve
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    const isSuperAdmin = existingProfile?.role === 'super_admin'
+    // Superadmins keep their role, others get 'nutritionist'
+    const newRole = isSuperAdmin ? 'super_admin' : 'nutritionist'
+    const isApproved = isSuperAdmin
+
     // Update profile
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
-        role: 'nutritionist',
-        is_approved: false,
+        role: newRole,
+        is_approved: isApproved,
+        subscription_tier: isApproved ? 'nutritionist' : undefined,
         bio,
         credentials_url: credentials_url || null,
         applied_at: new Date().toISOString(),
@@ -48,15 +61,23 @@ export async function POST(request) {
 
     const name = profile?.display_name || profile?.name || profile?.email || 'there'
 
-    // Send confirmation email
+    // Send email — approval for superadmins, confirmation for others
     try {
-      await sendEmail({
-        to: profile?.email || user.email,
-        subject: 'We received your nutritionist application',
-        html: nutritionistApplicationReceivedEmail({ name }),
-      })
+      if (isSuperAdmin) {
+        await sendEmail({
+          to: profile?.email || user.email,
+          subject: 'Your MintyFit nutritionist profile is active',
+          html: nutritionistApprovedEmail({ name }),
+        })
+      } else {
+        await sendEmail({
+          to: profile?.email || user.email,
+          subject: 'We received your nutritionist application',
+          html: nutritionistApplicationReceivedEmail({ name }),
+        })
+      }
     } catch (e) {
-      console.error('Application confirmation email failed:', e)
+      console.error('Application email failed:', e)
     }
 
     return NextResponse.json({ ok: true })
