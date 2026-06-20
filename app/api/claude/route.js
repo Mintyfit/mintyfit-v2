@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export const maxDuration = 60
 
 export async function POST(request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const body = await request.json()
   const { model, messages = [], max_tokens = 16384, temperature = 0.2, ...rest } = body
 

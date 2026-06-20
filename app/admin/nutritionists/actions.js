@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/admin/audit'
+import { requireAdmin } from '@/lib/admin/guard'
 import { sendEmail } from '@/lib/email/sendEmail'
 import { nutritionistApprovedEmail } from '@/lib/email/templates'
 
@@ -16,6 +17,7 @@ async function getActorId() {
 export async function approveNutritionist(formData) {
   const userId = formData.get('userId')
   const actorId = await getActorId()
+  await requireAdmin(actorId)
 
   const supabase = createAdminClient()
   
@@ -48,6 +50,7 @@ export async function approveNutritionist(formData) {
 export async function revokeNutritionist(formData) {
   const userId = formData.get('userId')
   const actorId = await getActorId()
+  await requireAdmin(actorId)
 
   const supabase = createAdminClient()
   await supabase.from('profiles').update({ role: 'customer', is_approved: false }).eq('id', userId)
@@ -60,6 +63,7 @@ export async function updateNutritionistTier(formData) {
   const userId = formData.get('userId')
   const tier = formData.get('tier')
   const actorId = await getActorId()
+  await requireAdmin(actorId)
 
   const supabase = createAdminClient()
   await supabase.from('profiles').update({ subscription_tier: tier }).eq('id', userId)

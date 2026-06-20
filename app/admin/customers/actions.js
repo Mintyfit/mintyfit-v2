@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/admin/audit'
+import { requireAdmin } from '@/lib/admin/guard'
 
 async function getActorId() {
   const supabase = await createClient()
@@ -17,6 +18,7 @@ export async function updateProfileField(formData) {
   const value = formData.get('value')
   const actorId = await getActorId()
 
+  await requireAdmin(actorId)
   const allowed = ['role', 'subscription_tier', 'is_active', 'is_approved']
   if (!allowed.includes(field)) throw new Error('Field not allowed')
 
@@ -32,6 +34,7 @@ export async function toggleSuspend(formData) {
   const userId = formData.get('userId')
   const currentActive = formData.get('currentActive') === 'true'
   const actorId = await getActorId()
+  await requireAdmin(actorId)
 
   const supabase = createAdminClient()
   await supabase.from('profiles').update({ is_active: !currentActive }).eq('id', userId)

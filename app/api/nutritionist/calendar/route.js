@@ -90,6 +90,7 @@ export async function DELETE(request) {
       .from('calendar_entries')
       .delete()
       .eq('id', entryId)
+      .eq('profile_id', clientId)
 
     if (error) throw error
     return NextResponse.json({ ok: true })

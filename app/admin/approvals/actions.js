@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/admin/audit'
+import { requireAdmin } from '@/lib/admin/guard'
 
 async function getActorId() {
   const supabase = await createClient()
@@ -17,6 +18,7 @@ export async function setPublic(formData) {
   const approve = formData.get('approve') === 'true'
   const actorId = await getActorId()
 
+  await requireAdmin(actorId)
   const allowed = ['recipes', 'menus']
   if (!allowed.includes(table)) throw new Error('Invalid table')
 

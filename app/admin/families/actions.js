@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { logAudit } from '@/lib/admin/audit'
+import { requireAdmin } from '@/lib/admin/guard'
 
 async function getActorId() {
   const supabase = await createClient()
@@ -15,6 +16,7 @@ export async function removeFamilyMember(formData) {
   const familyId = formData.get('familyId')
   const profileId = formData.get('profileId')
   const actorId = await getActorId()
+  await requireAdmin(actorId)
 
   const supabase = createAdminClient()
   await supabase.from('family_memberships').delete().eq('family_id', familyId).eq('profile_id', profileId)
@@ -28,6 +30,7 @@ export async function updateMemberRole(formData) {
   const profileId = formData.get('profileId')
   const role = formData.get('role')
   const actorId = await getActorId()
+  await requireAdmin(actorId)
 
   const supabase = createAdminClient()
   await supabase.from('family_memberships').update({ role }).eq('family_id', familyId).eq('profile_id', profileId)
