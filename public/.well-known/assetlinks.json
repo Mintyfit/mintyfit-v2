@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.mintyfit.app",
+    "sha256_cert_fingerprints": ["0C:1B:56:35:BE:EE:DA:AC:55:D1:87:1C:DC:74:17:97:AE:0E:FB:17:30:AE:8C:27:33:55:90:5E:2D:97:5C:2A"]
+  }
+}]
