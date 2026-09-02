@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { computeBMR, explainBMR } from '@/lib/nutrition/portionCalc'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 import { formatWeight, formatHeight, fieldLabel, dbToDisplay, lbsToKg, inToCm } from '@/lib/unitConversion'
+import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 const DIETARY_TYPES = ['none', 'omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'pescatarian']
 const ALLERGENS = ['none', 'gluten', 'dairy', 'nuts', 'shellfish', 'soy', 'eggs', 'fish', 'peanuts']
@@ -216,6 +218,10 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
   // Nutritionist connect
   const [nutritionistEmail, setNutritionistEmail] = useState('')
   const [connectingNutritionist, setConnectingNutritionist] = useState(false)
+  const [portalLoading, setPortalLoading] = useState(false)
+  const [portalError, setPortalError] = useState(null)
+  const toast = useToast()
+  const confirmDialog = useConfirm()
 
   const currentWeight = weightLogs[0]?.weight || profile.weight
   const isMetric = profile.units_preference !== 'imperial'
@@ -284,15 +290,12 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: nutritionistEmail }),
       })
-      console.log('[connect-client] Response status:', res.status)
       const d = await res.json()
-      console.log('[connect-client] Response body:', d)
       if (!res.ok) {
-        const extra = d.supabaseUrl ? ` [DB: ${d.supabaseUrl}]` : ''
-        throw new Error((d.error || `Server returned ${res.status}`) + extra)
+        throw new Error(d.error || `Server returned ${res.status}`)
       }
       const nutritionistName = d.nutritionistName || 'your nutritionist'
-      alert(`You are now connected to ${nutritionistName}'s account.`)
+      toast.success(`You are now connected to ${nutritionistName}'s account.`)
       window.location.reload()
     } catch (err) {
       console.error('[connect-client] Error:', err)
@@ -303,7 +306,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
   }
 
   async function disconnectNutritionist() {
-    if (!confirm('Disconnect your nutritionist? They will no longer see your data.')) return
+    if (!(await confirmDialog({ title: 'Disconnect nutritionist?', body: 'They will no longer see your meal plans or nutrition data.', confirmLabel: 'Disconnect', destructive: true }))) return
     try {
       await fetch('/api/nutritionist/connect', { method: 'DELETE' })
       window.location.reload()
@@ -583,15 +586,40 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
               </Link>
             )}
             {profile.stripe_customer_id && (
-              <a href="/api/stripe/portal" style={{
-                display: 'inline-block', border: '1px solid var(--border)', color: 'var(--text-2)',
-                padding: '10px 20px', borderRadius: '8px', textDecoration: 'none',
-                fontSize: '14px',
-              }}>
-                Manage billing
-              </a>
+              <button
+                onClick={async () => {
+                  setPortalError(null)
+                  setPortalLoading(true)
+                  try {
+                    const res = await fetch('/api/stripe/portal', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId }),
+                    })
+                    const data = await res.json()
+                    if (!res.ok) throw new Error(data.error || 'Failed to open billing portal')
+                    if (data?.url) window.location.href = data.url
+                    else throw new Error('No portal URL returned.')
+                  } catch (err) {
+                    setPortalError(err.message)
+                  } finally {
+                    setPortalLoading(false)
+                  }
+                }}
+                disabled={portalLoading}
+                style={{
+                  display: 'inline-block', border: '1px solid var(--border)', color: 'var(--text-2)',
+                  padding: '10px 20px', borderRadius: '8px', background: 'transparent',
+                  fontSize: '14px', cursor: portalLoading ? 'wait' : 'pointer',
+                  opacity: portalLoading ? 0.7 : 1,
+                }}>
+                {portalLoading ? 'Opening…' : 'Manage billing'}
+              </button>
             )}
           </div>
+          {portalError && (
+            <div style={{ fontSize: '13px', color: '#dc2626', marginTop: '8px' }}>{portalError}</div>
+          )}
         </div>
       </Section>
 
@@ -658,9 +686,14 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
           </a>
           <button
             onClick={() => {
-              if (confirm('Delete your account? This is permanent and cannot be undone.')) {
-                fetch('/api/gdpr/delete', { method: 'POST' }).then(() => window.location.href = '/')
-              }
+              confirmDialog({
+                title: 'Delete your account?',
+                body: 'All your data — recipes, plans, journal entries, and family data — will be permanently deleted. This cannot be undone.',
+                confirmLabel: 'Delete everything',
+                destructive: true,
+              }).then(ok => {
+                if (ok) fetch('/api/gdpr/delete', { method: 'DELETE' }).then(() => window.location.href = '/')
+              })
             }}
             style={{
               background: 'none', border: '1px solid #fecaca', color: '#ef4444',

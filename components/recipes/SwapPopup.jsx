@@ -37,7 +37,7 @@ function NutritionDelta({ original, replacement, amount }) {
         const positive = lowerBetter ? delta < 0 : delta > 0
         const color = positive ? '#2d6e2e' : '#c0392b'
         return (
-          <span key={key} style={{ fontSize: 11, color, fontWeight: 600 }}>
+          <span key={key} style={{ fontSize: '0.6875rem', color, fontWeight: 600 }}>
             {label}: {delta > 0 ? '+' : ''}{Math.round(delta)}
           </span>
         )
@@ -112,21 +112,21 @@ export default function SwapPopup({ ingredient, recipeContext, onSwap, onClose }
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Swap ingredient
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-1)', marginTop: 2 }}>
+            <div style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--text-1)', marginTop: 2 }}>
               {ingredient.name}
             </div>
             {(ingredient.amount || ingredient.unit) && (
-              <div style={{ fontSize: 13, color: 'var(--text-4)', marginTop: 1 }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-4)', marginTop: 1 }}>
                 {ingredient.amount} {ingredient.unit}
               </div>
             )}
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'var(--text-3)', padding: 4, lineHeight: 1, marginTop: -2 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.375rem', color: 'var(--text-3)', padding: 4, lineHeight: 1, marginTop: -2 }}
             aria-label="Close"
           >
             ×
@@ -135,7 +135,7 @@ export default function SwapPopup({ ingredient, recipeContext, onSwap, onClose }
 
         {/* Loading */}
         {phase === 'loading' && (
-          <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--text-3)', fontSize: 14 }}>
+          <div style={{ textAlign: 'center', padding: '28px 0', color: 'var(--text-3)', fontSize: '0.875rem' }}>
             <div style={{
               width: 24, height: 24,
               border: '2px solid var(--primary)',
@@ -150,7 +150,7 @@ export default function SwapPopup({ ingredient, recipeContext, onSwap, onClose }
 
         {/* Error */}
         {phase === 'error' && (
-          <div style={{ color: '#c0392b', fontSize: 14, padding: '12px 0', lineHeight: 1.5 }}>
+          <div style={{ color: '#c0392b', fontSize: '0.875rem', padding: '12px 0', lineHeight: 1.5 }}>
             {errMsg || 'Could not load suggestions — please try again.'}
           </div>
         )}
@@ -182,15 +182,15 @@ export default function SwapPopup({ ingredient, recipeContext, onSwap, onClose }
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>{s.name}</span>
+                  <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)' }}>{s.name}</span>
                   {(s.amount || s.unit) && (
-                    <span style={{ fontSize: 13, color: 'var(--text-3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
                       {s.amount} {s.unit}
                     </span>
                   )}
                 </div>
                 {s.reason && (
-                  <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>{s.reason}</div>
+                  <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: 3 }}>{s.reason}</div>
                 )}
                 {s.nutrition_per_100g && (
                   <NutritionDelta

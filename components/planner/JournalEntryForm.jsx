@@ -3,8 +3,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useVoice } from '@/hooks/useVoice'
+import { pickNutritionFields } from '@/lib/nutrition/nutrition'
+import { EMPTY_NUTRITION } from '@/lib/journal/grokFoodLookup'
 
 const UNITS = ['g', 'ml', 'oz', 'cup', 'tbsp', 'tsp', 'piece', 'slice', 'portion']
+
+// Full nutrient template (same 53-field set as the ingredient DB) so logged
+// food feeds every nutrient in the side panel + statistics, not just macros.
+const NUTRITION_TEMPLATE = EMPTY_NUTRITION.slice(1, -1)
 
 export default function JournalEntryForm({ mealType, dateKey, userId, members, onSave, onClose }) {
   const [tab, setTab] = useState('quick') // 'quick' | 'describe' | 'barcode'
@@ -64,10 +70,11 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'grok-3-fast',
-          max_tokens: 800,
+          max_tokens: 2000,
+          purpose: 'food-parse',
           messages: [
-            { role: 'system', content: 'You are a dietitian. Return ONLY raw valid JSON with nutrition per serving. No markdown.' },
-            { role: 'user', content: `Estimate nutrition for: ${amt} ${unitStr} of ${name}. Return JSON: {"energy_kcal":0,"protein":0,"carbs_total":0,"fat_total":0,"fiber":0}` },
+            { role: 'system', content: 'You are a registered dietitian with deep knowledge of food composition databases. Return ONLY raw valid JSON with nutrition for the exact quantity asked (not per 100g). energy_kj = energy_kcal × 4.184, salt_equiv = sodium_mg × 2.54 / 1000. No markdown.' },
+            { role: 'user', content: `Estimate nutrition for: ${amt} ${unitStr} of ${name}. Return ONLY this JSON with every 0 replaced by a realistic value: {${NUTRITION_TEMPLATE}}` },
           ],
         }),
       })
@@ -89,7 +96,7 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
         food_name: foodName,
         amount: parseFloat(amount),
         unit,
-        nutrition,
+        nutrition: nutrition ? pickNutritionFields(nutrition) : null,
         nutrition_source: 'grok',
       })
     } catch {
@@ -109,10 +116,11 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'grok-3-fast',
-          max_tokens: 1000,
+          max_tokens: 2000,
+          purpose: 'food-parse',
           messages: [
-            { role: 'system', content: 'You are a dietitian. Parse the food description and return ONLY raw JSON. No markdown.' },
-            { role: 'user', content: `Parse this food log entry and estimate nutrition: "${aiText}"\n\nReturn JSON: {"food_name":"","amount":0,"unit":"g","energy_kcal":0,"protein":0,"carbs_total":0,"fat_total":0,"fiber":0}` },
+            { role: 'system', content: 'You are a registered dietitian. Parse the food description and return ONLY raw JSON with nutrition for the exact total quantity described (not per 100g). energy_kj = energy_kcal × 4.184, salt_equiv = sodium_mg × 2.54 / 1000. No markdown.' },
+            { role: 'user', content: `Parse this food log entry and estimate nutrition: "${aiText}"\n\nReturn ONLY this JSON with every 0 replaced by a realistic value: {"food_name":"","amount":0,"unit":"g",${NUTRITION_TEMPLATE}}` },
           ],
         }),
       })
@@ -135,13 +143,7 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
       food_name: resolved.food_name || aiText,
       amount: resolved.amount,
       unit: resolved.unit || 'g',
-      nutrition: {
-        energy_kcal: resolved.energy_kcal,
-        protein: resolved.protein,
-        carbs_total: resolved.carbs_total,
-        fat_total: resolved.fat_total,
-        fiber: resolved.fiber,
-      },
+      nutrition: pickNutritionFields(resolved),
       nutrition_source: 'grok',
     })
     setLoading(false)

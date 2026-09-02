@@ -1,12 +1,11 @@
 'use client'
 
-const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
+import { toDateKey } from '@/lib/utils/dateKey'
+import { MEAL_TYPES } from '@/lib/nutrition/mealBudget'
+
 const MEAL_ICONS = { breakfast: '🌅', snack: '🍎', lunch: '☀️', snack2: '🍊', dinner: '🌙' }
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-function toDateKey(date) {
-  return date.toISOString().split('T')[0]
-}
 
 // Calculate total consumed calories for a day's entries across all members
 function getDayCalories(dayEntries) {

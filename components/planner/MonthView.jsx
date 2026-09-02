@@ -1,5 +1,6 @@
 'use client'
 
+import { MEAL_TYPES } from '@/lib/nutrition/mealBudget'
 import { useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, X, Trash2, Plus } from 'lucide-react'
@@ -7,7 +8,7 @@ import RecipePickerModal from './RecipePickerModal'
 import JournalEntryForm from './JournalEntryForm'
 import DayStatsPanel from './DayStatsPanel'
 
-const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
+
 const MEAL_LABEL = { breakfast: 'Breakfast', snack: 'Snack', lunch: 'Lunch', snack2: 'Snack 2', dinner: 'Dinner' }
 const MEAL_ICONS = { breakfast: '🌅', snack: '🍎', lunch: '☀️', snack2: '🍊', dinner: '🌙' }
 const DOT_MEAL = '#2d6e2e'

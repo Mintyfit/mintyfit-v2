@@ -37,10 +37,11 @@ serve(async (req) => {
         if (userId && session.subscription) {
           // Retrieve full subscription to record period end
           const sub = await stripe.subscriptions.retrieve(session.subscription as string)
-          await upsertSubscription(supabase, userId, sub, 'paid')
+          const tier = tierFromSubscription(sub)
+          await upsertSubscription(supabase, userId, sub, tier)
           // Activate the user
           await supabase.from('profiles')
-            .update({ subscription_tier: 'paid', status: 'active' })
+            .update({ subscription_tier: tier, status: 'active' })
             .eq('id', userId)
         }
         break
@@ -53,7 +54,7 @@ serve(async (req) => {
 
         if (userId) {
           const isActive = sub.status === 'active'
-          const tier     = isActive ? 'paid' : 'free'
+          const tier     = isActive ? tierFromSubscription(sub) : 'free'
           await upsertSubscription(supabase, userId, sub, tier)
           await supabase.from('profiles')
             .update({
@@ -113,6 +114,25 @@ async function getUserIdByCustomer(supabase: any, customerId: string): Promise<s
     .eq('stripe_customer_id', customerId)
     .maybeSingle()
   return data?.id || null
+}
+
+// Canonical tier vocabulary: 'free' | 'pro' | 'family' (matches lib/stripe.js PLANS
+// and lib/usageLimits.js LIMITS). Never write any other tier string.
+function tierFromSubscription(sub: Stripe.Subscription): 'pro' | 'family' {
+  // Primary source: plan_id set on subscription metadata by create-checkout
+  const planId = sub.metadata?.plan_id || ''
+  if (planId.startsWith('family')) return 'family'
+  if (planId.startsWith('pro')) return 'pro'
+
+  // Fallback: match the subscription price against configured price IDs
+  const priceId = sub.items?.data?.[0]?.price?.id
+  const familyPriceIds = [
+    Deno.env.get('STRIPE_FAMILY_MONTHLY_PRICE_ID'),
+    Deno.env.get('STRIPE_FAMILY_YEARLY_PRICE_ID'),
+  ].filter(Boolean)
+  if (priceId && familyPriceIds.includes(priceId)) return 'family'
+
+  return 'pro'
 }
 
 async function upsertSubscription(supabase: any, userId: string, sub: Stripe.Subscription, tier: string) {

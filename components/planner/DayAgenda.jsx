@@ -1,5 +1,6 @@
 'use client'
 
+import { MEAL_TYPES } from '@/lib/nutrition/mealBudget'
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -10,7 +11,7 @@ import RecipePickerModal from './RecipePickerModal'
 import JournalEntryForm from './JournalEntryForm'
 import ActivityForm from './ActivityForm'
 
-const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
+
 const MEAL_SHORT = { breakfast: 'Brkfst', snack: 'Snack1', lunch: 'Lunch', snack2: 'Snack2', dinner: 'Dinner' }
 const MEAL_LABELS = {
   breakfast: 'Breakfast',
@@ -275,7 +276,8 @@ export default function DayAgenda({
                     <button
                       onClick={() => handleRemove(entry.id)}
                       disabled={removingId === entry.id}
-                      style={{ width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-4)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                      aria-label="Remove from plan"
+                      style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-4)', cursor: 'pointer', fontSize: '1.125rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                     >
                       X
                     </button>
@@ -307,7 +309,7 @@ export default function DayAgenda({
                         await supabase.from('food_journal').delete().eq('id', je.id)
                         onRefresh(dateKey)
                       }}
-                      style={{ width: 24, height: 24, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-4)', cursor: 'pointer', fontSize: '0.875rem', flexShrink: 0 }}
+                      style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'transparent', color: 'var(--text-4)', cursor: 'pointer', fontSize: '1.125rem', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       aria-label="Remove journal entry"
                     >×</button>
                   ) : null}

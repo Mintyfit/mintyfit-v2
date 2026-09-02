@@ -128,11 +128,48 @@ export async function POST(request) {
       return NextResponse.json({ message: 'No valid recipes to add', added: 0 })
     }
 
-    const { error: insertErr } = await supabase
+    // The unique index on (family_id, date_str, meal_type, recipe_id, origin) is
+    // PARTIAL (migration 049, WHERE family_id IS NOT NULL), so PostgREST upsert
+    // cannot use it as an arbiter (Postgres 42P10). Split into update/insert.
+    let existingQuery = supabase
       .from('calendar_entries')
-      .upsert(rows, { onConflict: 'family_id,date_str,meal_type,recipe_id,origin' })
+      .select('id, date_str, meal_type, recipe_id')
+      .eq('origin', 'planned')
+      .in('date_str', Array.from(new Set(rows.map(r => r.date_str))))
+      .in('recipe_id', Array.from(new Set(rows.map(r => r.recipe_id))))
+    existingQuery = familyId
+      ? existingQuery.eq('family_id', familyId)
+      : existingQuery.eq('profile_id', user.id).is('family_id', null)
 
-    if (insertErr) throw new Error(insertErr.message)
+    const { data: existingRows, error: findErr } = await existingQuery
+    if (findErr) throw new Error(findErr.message)
+
+    const existingByKey = new Map(
+      (existingRows || []).map(r => [`${r.date_str}|${r.meal_type}|${r.recipe_id}`, r.id])
+    )
+    const toInsert = []
+    const toUpdate = []
+    for (const row of rows) {
+      const existingId = existingByKey.get(`${row.date_str}|${row.meal_type}|${row.recipe_id}`)
+      if (existingId) toUpdate.push({ id: existingId, row })
+      else toInsert.push(row)
+    }
+
+    if (toInsert.length) {
+      const { error } = await supabase.from('calendar_entries').insert(toInsert)
+      if (error) throw new Error(error.message)
+    }
+    for (const { id, row } of toUpdate) {
+      const { error } = await supabase
+        .from('calendar_entries')
+        .update({
+          recipe_name: row.recipe_name,
+          consumer_member_ids: row.consumer_member_ids,
+          personal_nutrition: row.personal_nutrition,
+        })
+        .eq('id', id)
+      if (error) throw new Error(error.message)
+    }
 
     return NextResponse.json({
       added: rows.length,

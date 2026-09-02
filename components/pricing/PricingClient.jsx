@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
+import { useToast } from '@/components/ui/Toast'
 
 const PLANS = [
   {
@@ -92,6 +93,7 @@ export default function PricingClient() {
   const [loading, setLoading] = useState(null)
   const [openFaq, setOpenFaq] = useState(null)
   const { user } = useAuth()
+  const toast = useToast()
 
   async function startCheckout(plan, isAnnual) {
     if (!plan.stripePriceIdMonthly) return
@@ -108,7 +110,7 @@ export default function PricingClient() {
       if (error) throw new Error(error)
       window.location.href = url
     } catch (err) {
-      alert('Checkout error: ' + err.message)
+      toast.error('Checkout error: ' + err.message)
     } finally {
       setLoading(null)
     }
@@ -127,7 +129,7 @@ export default function PricingClient() {
       if (error) throw new Error(error)
       window.location.href = url
     } catch (err) {
-      alert('Portal error: ' + err.message)
+      toast.error('Portal error: ' + err.message)
     } finally {
       setLoading(null)
     }

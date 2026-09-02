@@ -1,24 +1,21 @@
 'use client'
 
+import { toDateKey } from '@/lib/utils/dateKey'
+import { PLAN_CACHE_PREFIX, JOURNAL_SAVED_EVENT } from '@/lib/planner/planCache'
+import { MEAL_TYPES } from '@/lib/nutrition/mealBudget'
 import { useState, useEffect, useCallback, useRef } from 'react'
 
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { computeMealBudget } from '@/lib/nutrition/mealBudget'
 import WeekOverview from './WeekOverview'
 import DayAgenda from './DayAgenda'
 import DayStatsPanel from './DayStatsPanel'
 import MonthView from './MonthView'
-
-const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
-const MEAL_LABELS = { breakfast: 'Breakfast', snack: 'Morning Snack', lunch: 'Lunch', snack2: 'Afternoon Snack', dinner: 'Dinner' }
-const MEAL_ICONS = {
-  breakfast: '/icons/meals/morning.svg',
-  snack: '/icons/meals/snack.svg',
-  lunch: '/icons/meals/lunch.svg',
-  snack2: '/icons/meals/snack.svg',
-  dinner: '/icons/meals/evening.svg',
-}
+import PlannerSidebar from './PlannerSidebar'
+import { MEAL_LABELS, MEAL_ICONS } from './plannerConstants'
+import { AssistantFab } from '@/components/assistant/AssistantPanel'
+import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 function getWeekDates(anchorDate) {
   const d = new Date(anchorDate)
@@ -32,28 +29,31 @@ function getWeekDates(anchorDate) {
   })
 }
 
-function toDateKey(date) {
-  return date.toISOString().split('T')[0]
-}
 
-const CACHE_PREFIX = 'mintyfit:plan:'
+const CACHE_PREFIX = PLAN_CACHE_PREFIX // shared with lib/planner/planCache.js (writers outside the planner bust it)
+const CACHE_TTL_MS = 30 * 60 * 1000 // 30 min — survives app restarts (localStorage), never too stale
 
 function cacheGet(key) {
   try {
-    const raw = sessionStorage.getItem(CACHE_PREFIX + key)
-    return raw ? JSON.parse(raw) : null
+    const raw = localStorage.getItem(CACHE_PREFIX + key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (Date.now() - (parsed.ts || 0) > CACHE_TTL_MS) return null
+    return parsed.data
   } catch { return null }
 }
 
 function cacheSet(key, data) {
   try {
-    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data))
+    localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ ts: Date.now(), data }))
   } catch {}
 }
 
 export default function PlannerClient({ userId, familyId, profile, members, clientId, clientProfile, viewingClient, ownProfile }) {
   const effectiveUserId = clientId || userId
   const isViewingClient = !!clientId && viewingClient
+  const toast = useToast()
+  const confirmDialog = useConfirm()
   const [today] = useState(() => new Date())
   const [weekOffset, setWeekOffset] = useState(0)
   const [viewMode, setViewMode] = useState('week') // 'week' | 'month'
@@ -67,18 +67,6 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
   const [showClearMenu, setShowClearMenu] = useState(false)
   const touchStartX = useRef(null)
 
-  // Recipe sidebar (column 1) — always rendered, always populated
-  const PAGE_SIZE = 20
-  const [sidebarRecipes, setSidebarRecipes] = useState([])
-  const [sidebarSearch, setSidebarSearch] = useState('')
-  const [sidebarLoading, setSidebarLoading] = useState(true)
-  const [sidebarPage, setSidebarPage] = useState(0)
-  const [sidebarHasMore, setSidebarHasMore] = useState(true)
-  const [sidebarLoadingMore, setSidebarLoadingMore] = useState(false)
-  const [sidebarFilter, setSidebarFilter] = useState('all') // 'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack'
-  const [sidebarTab, setSidebarTab] = useState('recipes')
-  const [sidebarMenus, setSidebarMenus] = useState([])
-  const [sidebarMenusLoading, setSidebarMenusLoading] = useState(true)
   const draggedMenu = useRef(null)
   const draggedRecipe = useRef(null)
   const [dragActive, setDragActive] = useState(false)
@@ -305,99 +293,11 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
       })
   }, [viewMode, userId, effectiveUserId, isViewingClient, familyId])
 
-  function applySidebarFilter(query) {
-    if (sidebarFilter === 'snack') return query.in('meal_type', ['snack', 'snack2'])
-    if (sidebarFilter !== 'all') return query.eq('meal_type', sidebarFilter)
-    return query
-  }
-
-  // Sidebar recipes — first page; resets when search or filter changes
-  useEffect(() => {
-    if (!userId) return
-    setSidebarLoading(true)
-    setSidebarPage(0)
-    setSidebarHasMore(true)
-    const supabase = createClient()
-    if (!supabase) { setSidebarLoading(false); return }
-    let query = supabase
-      .from('recipes')
-      .select('id, title, slug, image_url, nutrition, meal_type')
-      .or(`is_public.eq.true,profile_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-      .range(0, PAGE_SIZE - 1)
-    if (sidebarSearch.trim()) query = query.ilike('title', `%${sidebarSearch.trim()}%`)
-    query = applySidebarFilter(query)
-    query.then(({ data }) => {
-      const list = data || []
-      setSidebarRecipes(list)
-      setSidebarHasMore(list.length === PAGE_SIZE)
-      setSidebarLoading(false)
-    })
-  }, [sidebarSearch, sidebarFilter, userId])
-
-  useEffect(() => {
-    if (!userId) return
-    setSidebarMenusLoading(true)
-    const supabase = createClient()
-    if (!supabase) { setSidebarMenusLoading(false); return }
-    Promise.all([
-      supabase
-        .from('menus')
-        .select('*, menu_recipes(count)')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-        .limit(100),
-      supabase
-        .from('menus')
-        .select('*, menu_recipes(count)')
-        .eq('profile_id', userId)
-        .eq('is_public', false)
-        .order('created_at', { ascending: false })
-        .limit(20),
-    ]).then(([publicResult, privateResult]) => {
-      const seen = new Set()
-      const merged = [...(publicResult.data || []), ...(privateResult.data || [])]
-        .filter(menu => {
-          if (seen.has(menu.id)) return false
-          seen.add(menu.id)
-          return true
-        })
-      const term = sidebarSearch.trim().toLowerCase()
-      const filtered = term
-        ? merged.filter(menu =>
-            menu.name?.toLowerCase().includes(term) ||
-            menu.description?.toLowerCase().includes(term)
-          )
-        : merged
-      setSidebarMenus(filtered)
-      setSidebarMenusLoading(false)
-    })
-  }, [sidebarSearch, userId])
-
-  async function loadMoreSidebar() {
-    if (sidebarLoadingMore || !sidebarHasMore) return
-    setSidebarLoadingMore(true)
-    const supabase = createClient()
-    if (!supabase) { setSidebarLoadingMore(false); return }
-    const nextPage = sidebarPage + 1
-    const from = nextPage * PAGE_SIZE
-    const to = from + PAGE_SIZE - 1
-    let query = supabase
-      .from('recipes')
-      .select('id, title, slug, image_url, nutrition, meal_type')
-      .or(`is_public.eq.true,profile_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-      .range(from, to)
-    if (sidebarSearch.trim()) query = query.ilike('title', `%${sidebarSearch.trim()}%`)
-    query = applySidebarFilter(query)
-    const { data } = await query
-    const list = data || []
-    setSidebarRecipes(prev => [...prev, ...list])
-    setSidebarPage(nextPage)
-    setSidebarHasMore(list.length === PAGE_SIZE)
-    setSidebarLoadingMore(false)
-  }
-
+  // Sidebar drag wiring — the sidebar owns its data; drags resolve here
+  function handleSidebarRecipeDragStart(r) { draggedRecipe.current = r; setDragActive(true) }
+  function handleSidebarRecipeDragEnd() { if (!dropTarget) { draggedRecipe.current = null; setDragActive(false) } }
+  function handleSidebarMenuDragStart(m) { draggedMenu.current = m; setDragActive(true) }
+  function handleSidebarMenuDragEnd() { draggedMenu.current = null; setDragActive(false) }
   async function applyMenuToDay(menu, dateKey) {
     if (!menu?.id || !dateKey) return
     setAddingToMeal(true)
@@ -485,13 +385,12 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
           }),
         })
         const d = await res.json()
-        console.log('[client-plan] API response:', res.status, d)
         if (!res.ok) {
-          alert('Failed to save to client plan: ' + (d.error || 'Unknown error'))
+          toast.error('Failed to save to client plan: ' + (d.error || 'Unknown error'))
         }
       } catch (e) {
         console.error('[client-plan] Save error:', e)
-        alert('Failed to save to client plan: ' + e.message)
+        toast.error('Failed to save to client plan: ' + e.message)
       }
       await refreshDay(dateKey)
       setAddingToMeal(false)
@@ -512,10 +411,44 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
       personal_nutrition: personalNutrition || null,
       origin: 'planned',
     }
-    const { error } = await supabase
+    // The unique index on (family_id, date_str, meal_type, recipe_id, origin) is
+    // PARTIAL (migration 049, WHERE family_id IS NOT NULL), so PostgREST upsert
+    // cannot use it as an arbiter (Postgres 42P10). Do select → insert/update.
+    let findQuery = supabase
       .from('calendar_entries')
-      .upsert([row], { onConflict: 'family_id,date_str,meal_type,recipe_id,origin' })
-    if (error) console.error('calendar upsert failed:', error)
+      .select('id')
+      .eq('date_str', dateKey)
+      .eq('meal_type', mealType)
+      .eq('recipe_id', recipe.id)
+      .eq('origin', 'planned')
+    findQuery = familyId
+      ? findQuery.eq('family_id', familyId)
+      : findQuery.eq('profile_id', userId).is('family_id', null)
+    const { data: existing, error: findErr } = await findQuery.maybeSingle()
+
+    let saveErr = findErr
+    if (!saveErr) {
+      if (existing?.id) {
+        const { error } = await supabase
+          .from('calendar_entries')
+          .update({
+            recipe_name: row.recipe_name,
+            consumer_member_ids: row.consumer_member_ids,
+            personal_nutrition: row.personal_nutrition,
+          })
+          .eq('id', existing.id)
+        saveErr = error
+      } else {
+        const { error } = await supabase.from('calendar_entries').insert([row])
+        saveErr = error
+      }
+    }
+    if (saveErr) {
+      console.error('calendar save failed:', saveErr)
+      toast.error('Failed to save meal to plan: ' + (saveErr.message || 'Unknown error'))
+      setAddingToMeal(false)
+      return
+    }
     await refreshDay(dateKey)
     setAddingToMeal(false)
   }
@@ -581,7 +514,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
     const wStart = toDateKey(weekStart)
     const wEnd = toDateKey(weekEnd)
     const wk = `${qUserId}:${isViewingClient ? 'client' : (familyId || 'solo')}:${wStart}:${wEnd}`
-    try { sessionStorage.removeItem(CACHE_PREFIX + 'week:' + wk) } catch {}
+    try { localStorage.removeItem(CACHE_PREFIX + 'week:' + wk) } catch {}
     const daySelect = `
         id, date_str, meal_type, member_id, consumer_member_ids,
         family_id, origin,
@@ -627,6 +560,16 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
     }
   }, [userId, weekOffset, effectiveUserId, isViewingClient, familyId])
 
+  // Refresh live when a journal entry is logged outside the planner (Minty Chat)
+  useEffect(() => {
+    function onJournalSaved(e) {
+      const dk = e.detail?.dateKey
+      if (dk) refreshDay(dk)
+    }
+    window.addEventListener(JOURNAL_SAVED_EVENT, onJournalSaved)
+    return () => window.removeEventListener(JOURNAL_SAVED_EVENT, onJournalSaved)
+  }, [refreshDay])
+
   const removeEntry = useCallback(async (entryId, dateKey) => {
     if (isViewingClient) {
       try {
@@ -645,7 +588,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
 
   async function clearDay() {
     if (!selectedKey || clearing || isViewingClient) return
-    if (!confirm('Clear all meals for this day?')) return
+    if (!(await confirmDialog({ title: 'Clear this day?', body: 'All planned meals for this day will be removed.', confirmLabel: 'Clear day', destructive: true }))) return
     setClearing(true)
     const supabase = createClient()
     if (!supabase) { setClearing(false); return }
@@ -659,7 +602,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
 
   async function clearWeek() {
     if (clearing || isViewingClient) return
-    if (!confirm(`Clear all meals for ${weekLabel}?`)) return
+    if (!(await confirmDialog({ title: 'Clear this week?', body: `All planned meals for ${weekLabel} will be removed.`, confirmLabel: 'Clear week', destructive: true }))) return
     setClearing(true)
     const supabase = createClient()
     if (!supabase) { setClearing(false); return }
@@ -678,7 +621,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
     const mStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
     const label = mStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-    if (!confirm(`Clear all meals for ${label}?`)) return
+    if (!(await confirmDialog({ title: 'Clear this month?', body: `All planned meals for ${label} will be removed.`, confirmLabel: 'Clear month', destructive: true }))) return
     setClearing(true)
     const supabase = createClient()
     if (!supabase) { setClearing(false); return }
@@ -731,177 +674,18 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
 
         <div className="plan-grid">
           {/* ── COLUMN 1: Recipes drag list ─────────────────────────── */}
-          <aside className="plan-col1">
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-              <div style={{ padding: '0.75rem 0.875rem', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', marginBottom: '0.5rem', padding: '0.2rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)' }}>
-                  {[
-                    { id: 'recipes', label: 'Recipes' },
-                    { id: 'menus', label: 'Menus' },
-                  ].map(tab => {
-                    const active = sidebarTab === tab.id
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setSidebarTab(tab.id)}
-                        style={{
-                          padding: '0.35rem 0.5rem',
-                          border: 'none',
-                          borderRadius: '6px',
-                          background: active ? 'var(--primary)' : 'transparent',
-                          color: active ? '#fff' : 'var(--text-3)',
-                          fontSize: '0.8125rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {tab.label}
-                      </button>
-                    )
-                  })}
-                </div>
-                <input
-                  type="text"
-                  value={sidebarSearch}
-                  onChange={e => setSidebarSearch(e.target.value)}
-                  placeholder="Search…"
-                  style={{ width: '100%', padding: '0.4rem 0.625rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.8125rem', outline: 'none', boxSizing: 'border-box' }}
-                />
-                {sidebarTab === 'recipes' && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: '0.4rem' }}>
-                  {[
-                    { id: 'all', label: 'All' },
-                    { id: 'breakfast', label: 'Breakfast' },
-                    { id: 'lunch', label: 'Lunch' },
-                    { id: 'dinner', label: 'Dinner' },
-                    { id: 'snack', label: 'Snack' },
-                  ].map(f => {
-                    const active = sidebarFilter === f.id
-                    return (
-                      <button
-                        key={f.id}
-                        onClick={() => setSidebarFilter(f.id)}
-                        style={{
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: '999px',
-                          border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
-                          background: active ? 'var(--primary)' : 'transparent',
-                          color: active ? '#fff' : 'var(--text-3)',
-                          fontSize: '0.6875rem',
-                          fontWeight: active ? 600 : 500,
-                          cursor: 'pointer',
-                          lineHeight: 1.4,
-                        }}
-                      >{f.label}</button>
-                    )
-                  })}
-                </div>}
-              </div>
-              <div style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto', padding: '0.5rem' }}>
-                {sidebarTab === 'menus' ? (
-                  sidebarMenusLoading ? (
-                    <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>Loading…</p>
-                  ) : sidebarMenus.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>No menus</p>
-                  ) : (
-                    sidebarMenus.map(menu => {
-                      return (
-                        <div
-                          key={menu.id}
-                          draggable
-                          onDragStart={() => { draggedMenu.current = menu; setDragActive(true) }}
-                          onDragEnd={() => { draggedMenu.current = null; setDragActive(false) }}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
-                        >
-                          {menu.image_url && (
-                            <img src={menu.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
-                          )}
-                          <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                            {menu.name}
-                          </span>
-                          <button
-                            onClick={() => applyMenuToDay(menu, toDateKey(selectedDate || today))}
-                            disabled={addingToMeal}
-                            aria-label={`Add ${menu.name} to plan`}
-                            title={selectedDate
-                              ? `Start on ${selectedDate.toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}`
-                              : 'Start today'}
-                            style={{
-                              width: 28, height: 28, borderRadius: '50%',
-                              border: 'none', background: 'var(--primary)', color: '#fff',
-                              fontSize: '1rem', fontWeight: 700, cursor: addingToMeal ? 'wait' : 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              flexShrink: 0, lineHeight: 1, opacity: addingToMeal ? 0.65 : 1,
-                            }}
-                          >+</button>
-                        </div>
-                      )
-                    })
-                  )
-                ) : sidebarLoading ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>Loading…</p>
-                ) : sidebarRecipes.length === 0 ? (
-                  <p style={{ textAlign: 'center', color: 'var(--text-4)', fontSize: '0.8125rem', padding: '1rem 0' }}>No recipes</p>
-                ) : (
-                  <>
-                    {sidebarRecipes.map(r => (
-                      <div
-                        key={r.id}
-                        draggable
-                        onDragStart={() => { draggedRecipe.current = r; setDragActive(true) }}
-                        onDragEnd={() => { if (!dropTarget) { draggedRecipe.current = null; setDragActive(false) } }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
-                      >
-                        <Link href={`/recipes/${r.slug || r.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, textDecoration: 'none', minWidth: 0 }} onClick={e => e.stopPropagation()}>
-                          {r.image_url && (
-                            <img src={r.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
-                          )}
-                          <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                            {r.title}
-                          </span>
-                        </Link>
-                        {MEAL_ICONS[r.meal_type] && (
-                          <img
-                            src={MEAL_ICONS[r.meal_type]}
-                            alt={MEAL_LABELS[r.meal_type] || r.meal_type}
-                            title={MEAL_LABELS[r.meal_type] || r.meal_type}
-                            style={{ width: 18, height: 18, flexShrink: 0, opacity: 0.8 }}
-                          />
-                        )}
-                        <button
-                          onClick={() => handleTapAddRecipe(r)}
-                          aria-label={`Add ${r.title} to plan`}
-                          title={selectedDate
-                            ? `Add to ${selectedDate.toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' })}`
-                            : 'Add to today'}
-                          style={{
-                            width: 28, height: 28, borderRadius: '50%',
-                            border: 'none', background: 'var(--primary)', color: '#fff',
-                            fontSize: '1rem', fontWeight: 700, cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            flexShrink: 0, lineHeight: 1,
-                          }}
-                        >+</button>
-                      </div>
-                    ))}
-                    {sidebarHasMore && (
-                      <button
-                        onClick={loadMoreSidebar}
-                        disabled={sidebarLoadingMore}
-                        style={{
-                          width: '100%', marginTop: '0.5rem', padding: '0.5rem',
-                          borderRadius: '8px', border: '1px solid var(--border)',
-                          background: 'var(--bg-page)', color: 'var(--text-2)',
-                          fontSize: '0.8125rem', fontWeight: 500, cursor: 'pointer',
-                        }}
-                      >
-                        {sidebarLoadingMore ? 'Loading…' : 'Load more'}
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </aside>
+          <PlannerSidebar
+            userId={userId}
+            selectedDate={selectedDate}
+            today={today}
+            addingToMeal={addingToMeal}
+            onTapAddRecipe={handleTapAddRecipe}
+            onApplyMenu={applyMenuToDay}
+            onRecipeDragStart={handleSidebarRecipeDragStart}
+            onRecipeDragEnd={handleSidebarRecipeDragEnd}
+            onMenuDragStart={handleSidebarMenuDragStart}
+            onMenuDragEnd={handleSidebarMenuDragEnd}
+          />
 
           {/* ── MAIN: calendar on top, day view below ──────────────── */}
           <div className="plan-main">
@@ -949,7 +733,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
                 {viewMode === 'week' && (<>
                   <button
                     onClick={() => setWeekOffset(o => o - 1)}
-                    style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-2)' }}
+                    style={{ width: 44, height: 44, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-2)', fontSize: '1rem' }}
                     aria-label="Previous week"
                   >◀</button>
                   <button
@@ -958,7 +742,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
                   >This week</button>
                   <button
                     onClick={() => setWeekOffset(o => o + 1)}
-                    style={{ width: 34, height: 34, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-2)' }}
+                    style={{ width: 44, height: 44, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg-card)', cursor: 'pointer', color: 'var(--text-2)', fontSize: '1rem' }}
                     aria-label="Next week"
                   >▶</button>
                 </>)}
@@ -1046,6 +830,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
                     dateKey={selectedKey}
                     entries={dayEntries}
                     activities={dayActivities}
+                    journals={dayJournals}
                     members={members}
                     enabledMealTypes={getDayEnabledMeals(selectedKey)}
                     selectedMemberIds={selectedMemberIds}
@@ -1142,8 +927,14 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
               display: flex;
               flex-direction: column;
               gap: 1rem;
+              /* Day-first on portrait mobile: today's agenda is the primary
+                 view; the week grid sits below for navigation. */
+              order: 1;
+              margin-top: 0;
+              margin-bottom: 1rem;
             }
-            .plan-col2 { order: 1; min-width: 0; }
+            .plan-calendar { order: 2; }
+            .plan-col2 { order: 1; min-width: 0; max-width: none; }
             .plan-col3 { order: 2; min-width: 0; }
           }
           @media (max-width: 600px) {
@@ -1153,8 +944,11 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
             }
             .plan-page h1 { font-size: 1.25rem !important; }
           }
-        `}</style>
+        `}        </style>
       </div>
+
+      {/* Minty Chat — conversational planning + food logging (paid) */}
+      <AssistantFab members={members} />
     </>
   )
 }

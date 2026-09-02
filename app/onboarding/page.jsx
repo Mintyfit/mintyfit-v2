@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import AuthModal from '@/components/landing/AuthModal'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/components/ui/Toast'
 import { fieldLabel, displayToDb, lbsToKg, inToCm } from '@/lib/unitConversion'
 
 const STORAGE_KEY = 'mintyfit-onboarding'
@@ -36,6 +37,7 @@ function emptyMember() {
 export default function OnboardingPage() {
   const router = useRouter()
   const { user, profile, loading: authLoading } = useAuth()
+  const toast = useToast()
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
@@ -135,7 +137,7 @@ export default function OnboardingPage() {
       router.push('/plan')
     } catch (err) {
       console.error('[onboarding] Save error:', err)
-      alert('Failed to save. Please try again.')
+      toast.error('Failed to save. Please try again.')
     } finally {
       setSaving(false)
     }

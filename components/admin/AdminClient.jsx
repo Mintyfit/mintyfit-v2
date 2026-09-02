@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 const TABS = ['overview', 'users', 'audit', 'gdpr']
 
 export default function AdminClient({ adminData }) {
+  const confirmDialog = useConfirm()
   const [tab, setTab] = useState('overview')
   const [userSearch, setUserSearch] = useState('')
   const [users, setUsers] = useState(adminData.recentUsers)
@@ -51,7 +53,7 @@ export default function AdminClient({ adminData }) {
   }
 
   async function gdprDelete() {
-    if (!confirm(`Delete ALL data for ${gdprEmail}? This cannot be undone.`)) return
+    if (!(await confirmDialog({ title: 'Delete all user data?', body: `ALL data for ${gdprEmail} will be permanently deleted. This cannot be undone.`, confirmLabel: 'Delete all data', destructive: true }))) return
     const { data: profile } = await supabase.from('profiles').select('id').eq('email', gdprEmail).single()
     if (!profile) { setGdprResult({ type: 'error', message: 'User not found' }); return }
     await supabase.from('profiles').delete().eq('id', profile.id)

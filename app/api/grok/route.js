@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { enforceUsageLimit, AI_PURPOSES } from '@/lib/usageLimits'
 
 export const maxDuration = 60
+
+// Client-supplied model is ignored unless whitelisted — never let callers
+// pick arbitrary (expensive) upstream models.
+const ALLOWED_MODELS = ['grok-3-fast', 'grok-3']
+const DEFAULT_MODEL = 'grok-3-fast'
+const MAX_TOKENS_CEILING = 16384
 
 export async function POST(request) {
   const supabase = await createClient()
@@ -9,7 +16,19 @@ export async function POST(request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { messages, model = 'grok-3', max_tokens = 16384, ...rest } = body
+  const { messages, model, max_tokens = 16384, purpose = 'food-parse', ...rest } = body
+
+  // Server-side usage enforcement (atomic, tier-aware)
+  if (!AI_PURPOSES[purpose]) {
+    return NextResponse.json({ error: 'Unknown purpose' }, { status: 400 })
+  }
+  const usage = await enforceUsageLimit(supabase, user.id, purpose)
+  if (!usage.allowed) {
+    return NextResponse.json(
+      { error: 'LIMIT_REACHED', current: usage.current, limit: usage.limit },
+      { status: 429 }
+    )
+  }
 
   const xaiKey = process.env.XAI_API_KEY
   if (!xaiKey) return NextResponse.json({ error: 'XAI_API_KEY missing' }, { status: 500 })
@@ -22,9 +41,9 @@ export async function POST(request) {
         'Authorization': `Bearer ${xaiKey}`,
       },
       body: JSON.stringify({
-        model,
+        model: ALLOWED_MODELS.includes(model) ? model : DEFAULT_MODEL,
         messages,
-        max_tokens,
+        max_tokens: Math.min(Math.max(1, Number(max_tokens) || 1024), MAX_TOKENS_CEILING),
         temperature: 0.1,
         stream: false,
         ...rest,

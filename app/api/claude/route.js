@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { enforceUsageLimit, AI_PURPOSES } from '@/lib/usageLimits'
 
 export const maxDuration = 60
+
+// Client-supplied model is ignored — the route fixes the model server-side.
+const ALLOWED_MODELS = ['claude-haiku-4-5-20251001']
+const DEFAULT_MODEL = 'claude-haiku-4-5-20251001'
+const MAX_TOKENS_CEILING = 16384
 
 export async function POST(request) {
   const supabase = await createClient()
@@ -9,7 +15,19 @@ export async function POST(request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
-  const { model, messages = [], max_tokens = 16384, temperature = 0.2, ...rest } = body
+  const { model, messages = [], max_tokens = 16384, temperature = 0.2, purpose = 'nutrition-estimate', ...rest } = body
+
+  // Server-side usage enforcement (atomic, tier-aware)
+  if (!AI_PURPOSES[purpose]) {
+    return NextResponse.json({ error: 'Unknown purpose' }, { status: 400 })
+  }
+  const usage = await enforceUsageLimit(supabase, user.id, purpose)
+  if (!usage.allowed) {
+    return NextResponse.json(
+      { error: 'LIMIT_REACHED', current: usage.current, limit: usage.limit },
+      { status: 429 }
+    )
+  }
 
   const anthropicKey = process.env.ANTHROPIC_API_KEY
   if (!anthropicKey) {
@@ -38,9 +56,9 @@ export async function POST(request) {
   }
 
   const payload = {
-    model: model || 'claude-haiku-4-5-20251001',
+    model: ALLOWED_MODELS.includes(model) ? model : DEFAULT_MODEL,
     messages: cleanedMessages,
-    max_tokens,
+    max_tokens: Math.min(Math.max(1, Number(max_tokens) || 1024), MAX_TOKENS_CEILING),
     temperature,
     stream: false,
     ...(systemPrompt && { system: systemPrompt.trim() }),

@@ -2,6 +2,7 @@
 
 import { useState, useOptimistic, useTransition, useCallback } from 'react'
 import { groupItemsByCategory, generateShareText } from '@/lib/shopping/utils'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 // ── Category section (collapsible) ───────────────────────────────────────────
 function CategorySection({ group, onToggle, onDelete }) {
@@ -186,6 +187,7 @@ function AddItemForm({ onAdd }) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 export default function ShoppingListClient({ initialList, initialItems }) {
+  const confirmDialog = useConfirm()
   const [items, setItems] = useState(initialItems || [])
   const [shareToast, setShareToast] = useState('')
   const [, startTransition] = useTransition()
@@ -263,7 +265,7 @@ export default function ShoppingListClient({ initialList, initialItems }) {
 
   // ── Clear all ───────────────────────────────────────────────────────────────
   async function handleClearAll() {
-    if (!confirm('Remove every item from the shopping list?')) return
+    if (!(await confirmDialog({ title: 'Clear shopping list?', body: 'Every item will be removed.', confirmLabel: 'Clear list', destructive: true }))) return
     setItems([])
     try {
       await fetch('/api/shopping-list', {

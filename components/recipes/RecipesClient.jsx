@@ -1,15 +1,18 @@
 'use client'
 
+import { RECIPE_MEAL_TYPES as MEAL_TYPES } from '@/lib/nutrition/mealBudget'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import RecipeCard from './RecipeCard'
 import { createClient } from '@/lib/supabase/client'
 import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
+import { useCachedData } from '@/hooks/useCachedData'
+import AssistantPanel from '@/components/assistant/AssistantPanel'
 
 // Keep in sync with app/recipes/page.jsx — slim columns, kcal only.
 const LIST_COLUMNS = 'id,slug,title,description,image_url,image_thumb_url,meal_type,food_type,cuisine_type,glycemic_load,price_level,calorie_range,cooking_technique,prep_time_minutes,cook_time_minutes,is_public,profile_id,created_at,updated_at,calories_kcal:nutrition->perServing->energy_kcal'
 
-const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
+
 const FOOD_TYPES = ['omnivore', 'vegetarian', 'vegan', 'pescatarian', 'keto', 'paleo']
 const CUISINES = ['Italian', 'Asian', 'Mediterranean', 'Mexican', 'American', 'Indian', 'Middle Eastern', 'French']
 // Total time = prep + cook (minutes)
@@ -32,43 +35,42 @@ const PAGE_SIZE = 12
 
 export default function RecipesClient({ initialRecipes = [] }) {
   const [allRecipes, setAllRecipes] = useState(initialRecipes)
+  const [userId, setUserId] = useState(null)
 
-  // Fetch the logged-in user's private recipes client-side (avoids making the
-  // server route dynamic, which would bust the ISR cache on every request)
+  // Resolve the logged-in user client-side (keeps the server route static/ISR'd)
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) return
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return
-      // Check sessionStorage cache first
-      const cacheKey = 'mintyfit:recipes:user:' + user.id
-      let cached
-      try { cached = JSON.parse(sessionStorage.getItem(cacheKey)) } catch {}
-      if (cached?.length) {
-        setAllRecipes(prev => {
-          const ids = new Set(prev.map(r => r.id))
-          return [...prev, ...cached.filter(r => !ids.has(r.id))]
-        })
-        return
-      }
-      supabase
+      setUserId(user?.id || null)
+    })
+  }, [])
+
+  // Private recipes via shared cache (localStorage SWR — survives app restarts,
+  // invalidated on recipe save/delete via invalidateCache('recipes:'))
+  const { data: privateRecipes } = useCachedData(
+    userId ? `recipes:private:${userId}` : null,
+    async () => {
+      const supabase = createClient()
+      const { data } = await supabase
         .from('recipes')
         .select(LIST_COLUMNS)
-        .eq('profile_id', user.id)
+        .eq('profile_id', userId)
         .eq('is_public', false)
         .order('created_at', { ascending: false })
         .limit(100)
-        .then(({ data }) => {
-          if (!data?.length) return
-          const normalized = data.map(normalizeRecipe).filter(Boolean)
-          try { sessionStorage.setItem(cacheKey, JSON.stringify(normalized)) } catch {}
-          setAllRecipes(prev => {
-            const ids = new Set(prev.map(r => r.id))
-            return [...prev, ...normalized.filter(r => !ids.has(r.id))]
-          })
-        })
+      return (data || []).map(normalizeRecipe).filter(Boolean)
+    },
+    { ttlMs: 10 * 60 * 1000 }
+  )
+
+  useEffect(() => {
+    if (!privateRecipes?.length) return
+    setAllRecipes(prev => {
+      const ids = new Set(prev.map(r => r.id))
+      return [...prev, ...privateRecipes.filter(r => !ids.has(r.id))]
     })
-  }, [])
+  }, [privateRecipes])
 
   const [search, setSearch] = useState('')
   const [mealType, setMealType] = useState('')
@@ -154,6 +156,11 @@ export default function RecipesClient({ initialRecipes = [] }) {
         }}>
           ✨ Generate with AI
         </Link>
+      </div>
+
+      {/* Minty Chat — conversational search (paid; renders teaser for free) */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <AssistantPanel />
       </div>
 
       {/* Search + filter bar */}

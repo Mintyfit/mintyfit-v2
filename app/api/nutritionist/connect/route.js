@@ -13,7 +13,6 @@ export async function POST(request) {
 
     const { email } = await request.json()
     const searchEmail = email.toLowerCase().trim()
-    console.log('[connect] STEP 1: Looking up nutritionist email:', searchEmail, 'client:', user.email)
 
     // Use admin client to bypass RLS for the profile lookup
     const adminClient = createAdminClient()
@@ -23,23 +22,17 @@ export async function POST(request) {
       .eq('email', searchEmail)
       .single()
 
-    console.log('[connect] STEP 2: Admin lookup — found:', !!nutritionistProfile, 'role:', nutritionistProfile?.role)
-
     if (!nutritionistProfile) {
       return NextResponse.json({
         error: 'No user found with that email',
-        searched: searchEmail,
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 40),
       }, { status: 404 })
     }
 
-    console.log('[connect] STEP 3: Found profile, role:', nutritionistProfile.role)
     if (nutritionistProfile.role !== 'nutritionist' && nutritionistProfile.role !== 'super_admin') {
       return NextResponse.json({ error: 'That user is not a registered nutritionist' }, { status: 400 })
     }
 
     // Create link (or re-activate if exists)
-    console.log('[connect] STEP 4: Upserting link — client:', user.id, 'nutritionist:', nutritionistProfile.id)
     const { data: link, error } = await supabase
       .from('nutritionist_client_links')
       .upsert({
@@ -51,10 +44,9 @@ export async function POST(request) {
       .single()
 
     if (error) {
-      console.error('[connect] STEP 4 FAILED:', error)
+      console.error('[connect] link upsert failed:', error)
       throw error
     }
-    console.log('[connect] STEP 4: Link upserted, id:', link?.id)
 
     // Get client name for the email
     const { data: clientProfile } = await supabase
@@ -67,7 +59,6 @@ export async function POST(request) {
     const nutritionistName = nutritionistProfile.full_name || 'Your nutritionist'
 
     // Send email notification to the nutritionist
-    console.log('[connect] STEP 5: Sending email to:', nutritionistProfile.email)
     try {
       await sendEmail({
         to: nutritionistProfile.email,
@@ -84,12 +75,10 @@ export async function POST(request) {
   </div>
 </body></html>`,
       })
-      console.log('[connect] STEP 5: Email sent successfully')
     } catch (e) {
-      console.error('[connect] STEP 5: Email notification failed:', e)
+      console.error('[connect] Email notification failed:', e)
     }
 
-    console.log('[connect] SUCCESS: Returning response')
     return NextResponse.json({ link, nutritionistName })
   } catch (err) {
     console.error('[connect] CAUGHT ERROR:', err)

@@ -1,6 +1,7 @@
 import { createPublicClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import SafeHtml from '@/components/shared/SafeHtml'
 
 export const revalidate = 3600
 
@@ -134,19 +135,19 @@ export default async function CmsPage({ params }) {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '2rem 1rem' }}>
-      <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary, #6b7280)' }}>
-        <Link href="/" style={{ color: '#10b981', textDecoration: 'none' }}>Home</Link>
+      <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-3)' }}>
+        <Link href="/" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Home</Link>
         {' / '}
         <span>{page.title}</span>
       </nav>
 
-      <div
-        style={{ lineHeight: 1.8, color: 'var(--text-primary, #374151)' }}
-        dangerouslySetInnerHTML={{ __html: page.content }}
+      <SafeHtml
+        html={page.content}
+        style={{ lineHeight: 1.8, color: 'var(--text-2)' }}
       />
 
-      <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color, #e5e7eb)', fontSize: '0.875rem', color: 'var(--text-secondary, #6b7280)' }}>
-        <Link href="/" style={{ color: '#10b981', textDecoration: 'none' }}>← Back to MintyFit</Link>
+      <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)', fontSize: '0.875rem', color: 'var(--text-3)' }}>
+        <Link href="/" style={{ color: 'var(--primary)', textDecoration: 'none' }}>← Back to MintyFit</Link>
       </div>
     </div>
   )

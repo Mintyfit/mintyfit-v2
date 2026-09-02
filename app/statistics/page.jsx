@@ -1,4 +1,5 @@
-﻿import { redirect } from 'next/navigation'
+import { toDateKey } from '@/lib/utils/dateKey'
+import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 import StatisticsClient from '@/components/statistics/StatisticsClient'
@@ -11,9 +12,6 @@ export const metadata = {
   description: 'Family nutrition analytics with date range, member filters, and nutrient breakdown.',
 }
 
-function toDateKey(date) {
-  return date.toISOString().slice(0, 10)
-}
 
 function normalizeName(row) {
   return row?.display_name || row?.full_name || row?.name || 'Member'
@@ -26,10 +24,10 @@ async function getStatisticsData(effectiveUserId, supabase) {
     historyFrom.setDate(today.getDate() - HISTORY_DAYS)
     const fromKey = toDateKey(historyFrom)
 
-    const [meResult, membershipsResult, calendarResult, journalResult, recipesResult, weightLogsResult] = await Promise.all([
+    const [meResult, membershipsResult, calendarResult, journalResult, weightLogsResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, display_name, full_name, name, role, gender, date_of_birth, weight, weight_kg, height, height_cm, subscription_tier')
+        .select('id, display_name, full_name, name, role, gender, date_of_birth, weight, height, subscription_tier')
         .eq('id', effectiveUserId)
         .maybeSingle(),
       supabase
@@ -55,12 +53,6 @@ async function getStatisticsData(effectiveUserId, supabase) {
         .gte('logged_date', fromKey)
         .order('logged_date', { ascending: false }),
       supabase
-        .from('recipes')
-        .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
-        .or(`is_public.eq.true,profile_id.eq.${effectiveUserId}`)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      supabase
         .from('weight_logs')
         .select('*')
         .eq('profile_id', effectiveUserId)
@@ -80,12 +72,12 @@ async function getStatisticsData(effectiveUserId, supabase) {
       const [linkedResult, managedResult] = await Promise.all([
         supabase
           .from('family_memberships')
-          .select('profile_id, role, status, profiles(id, display_name, full_name, name, gender, date_of_birth, weight, weight_kg, height, height_cm)')
+          .select('profile_id, role, status, profiles(id, display_name, full_name, name, gender, date_of_birth, weight, height)')
           .eq('family_id', familyId)
           .eq('status', 'active'),
         supabase
           .from('managed_members')
-          .select('id, name, gender, date_of_birth, weight_kg, height_cm')
+          .select('id, name, gender, date_of_birth, weight, height')
           .eq('family_id', familyId),
       ])
 
@@ -98,8 +90,8 @@ async function getStatisticsData(effectiveUserId, supabase) {
           role: r.role,
           gender: r.profiles.gender,
           date_of_birth: r.profiles.date_of_birth,
-          weight: r.profiles.weight ?? r.profiles.weight_kg ?? null,
-          height: r.profiles.height ?? r.profiles.height_cm ?? null,
+          weight: r.profiles.weight ?? null,
+          height: r.profiles.height ?? null,
         }))
 
       managedMembers = (managedResult?.data || []).map(m => ({
@@ -109,8 +101,8 @@ async function getStatisticsData(effectiveUserId, supabase) {
         role: 'managed',
         gender: m.gender,
         date_of_birth: m.date_of_birth,
-        weight: m.weight_kg ?? null,
-        height: m.height_cm ?? null,
+        weight: m.weight ?? null,
+        height: m.height ?? null,
       }))
     }
 
@@ -124,8 +116,8 @@ async function getStatisticsData(effectiveUserId, supabase) {
         role: 'self',
         gender: me.gender,
         date_of_birth: me.date_of_birth,
-        weight: me.weight ?? me.weight_kg ?? null,
-        height: me.height ?? me.height_cm ?? null,
+        weight: me.weight ?? null,
+        height: me.height ?? null,
       })
     }
 
@@ -139,7 +131,6 @@ async function getStatisticsData(effectiveUserId, supabase) {
       calendarEntries: calendarResult?.data || [],
       journalEntries: journalResult?.data || [],
       weightLogs: weightLogsResult?.data || [],
-      allRecipes: recipesResult?.data || [],
     }
   } catch (error) {
     console.error('Statistics data error:', error)
@@ -204,7 +195,6 @@ export default async function StatisticsPage({ searchParams }) {
           userId={clientId}
           initialData={initialData}
           nutritionFields={NUTRITION_FIELDS}
-          allRecipes={initialData.allRecipes}
           viewingClient={true}
           clientName={clientName}
         />
@@ -219,7 +209,6 @@ export default async function StatisticsPage({ searchParams }) {
       userId={user.id}
       initialData={initialData}
       nutritionFields={NUTRITION_FIELDS}
-      allRecipes={initialData.allRecipes}
       viewingClient={false}
     />
   )

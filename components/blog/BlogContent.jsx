@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from 'react'
 import BlogCalculatorEmbed from '@/components/calculators/BlogCalculatorEmbed'
+import SafeHtml from '@/components/shared/SafeHtml'
 
 // Markers placed by content authors: <!-- CALCULATOR:slug --> or <div data-calculator="slug"></div>
 const CALCULATOR_PATTERN = /<!--\s*CALCULATOR:\s*([a-z0-9-]+)\s*-->|<div\s+data-calculator\s*=\s*["']([a-z0-9-]+)["']\s*><\/div>/gi
@@ -32,8 +33,9 @@ export default function BlogContent({ html }) {
     [html]
   )
 
-  // After innerHTML lands: rewrite legacy mintyfit.com calculator iframes to local paths,
-  // and re-execute any inline <script> tags (innerHTML doesn't auto-run them).
+  // After innerHTML lands: rewrite legacy mintyfit.com calculator iframes to
+  // local paths. (Scripts are stripped by SafeHtml sanitization — calculator
+  // embeds run inside their own iframes, so no script re-execution is needed.)
   useEffect(() => {
     const container = ref.current
     if (!container) return
@@ -43,13 +45,6 @@ export default function BlogContent({ html }) {
       if (src && LEGACY_CALC_HOST_RE.test(src)) {
         iframe.setAttribute('src', src.replace(LEGACY_CALC_HOST_RE, '/calculators/'))
       }
-    })
-
-    container.querySelectorAll('script').forEach(old => {
-      const fresh = document.createElement('script')
-      Array.from(old.attributes).forEach(attr => fresh.setAttribute(attr.name, attr.value))
-      if (!old.src && old.textContent) fresh.textContent = old.textContent
-      old.parentNode?.replaceChild(fresh, old)
     })
   }, [cleanHtml])
 
@@ -70,11 +65,12 @@ export default function BlogContent({ html }) {
 
   return (
     <>
-      <div
-        ref={ref}
-        style={{ fontSize: '1.05rem', lineHeight: 1.8, color: 'var(--text-primary, #374151)' }}
-        dangerouslySetInnerHTML={{ __html: cleanHtml || '<p>Content coming soon.</p>' }}
-      />
+      <div ref={ref}>
+        <SafeHtml
+          html={cleanHtml}
+          style={{ fontSize: '1.05rem', lineHeight: 1.8, color: 'var(--text-2)' }}
+        />
+      </div>
       {calculatorSlugs.map((slug, index) => (
         <BlogCalculatorEmbed key={`${slug}-${index}`} slug={slug} />
       ))}

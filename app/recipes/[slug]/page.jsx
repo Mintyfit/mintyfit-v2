@@ -114,7 +114,7 @@ async function loadFamilyMembers(supabase, userId) {
         .eq('family_id', familyId),
       supabase
         .from('managed_members')
-        .select('id, name, date_of_birth, weight_kg, height_cm, gender')
+        .select('id, name, date_of_birth, weight, height, gender')
         .eq('family_id', familyId),
     ])
 
@@ -145,8 +145,8 @@ async function loadFamilyMembers(supabase, userId) {
         ...m,
         display_name: m.name,
         type: 'managed',
-        weight: m.weight_kg ?? null,
-        height: m.height_cm ?? null,
+        weight: m.weight ?? null,
+        height: m.height ?? null,
       })),
     ].filter(Boolean)
 

@@ -86,8 +86,7 @@ Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabas
 | `lib/nutrition/portionCalc.js` | `computeBMR()`, `computeTDEE()`, `computeFamilyBMI()`, `getMemberBMIFraction()`, `getMemberActivityFactor()`, `computeMemberNutrition()` — SINGLE SOURCE OF TRUTH for BMR and BMI fraction (used only for legacy fallback now) |
 | `lib/nutrition/mealBudget.js` | `computeMealBudget()`, `computeMealBudgetDayBreakdown()`, `computeMealBudgetDayNutrition()`, `getMealWeight()`, `getPersonMealTarget()` — SINGLE SOURCE OF TRUTH for meal budget/portion calculation. Replaces BMI fraction scaling for all new entries. |
 | `lib/nutrition/memberRDA.js` | `computeMemberDailyNeeds(member)` — 47 personal daily nutrient targets. Metabolic-health focused (low carb, higher protein) |
-| `lib/nutrition/nutrition.js` | `NUTRITION_FIELDS` array (47 nutrients), `getNutritionData()`, `scaleNutrition()`, `sumNutrition()` |
-| `lib/member/syncFamily.js` | `syncFamilyMembers(userId)` — loads family from Supabase with measurements, computes BMR/TDEE |
+| `lib/nutrition/nutrition.js` | `NUTRITION_FIELDS` array (47 nutrients), `getNutritionData()`, `scaleNutrition()`, `sumNutrition()`, `pickNutritionFields()` (canonical AI-parse → clean nutrition object; used by assistant log_food + JournalEntryForm) |
 | `lib/member/enrichMember.js` | `enrichMember(m)` — computes baseDailyCalories, falls back to age/gender estimates when weight/height missing. Single source of truth — NOT duplicated in pages/components. |
 | `lib/recipe/recipeGenerator.js` | Full recipe generation pipeline: Claude → nutrition → image → save |
 | `lib/recipe/ingredientDatabase.js` | Central ingredient lookup: Supabase → USDA → Claude Haiku fallback |
@@ -95,7 +94,10 @@ Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabas
 | `lib/recipe/ingredientSwap.js` | AI-powered ingredient substitution |
 | `lib/journal/openFoodFacts.js` | `lookupBarcode()` — barcode scan product lookup + nutrient mapping |
 | `lib/nutrition/usdaLookup.js` | USDA FoodData Central API wrapper |
-| `lib/usageLimits.js` | `checkAndIncrementUsage()` — rate limiting per tier |
+| `lib/usageLimits.js` | `getLimits()`, `enforceUsageLimit()` (server-side, RPC-backed), `canUseVoiceAssistant()`. `checkAndIncrementUsage()` is DEPRECATED (client-side, racy) |
+| `lib/utils/extractJSON.js` | Canonical LLM JSON extraction — the ONLY copy |
+| `lib/utils/dateKey.js` | Canonical `toDateKey()` — the ONLY copy |
+| `lib/planner/planCache.js` | Planner week-cache contract: `PLAN_CACHE_PREFIX`, `bustPlanWeekCache(userId)`, `JOURNAL_SAVED_EVENT`. Writers outside the planner (e.g. Minty Chat journal logging) MUST bust/notify or /plan shows stale data (30-min localStorage TTL) |
 | `lib/stripe.js` | Stripe plan config, `FREE_LIMITS`, price IDs |
 | `lib/supabase/client.js` | Browser Supabase client (singleton, `createBrowserClient`) |
 | `lib/supabase/server.js` | Server Supabase clients: cookie-based SSR, public/ISR, admin |
@@ -130,6 +132,8 @@ AprillBuild/
 │       │   ├── export/route.js       # GET full data export (JSON download)
 │       │   └── delete/route.js       # DELETE account + all data
 │       ├── shopping-list/route.js    # Shopping list CRUD
+│       ├── transcribe/route.js       # POST audio → Groq Whisper STT (paid tier)
+│       ├── assistant/route.js        # POST conversational assistant (intent classify → find/create/log/question)
 │       ├── ingredient-alternatives/
 │       │   └── route.js              # GET ingredient swap suggestions
 │       ├── menus/apply/route.js      # POST copy menu to calendar
@@ -157,13 +161,11 @@ AprillBuild/
 │   │   ├── grokFoodLookup.js         # Grok AI food nutrition lookup
 │   │   └── openFoodFacts.js          # Barcode lookup
 │   ├── member/
-│   │   ├── syncFamily.js             # Load + compute family data
 │   │   ├── memberColors.js           # Member avatar colors
 │   │   ├── activityCalories.js       # Activity calorie estimation
 │   │   └── recoveryFactor.js         # Recovery / rest day factor
 │   ├── stripe.js                     # Stripe config, FREE_LIMITS
-│   ├── promotions.js                 # Promotional pricing logic
-│   ├── usageLimits.js                # Rate limiting
+│   ├── usageLimits.js                # Server-side usage metering (RPC-backed, migration 058)
 │   └── mealParser.js                 # Meal text parsing
 │
 ├── contexts/
@@ -171,19 +173,19 @@ AprillBuild/
 │
 ├── hooks/
 │   ├── useAuth.js                    # Re-export from AuthContext
-│   ├── useFamily.js                  # Family members state
 │   ├── useProfile.js                 # Profile state
 │   ├── useSubscription.js            # Stripe subscription state
-│   ├── useStorage.js                 # localStorage wrapper
-│   └── useVoice.js                   # Web Speech API wrapper
+│   ├── useCachedData.js              # localStorage SWR cache + invalidateCache() events
+│   ├── useVoiceInput.js              # Voice→text: Web Speech API or MediaRecorder→/api/transcribe
+│   └── useVoice.js                   # Web Speech API wrapper (legacy — prefer useVoiceInput)
 │
 ├── components/                       # UI components
-│   ├── shared/                       # AppNav, ShoppingCartLink, ThemeToggle
-│   ├── home/                         # HeroSection, LandingClient
-│   ├── landing/                      # LandingClient (full landing page)
-│   ├── auth/                         # AuthModal (login/register/Google OAuth)
-│   ├── recipes/                      # RecipesClient, RecipeCard, RecipeDetailClient, RecipeGeneratorClient
-│   ├── planner/                      # PlannerClient, WeekOverview, DayAgenda, ActivityForm, JournalEntryForm, RecipePickerModal
+│   ├── ui/                           # Primitives: Toast (useToast), Modal (focus trap), ConfirmDialog (useConfirm) — NEVER use alert()/confirm()
+│   ├── shared/                       # NavbarWrapper, ShoppingCartLink, SafeHtml (ONLY sanitized-HTML site), ServiceWorkerRegistrar
+│   ├── assistant/                    # AssistantPanel (Minty Chat) + AssistantFab — conversational search/create/log, paid tier
+│   ├── landing/                      # LandingClient (full landing page), AuthModal
+│   ├── recipes/                      # RecipesClient, RecipeCard, RecipeDetailClient, RecipeGeneratorClient, RecipeNutrition (extracted sub-components)
+│   ├── planner/                      # PlannerClient, PlannerSidebar (recipe/menu browser), WeekOverview, DayAgenda, plannerConstants.js, ActivityForm, JournalEntryForm, RecipePickerModal
 │   ├── shopping/                     # ShoppingListClient
 │   ├── menus/                        # MenusClient, MenuDetailClient
 │   ├── statistics/                   # StatisticsClient (family dashboard + individual detail)
@@ -229,13 +231,15 @@ Used consistently across Plan, Calendar, Statistics:
 
 ## 🔄 Subscription Tiers
 
+**Canonical vocabulary (only valid values for `profiles.subscription_tier`): `free`, `pro`, `family` (+ legacy `nutritionist` alias with paid limits). Never write `'paid'` — the Stripe webhook maps plan_id metadata → tier via `tierFromSubscription()`.**
+
 | Tier | Members | Recipes/day | Planner range |
 |---|---|---|---|
 | free | 2 | 5 | Current week |
 | pro | Unlimited | Unlimited | 365 days |
 | family | Unlimited | Unlimited | 365 days |
 
-**`FREE_LIMITS`** defined in `lib/stripe.js`: `{ membersPerFamily: 2, recipesPerDay: 5 }`
+**`FREE_LIMITS`** defined in `lib/stripe.js`: `{ membersPerFamily: 2, recipesPerDay: 5 }` — mirrored by `LIMITS.free` in `lib/usageLimits.js`.
 
 ### Stripe Price IDs (v2)
 
@@ -397,6 +401,22 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 - All Stripe price IDs (4 vars)
 - `SUPABASE_SERVICE_ROLE_KEY` — For GDPR delete and admin operations
 - `IDEOGRAM_API_KEY` — For recipe image generation
+- `NEXT_PUBLIC_USDA_API_KEY` — USDA FoodData Central (browser-exposed by design; falls back to public DEMO_KEY)
+- `GROQ_API_KEY` — Groq Whisper STT (`whisper-large-v3-turbo`) for `/api/transcribe`. Without it, voice works via Web Speech API in browsers and fails gracefully in the app.
+
+### Manual Ops Pending (after 2026-09-01 hardening session)
+
+- ⚠️ **Run `supabase/migrations/058_usage_check_and_increment.sql`** in Supabase SQL editor (adds atomic usage RPC + `daily_usage.ai_calls`). AI proxy routes fail open until run — no breakage, but no limit enforcement.
+- ⚠️ **Run `supabase/migrations/059_recipe_search_vector.sql`** (recipes FTS for assistant). Until then /api/assistant falls back to ILIKE search.
+- ⚠️ **Redeploy edge function**: `supabase functions deploy stripe-webhook` (tier vocabulary fix — webhook must write pro/family, not 'paid').
+- ⚠️ **Add `GROQ_API_KEY`** to Vercel env for voice transcription.
+- ⚠️ Verify GDPR delete on staging with a test account (all user tables should be empty after).
+- ⚠️ If Stripe price-ID fallback is needed in webhook: `supabase secrets set STRIPE_FAMILY_MONTHLY_PRICE_ID=... STRIPE_FAMILY_YEARLY_PRICE_ID=...` (plan_id metadata is the primary mechanism and needs no secrets).
+
+### PWA / Caching (added 2026-09-01)
+
+- `public/manifest.json` + `public/sw.js` (service worker): static assets & fonts cache-first; public pages (/, /recipes, /menus, /blog, /pricing, /pages) stale-while-revalidate; recipe images cache-first 30d. **Authenticated HTML and /api/* are never cached.** Registered production-only via `components/shared/ServiceWorkerRegistrar.jsx`.
+- Client data cache: `hooks/useCachedData.js` (localStorage + TTL + SWR). Invalidate after writes via `invalidateCache('recipes:')` etc.
 
 ### Post-Deploy Checklist (not yet done)
 

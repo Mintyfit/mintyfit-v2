@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useToast } from '@/components/ui/Toast'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 function Section({ title, children }) {
   return (
@@ -271,6 +273,7 @@ function AddChildModal({ onClose, onAdd }) {
 }
 
 function NoFamilyView({ onCreateFamily, onCreate }) {
+  const toast = useToast()
   const [familyName, setFamilyName] = useState('')
   const [creating, setCreating] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
@@ -286,12 +289,12 @@ function NoFamilyView({ onCreateFamily, onCreate }) {
       })
       if (!res.ok) {
         const d = await res.json()
-        alert(d.error)
+        toast.error(d.error)
         return
       }
       onCreate()
     } catch {
-      alert('Failed to create family')
+      toast.error('Failed to create family')
     } finally {
       setCreating(false)
     }
@@ -358,6 +361,7 @@ function NoFamilyView({ onCreateFamily, onCreate }) {
 }
 
 export default function MyFamilyClient({ userId, initialData }) {
+  const confirmDialog = useConfirm()
   const [data, setData] = useState(initialData)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
@@ -475,7 +479,7 @@ export default function MyFamilyClient({ userId, initialData }) {
   }
 
   async function handleRemoveMember(memberId, name) {
-    if (!confirm(`Remove ${name} from the family?`)) return
+    if (!(await confirmDialog({ title: 'Remove member?', body: `${name} will lose access to shared plans and lists.`, confirmLabel: 'Remove', destructive: true }))) return
     try {
       const res = await fetch(`/api/family/members?memberId=${memberId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to remove member')
@@ -489,7 +493,7 @@ export default function MyFamilyClient({ userId, initialData }) {
   }
 
   async function handleLeaveFamily() {
-    if (!confirm('Leave the family? You will lose access to shared plans.')) return
+    if (!(await confirmDialog({ title: 'Leave the family?', body: 'You will lose access to shared plans and lists.', confirmLabel: 'Leave', destructive: true }))) return
     try {
       await fetch(`/api/family/members?memberId=${userId}`, { method: 'DELETE' })
       window.location.reload()
@@ -497,7 +501,7 @@ export default function MyFamilyClient({ userId, initialData }) {
   }
 
   async function handleRemoveManaged(id, name) {
-    if (!confirm(`Remove ${name} from the family?`)) return
+    if (!(await confirmDialog({ title: 'Remove child?', body: `${name} and their nutrition profile will be removed from the family.`, confirmLabel: 'Remove', destructive: true }))) return
     try {
       await fetch(`/api/family/managed?id=${id}`, { method: 'DELETE' })
       setData(prev => ({ ...prev, managedMembers: prev.managedMembers.filter(m => m.id !== id) }))

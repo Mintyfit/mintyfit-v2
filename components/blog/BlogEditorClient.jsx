@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useConfirm } from '@/components/ui/ConfirmDialog'
 
 function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80)
@@ -11,6 +12,7 @@ function slugify(str) {
 const CATEGORY_OPTIONS = ['Nutrition', 'Meal Planning', 'Family Health', 'Recipes', 'Weight Loss', 'Kids']
 
 export default function BlogEditorClient({ post, isNew }) {
+  const confirmDialog = useConfirm()
   const router = useRouter()
   const supabase = createClient()
 
@@ -67,7 +69,7 @@ export default function BlogEditorClient({ post, isNew }) {
   }
 
   async function handleDelete() {
-    if (!confirm('Delete this post? This cannot be undone.')) return
+    if (!(await confirmDialog({ title: 'Delete this post?', body: 'This cannot be undone.', confirmLabel: 'Delete post', destructive: true }))) return
     await supabase.from('blog_posts').delete().eq('id', post.id)
     router.push('/blog')
   }

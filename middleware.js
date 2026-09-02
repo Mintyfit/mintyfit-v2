@@ -3,10 +3,10 @@ import { NextResponse } from 'next/server'
 
 const PROTECTED_PATHS = [
   '/plan',
-  '/journal',
-  '/stats',
+  '/statistics',
   '/my-account',
-  '/generate',
+  '/my-family',
+  '/shopping-list',
   '/nutritionist',
   '/admin',
 ]

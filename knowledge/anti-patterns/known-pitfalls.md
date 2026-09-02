@@ -29,6 +29,10 @@
 - **`eslint: { ignoreDuringBuilds: true }`**: Convenient during dev but masks real issues. Remove before production or at least review lint output separately.
 - **Environment variables prefix**: Browser-accessible vars must be `NEXT_PUBLIC_`. Server-only vars have no prefix. Never put secret API keys in `NEXT_PUBLIC_` vars.
 
+## Caching
+
+- **Planner week cache hides external writes**: `PlannerClient` caches week data (entries/activities/journals) in localStorage under `mintyfit:plan:week:{userId}:...` with a 30-min TTL and serves it without revalidating. Any write to `calendar_entries`/`food_journal`/`daily_activities` made OUTSIDE PlannerClient (e.g. Minty Chat journal logging) is invisible on /plan until TTL expiry. Fix pattern: call `bustPlanWeekCache(userId)` + dispatch `JOURNAL_SAVED_EVENT` from `lib/planner/planCache.js` after the write; PlannerClient listens and runs `refreshDay()`.
+
 ---
 *Last updated: 2026-04-06*
 *Confidence: High — learned from v1 and Next.js patterns*

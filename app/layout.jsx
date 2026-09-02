@@ -22,8 +22,11 @@
 import localFont from 'next/font/local'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import { ToastProvider } from '@/components/ui/Toast'
+import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import NavbarWrapper from '@/components/shared/NavbarWrapper'
 import AppFooter from '@/components/landing/AppFooter'
+import ServiceWorkerRegistrar from '@/components/shared/ServiceWorkerRegistrar'
 import './globals.css'
 
 const montserrat = localFont({
@@ -80,9 +83,14 @@ export default function RootLayout({ children }) {
       <body suppressHydrationWarning>
         <ThemeProvider>
           <AuthProvider>
-            <NavbarWrapper />
-            <main style={{ minHeight: '100vh' }}>{children}</main>
-            <AppFooter />
+            <ToastProvider>
+              <ConfirmProvider>
+                <NavbarWrapper />
+                <main style={{ minHeight: '100vh' }}>{children}</main>
+                <AppFooter />
+                <ServiceWorkerRegistrar />
+              </ConfirmProvider>
+            </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

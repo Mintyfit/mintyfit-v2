@@ -26,12 +26,9 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
     }
   }, [isOpen, defaultTab])
 
-  // Debug: log supabase client status on mount
+  // Warm the Supabase singleton on mount so auth calls don't pay init cost
   useEffect(() => {
-    const client = createClient()
-    console.log('[AuthModal] Supabase client created:', !!client)
-    console.log('[AuthModal] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 20) + '...')
-    console.log('[AuthModal] Supabase key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+    createClient()
   }, [])
 
   // Close on Escape
@@ -56,26 +53,22 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
 
   async function handleEmailSubmit(e) {
     e.preventDefault()
-    console.log('[AuthModal] Form submitted, tab:', tab)
-    
+
     if (tab === 'signup' && !gdpr) {
       setError('Please agree to the Privacy Policy and Terms of Service to continue.')
       return
     }
-    
+
     if (!supabase) {
-      console.error('[AuthModal] Supabase client is null')
       setError('Authentication service not configured. Please check your connection.')
       return
     }
-    
+
     setLoading(true)
     setError(null)
-    console.log('[AuthModal] Starting auth with email:', email)
 
     if (tab === 'signup') {
       // Signup via server-side API (Admin API — no default confirmation email sent)
-      console.log('[AuthModal] Calling /api/auth/signup...')
       let signupRes
       try {
         signupRes = await fetch('/api/auth/signup', {
@@ -94,15 +87,12 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
       const data = await signupRes.json()
 
       if (!signupRes.ok) {
-        console.error('[AuthModal] Signup failed:', data)
         setError(data.detail || data.error || 'Something went wrong. Please try again.')
         return
       }
 
-      console.log('[AuthModal] Signup successful')
       setMessage('Check your email for a sign-in link!')
     } else {
-      console.log('[AuthModal] Calling signInWithPassword...')
       let result
       try {
         result = await supabase.auth.signInWithPassword({ email, password })
@@ -116,12 +106,10 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
       setLoading(false)
 
       if (!result || result.error) {
-        console.error('[AuthModal] Auth failed:', result?.error)
         setError(result?.error?.message || 'Something went wrong. Please try again.')
         return
       }
 
-      console.log('[AuthModal] Signin successful')
       // Check if user needs onboarding before completing sign-in
       if (result.data?.user) {
         const { data: profileCheck } = await supabase
@@ -361,9 +349,6 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
             <button
               type="submit"
               disabled={loading}
-              onClick={(e) => {
-                console.log('[AuthModal] Submit button clicked, loading:', loading)
-              }}
               style={{
                 width: '100%', padding: '0.875rem', borderRadius: '10px',
                 background: loading ? 'var(--text-4)' : 'var(--primary)',

@@ -44,6 +44,8 @@
 | `sessions/2026-04-06-business-logic.md` | Session 02 — Business logic transplant from v1; API route conversion; build verified |
 | `sessions/SESSION-08-WRAPUP.md` | Sessions 03–08 — All pages built (landing, recipes, planner, shopping, menus, blog, admin, pricing, SEO) |
 | `sessions/2026-04-09-session07-session09.md` | Sessions 07+09 — Statistics, Account, Family, Nutritionist; full audit; SYSTEM.md updated |
+| `sessions/2026-09-01-phase0-hardening.md` | Full evaluation + MASTER-PLAN.md + Phase 0 critical fixes (Stripe tiers, GDPR, XSS, upserts, usage limits, column bugs) |
+| `sessions/2026-09-02-chat-journal-planner-sync.md` | Minty Chat journal logging invisible on /plan — root cause: planner localStorage week cache; fix: shared `lib/planner/planCache.js` bust+event contract |
 
 ### Prompts
 | File | Purpose |

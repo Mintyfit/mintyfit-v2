@@ -1,11 +1,16 @@
-﻿'use client'
+'use client'
+
+import { toDateKey } from '@/lib/utils/dateKey'
+import { MEAL_TYPES } from '@/lib/nutrition/mealBudget'
+import { extractJSON } from '@/lib/utils/extractJSON'
 
 import { useMemo, useState } from 'react'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
+import { computeTDEE } from '@/lib/nutrition/portionCalc'
 import { useSubscription } from '@/hooks/useSubscription'
 import { Sparkles } from 'lucide-react'
 
-const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
+
 
 const NUTRIENT_GROUPS = [
   { title: 'Energy', keys: ['energy_kcal', 'energy_kj'] },
@@ -17,9 +22,6 @@ const NUTRIENT_GROUPS = [
   { title: 'Other', keys: ['water', 'ash'] },
 ]
 
-function toDateKey(date) {
-  return date.toISOString().slice(0, 10)
-}
 
 function parseDate(value) {
   return new Date(`${value}T12:00:00`)
@@ -75,24 +77,11 @@ function pct(value, target) {
   return (value / target) * 100
 }
 
-function extractJSON(text) {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
-  if (fenced) { try { return JSON.parse(fenced[1]) } catch {} }
-  const start = text.indexOf('{')
-  const end = text.lastIndexOf('}')
-  if (start !== -1 && end !== -1) return JSON.parse(text.slice(start, end + 1))
-  throw new Error('No JSON found in response')
-}
 
-function computeTDEE(weight, height, age, gender) {
-  if (!weight || !height || !age) return 2000
-  const bmr = gender === 'female'
-    ? (10 * weight + 6.25 * height - 5 * age - 161)
-    : (10 * weight + 6.25 * height - 5 * age + 5)
-  return Math.round(bmr * 1.2)
-}
+// NOTE: computeTDEE is imported from lib/nutrition/portionCalc (single source
+// of truth). Never re-implement BMR/TDEE locally.
 
-export default function StatisticsClient({ userId, initialData, nutritionFields, allRecipes }) {
+export default function StatisticsClient({ userId, initialData, nutritionFields }) {
   const { isPro } = useSubscription()
   const [period, setPeriod] = useState('7d')
   const [customStart, setCustomStart] = useState('')
@@ -100,6 +89,7 @@ export default function StatisticsClient({ userId, initialData, nutritionFields,
   const [selectedMeals, setSelectedMeals] = useState(new Set(MEAL_TYPES))
   const [selectedMembers, setSelectedMembers] = useState(new Set())
   const [expandedGroups, setExpandedGroups] = useState(new Set(['Energy', 'Macronutrients']))
+  const [recipeCatalogue, setRecipeCatalogue] = useState(null) // lazy — loaded on first AI analysis
   const [analysisResult, setAnalysisResult] = useState(null)
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState(null)
@@ -307,7 +297,27 @@ export default function StatisticsClient({ userId, initialData, nutritionFields,
     setAnalysisError(null)
     setAnalysisResult(null)
 
-    const recipeList = (allRecipes || []).slice(0, 50).map(r => {
+    // Recipe catalogue is fetched lazily — it carries 47-nutrient JSONB per row
+    // and is only needed when the user explicitly runs AI analysis.
+    let catalogue = recipeCatalogue
+    if (!catalogue) {
+      try {
+        const { createClient } = await import('@/lib/supabase/client')
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('recipes')
+          .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
+          .or(`is_public.eq.true,profile_id.eq.${userId}`)
+          .order('created_at', { ascending: false })
+          .limit(50)
+        catalogue = data || []
+        setRecipeCatalogue(catalogue)
+      } catch {
+        catalogue = []
+      }
+    }
+
+    const recipeList = (catalogue || []).slice(0, 50).map(r => {
       const n = r.nutrition?.perServing || {}
       return `${r.id}|${r.title}|${r.meal_type || 'any'}|` +
         `${Math.round(n.energy_kcal||0)}kcal|${Math.round(n.protein||0)}g prot|` +
@@ -339,6 +349,7 @@ export default function StatisticsClient({ userId, initialData, nutritionFields,
         body: JSON.stringify({
           model: 'grok-3-fast',
           max_tokens: 2500,
+          purpose: 'insights',
           messages: [
             {
               role: 'system',
@@ -711,7 +722,7 @@ Rules:
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {analysisResult.recipeSuggestions.map((s, i) => {
-                    const recipe = (allRecipes || []).find(r => r.id === s.id)
+                    const recipe = (recipeCatalogue || []).find(r => r.id === s.id)
                     return (
                       <div key={i} style={{
                         background: '#F0FDF4', border: '1px solid #BBF7D0',

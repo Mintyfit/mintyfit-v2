@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useToast } from '@/components/ui/Toast'
 
 function ClientCard({ client, onLeaveNote }) {
+  const toast = useToast()
   const { profile, avgCalories, recentNotes, lastActivity, calendarEntries } = client
   const [showNoteForm, setShowNoteForm] = useState(false)
   const [noteText, setNoteText] = useState('')
@@ -24,7 +26,7 @@ function ClientCard({ client, onLeaveNote }) {
       setNoteText('')
       setShowNoteForm(false)
     } catch (err) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setSavingNote(false)
     }

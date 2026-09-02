@@ -64,18 +64,37 @@ function MacroDonut({ protein, carbs, fat }) {
   )
 }
 
-export default function DayStatsPanel({ date, dateKey, entries, activities, members, enabledMealTypes, selectedMemberIds, onToggleMember }) {
+export default function DayStatsPanel({ date, dateKey, entries, activities, journals, members, enabledMealTypes, selectedMemberIds, onToggleMember }) {
   const isChecked = (id) => selectedMemberIds ? selectedMemberIds.has(id) : true
   const meals = (enabledMealTypes && enabledMealTypes.length) ? enabledMealTypes : MEAL_TYPES
 
+  // Journal entries (logged food facts) count toward the day too. They ride the
+  // same fallback path as legacy calendar rows: personal_nutrition + consumers.
+  const entriesWithJournals = useMemo(() => {
+    const merged = {}
+    for (const mt of meals) {
+      const cal = entries?.[mt] || []
+      const j = (journals?.[mt] || [])
+        .filter(je => je.nutrition && typeof je.nutrition === 'object')
+        .map(je => ({
+          member_id: je.member_id || null,
+          consumer_member_ids: je.member_id ? [je.member_id] : null,
+          personal_nutrition: je.nutrition,
+          recipes: null,
+        }))
+      merged[mt] = [...cal, ...j]
+    }
+    return merged
+  }, [entries, journals, meals])
+
   const breakdown = useMemo(() =>
-    computeMealBudgetDayBreakdown(entries, members, meals, selectedMemberIds),
-    [entries, members, meals, selectedMemberIds]
+    computeMealBudgetDayBreakdown(entriesWithJournals, members, meals, selectedMemberIds),
+    [entriesWithJournals, members, meals, selectedMemberIds]
   )
 
   const dayNutrition = useMemo(() =>
-    computeMealBudgetDayNutrition(entries, members, meals, selectedMemberIds),
-    [entries, members, meals, selectedMemberIds]
+    computeMealBudgetDayNutrition(entriesWithJournals, members, meals, selectedMemberIds),
+    [entriesWithJournals, members, meals, selectedMemberIds]
   )
 
   // Top donut = sum across CHECKED members only

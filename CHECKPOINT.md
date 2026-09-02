@@ -97,3 +97,57 @@
 - [DONE] TASK 9.6: Knowledge base consolidation — sessions/2026-04-09-session07-session09.md created, INDEX.md updated, SYSTEM.md fully updated to v2 final state ✓
 - [DONE] TASK 9.7: Final commit pushed (build clean, 40 routes, zero errors) ✓
 - [PENDING] TASK 9.8: Switch production domain (mintyfit.com) to new project, update webhooks and OAuth — user to do manually when ready
+
+---
+
+## Session 10+ — Hardening + Voice (see MASTER-PLAN.md for full task specs)
+
+> Full instructions per task live in MASTER-PLAN.md. Migrations marked ⚠️ require manual run in Supabase.
+
+### Phase 0 — Critical Bug Fixes
+- [DONE] 0.1: Fix managed_members/profiles column selects — ✓ code fixed to `weight`/`height` (per migrations 027/043) in plan/page.jsx, statistics/page.jsx, recipes/[slug]/page.jsx, RecipeDetailClient.jsx. Build passes. Runtime verify: add managed child → appears in planner/statistics/recipe member pickers.
+- [DONE] 0.2: Unify Stripe tier vocabulary — ✓ webhook writes pro/family (plan_id metadata → price-ID fallback); usageLimits adds `family`; free recipes unified to 5/day; portal link GET→POST with loading/error states. ⚠️ REQUIRES: redeploy edge function `supabase functions deploy stripe-webhook`.
+- [DONE] 0.3: Fix GDPR export/delete — ✓ food_journal (was journal_entries), calendar/journal keyed by profile_id, added recipes/menus/swaps/member_states/usage/shopping lists+items/invites; managed children reassigned to surviving family member instead of deleted. Runtime verify on staging before relying on it.
+- [DONE] 0.4: SafeHtml + DOMPurify — ✓ isomorphic-dompurify installed; components/shared/SafeHtml.jsx is the only dangerouslySetInnerHTML site; BlogContent + pages/[slug] migrated; script re-execution removed (calculators run in iframes). Blog dark-mode vars fixed in passing.
+- [DONE] 0.5: Calendar upsert fix — ✓ select→insert/update replaces broken partial-index upsert in PlannerClient + menus/apply; save failures now surface via alert (toast system is Phase 4).
+- [DONE] 0.6: Server-side usage limits — ✓ migration 058 (atomic usage_check_and_increment RPC + ai_calls column); /api/claude + /api/grok meter by whitelisted purpose, fixed model lists, max_tokens cap, 429 LIMIT_REACHED; recipeGenerator drops client-side check; LIMIT_REACHED error now links to /pricing. ⚠️ REQUIRES: run migration 058 in Supabase (fails open until then — no breakage, just no enforcement).
+- [DONE] 0.7: Middleware paths (real routes now), dead code sweep — ✓ deleted AppNav, ThemeToggle, useFamily, useStorage, syncFamily, promotions, FamilySection, MemberCard, MeasurementForm, SubscriptionCard, api/account/{family,measurements}, empty dirs (auth/home/mobile); debug console.logs removed from AuthModal/supabase client/nutritionist connect (also removed supabaseUrl leak in 404 response); StatisticsClient computeTDEE now imports canonical portionCalc; USDA key → NEXT_PUBLIC_USDA_API_KEY env.
+
+### Phase 1 — Performance & Caching
+- [DONE] 1.1: Android wrapper fixes — ✓ double loadUrl removed (factory no longer loads; LaunchedEffect is single source), configChanges added (rotation survives), RECORD_AUDIO + MODIFY_AUDIO_SETTINGS manifest, WebChromeClient.onPermissionRequest grants mic for mintyfit.com origin with runtime permission flow, onShowFileChooser wired, mediaPlaybackRequiresUserGesture=false. NOT YET COMPILED — run a Gradle build on the Android side.
+- [DONE] 1.2: PWA manifest + service worker — ✓ public/manifest.json created (was referenced but missing), public/sw.js (static cache-first, public pages SWR, images 30d cache; NEVER caches authed HTML or /api/*), ServiceWorkerRegistrar (production-only) wired into layout.jsx.
+- [DONE] 1.3: useCachedData layer — ✓ hooks/useCachedData.js (localStorage + TTL + SWR + invalidateCache events); RecipesClient private recipes migrated (fixes staleness bug — save/delete now invalidate via 'recipes:' prefix); PlannerClient week cache sessionStorage→localStorage + 30min TTL.
+- [DONE] 1.4: Statistics slimming (partial) — ✓ removed the 50-recipe × 47-nutrient catalogue from every SSR load; fetched lazily on first AI analysis click.
+
+### Phase 2 — Mobile Typography & Portrait UX
+- [DONE] 2.1: Root font scaling — ✓ 17.5px ≤767px, 18px ≤380px in globals.css (scales ~90% of rem-based inline styles +9-12%)
+- [DONE] 2.2: px→rem audit — ✓ SwapPopup + RecipeDetailClient numeric fontSizes converted to rem
+- [DONE] 2.3: Touch targets — ✓ week arrows 34→44px, planner "+" buttons 28→40px, DayAgenda remove buttons →40px with aria-labels, bottom-nav labels 10→12px + min-height 44px
+- [DONE] 2.4: Typography tokens — ✓ --text-xs…--text-2xl in globals.css
+- [DONE] 2.5: Portrait-first planner — ✓ day view renders ABOVE week grid on ≤900px (day-first mobile)
+
+### Phase 3 — Voice Assistant (paid feature)
+- [DONE] 3.1: STT pipeline — ✓ POST /api/transcribe (Groq whisper-large-v3-turbo, 10MB cap, entitlement+metered); hooks/useVoiceInput.js (Web Speech API free path in browsers, MediaRecorder→transcribe fallback for the app)
+- [DONE] 3.2: Assistant brain — ✓ POST /api/assistant (Haiku intent classify → find_recipe: FTS+LLM rerank with ILIKE fallback / create_recipe: prompt handoff / log_food: Grok parse / question: short answer); migration 059 (recipes.search_vector tsvector + GIN index)
+- [DONE] 3.3: Chat UI — ✓ components/assistant/AssistantPanel.jsx (chat, voice auto-send, recipe cards, inline generation with progress, journal confirm card with meal/member selects, upgrade card) + AssistantFab (bottom-sheet launcher); mounted on /recipes (panel) and /plan (FAB)
+- [DONE] 3.4: Entitlement gating — ✓ canUseVoiceAssistant(tier) server-side in both routes (403 UPGRADE_REQUIRED) + client teaser card with /pricing link
+
+### Phase 4 — Consolidation (ongoing)
+- [DONE] 4.2a: extractJSON deduped — ✓ 8 copies → lib/utils/extractJSON.js (canonical depth-tracking variant)
+- [DONE] 4.2b: MEAL_TYPES deduped — ✓ 9 copies → mealBudget.js exports MEAL_TYPES (5-slot) + RECIPE_MEAL_TYPES (4-slot)
+- [DONE] 4.2c: toDateKey deduped — ✓ 4 function copies → lib/utils/dateKey.js
+- [DONE] 4.1: RecipeDetailClient decomposition (partial) — ✓ 2,208→1,725 lines: NutritionDelta/IngredientAlternativesSheet/DonutChart/NutritionSection/SidebarNutrition + helpers extracted to components/recipes/RecipeNutrition.jsx. NOTE: NutritionSection is currently NOT rendered anywhere (progressive-disclosure feature regressed at some point) — decide: wire it back or delete.
+- [DONE] 4.1b: PlannerClient split — ✓ 1,210→943 lines: sidebar (state, search/filter/pagination, menus tab, drag initiation) extracted to components/planner/PlannerSidebar.jsx; MEAL_LABELS/MEAL_ICONS (SVG variants) → components/planner/plannerConstants.js; drag callbacks resolve in parent; unused Link import removed. Build green.
+- [DONE] 4.3: Lint enabled in builds — ✓ eslint.ignoreDuringBuilds removed; build passes with "Linting and checking validity of types" green.
+- [DONE] 4.4: Smoke-test script — ✓ scripts/smoke-test.mjs (schema sanity, managed-member round-trip, calendar save, RPC auth guard, tier vocabulary, FTS). Needs SMOKE_TEST_USER_ID + staging project.
+- [DONE] 4.5: Primitives — ✓ components/ui/{Toast,Modal,ConfirmDialog}.jsx; providers wired in layout; ALL 24 alert()/confirm() call sites replaced. Bonus bugs fixed: GDPR delete button called POST (route only accepts DELETE — delete-account was broken); removed supabaseUrl leak remnant in MyAccountClient; deleted dead ProfileSection + NutritionistLinkStatus.
+
+### ⚠️ Manual steps required (website)
+1. Run migration 058 (usage RPC) — until then limits fail open (no breakage)
+2. Run migration 059 (recipes.search_vector) — until then assistant falls back to ILIKE search
+3. `supabase functions deploy stripe-webhook` — tier fix
+4. Add `GROQ_API_KEY` to Vercel env — until then voice falls back to Web Speech API (browsers) and fails gracefully in the app
+
+### ⚠️ Manual steps required (Android app, D:\WORKS\Minty\Android)
+1. Rebuild the app (Gradle) — wrapper changes not yet compiled
+2. Test: rotation state, mic permission prompt, voice in assistant

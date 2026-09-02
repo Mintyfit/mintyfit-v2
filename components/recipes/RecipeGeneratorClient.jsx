@@ -1,5 +1,6 @@
 'use client'
 
+import { RECIPE_MEAL_TYPES as MEAL_TYPES } from '@/lib/nutrition/mealBudget'
 import { useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -8,7 +9,7 @@ import { generateRecipe } from '@/lib/recipe/recipeGenerator'
 import { useVoice } from '@/hooks/useVoice'
 import { useAuth } from '@/contexts/AuthContext'
 
-const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
+
 const SUGGESTIONS = [
   'High-protein breakfast with eggs',
   'Quick vegan lunch bowl',
@@ -173,7 +174,7 @@ export default function RecipeGeneratorClient() {
     } catch (err) {
       console.error('Generation error:', err)
       if (err.message?.startsWith('LIMIT_REACHED')) {
-        setError('You have reached your recipe generation limit. Upgrade to Pro for unlimited recipes.')
+        setError('LIMIT') // sentinel — rendered with an upgrade link below
       } else {
         setError('Something went wrong. Please try again.')
       }
@@ -482,7 +483,14 @@ export default function RecipeGeneratorClient() {
       {/* Error */}
       {error && (
         <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '0.875rem 1rem', marginBottom: '1.25rem', color: '#dc2626', fontSize: '0.9375rem' }}>
-          {error}
+          {error === 'LIMIT' ? (
+            <>
+              You have reached your recipe generation limit.{' '}
+              <Link href="/pricing" style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'underline' }}>
+                Upgrade to Pro for unlimited recipes →
+              </Link>
+            </>
+          ) : error}
         </div>
       )}
 

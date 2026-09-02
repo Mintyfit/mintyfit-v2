@@ -1,3 +1,4 @@
+import { extractJSON } from '@/lib/utils/extractJSON'
 // ── Hardcoded substitution table (instant, free) ──────────────────────────────
 // Used as first-pass lookup. Falls back to Claude Haiku for anything not here.
 
@@ -130,25 +131,6 @@ function findHardcodedAlternatives(ingredientName) {
 }
 
 // ── JSON extraction (same logic as ingredientSwap.js) ─────────────────────────
-function extractJSON(text) {
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
-  if (fenced) { try { return JSON.parse(fenced[1]) } catch {} }
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === '[') {
-      let depth = 0, inStr = false, esc = false
-      for (let j = i; j < text.length; j++) {
-        const ch = text[j]
-        if (esc) { esc = false; continue }
-        if (ch === '\\' && inStr) { esc = true; continue }
-        if (ch === '"') { inStr = !inStr; continue }
-        if (inStr) continue
-        if (ch === '[') depth++
-        else if (ch === ']') { depth--; if (depth === 0) { try { return JSON.parse(text.slice(i, j + 1)) } catch {} break } }
-      }
-    }
-  }
-  return JSON.parse(text)
-}
 
 // ── Claude Haiku fallback (same logic as getSwapSuggestions) ──────────────────
 const HAIKU = 'claude-haiku-4-5-20251001'

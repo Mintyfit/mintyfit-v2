@@ -1,11 +1,12 @@
 'use client'
 
+import { MEAL_TYPES } from '@/lib/nutrition/mealBudget'
 import Link from 'next/link'
 import { calculateMacroPercentages } from '@/lib/nutrition/dailyTotals'
 import { getNutrientLossSummary, formatNutrientValue } from '@/lib/nutrition/activityNutrientLoss'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 
-const MEAL_TYPES = ['breakfast', 'snack', 'lunch', 'snack2', 'dinner']
+
 const MEAL_ICONS = { breakfast: '🌅', snack: '🍎', lunch: '☀️', snack2: '🍊', dinner: '🌙' }
 const MEAL_LABELS = { breakfast: 'Breakfast', snack: 'Morning Snack', lunch: 'Lunch', snack2: 'Afternoon Snack', dinner: 'Dinner' }
 

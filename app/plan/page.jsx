@@ -97,7 +97,7 @@ async function getPlannerData(searchParams) {
           .eq('status', 'active'),
         adminClient
           .from('managed_members')
-          .select('id, name, date_of_birth, weight_kg, height_cm, gender')
+          .select('id, name, date_of_birth, weight, height, gender')
           .eq('family_id', clientFamilyId),
       ])
 
@@ -129,8 +129,8 @@ async function getPlannerData(searchParams) {
           ...m,
           display_name: m.name,
           type: 'managed',
-          weight: m.weight_kg ?? null,
-          height: m.height_cm ?? null,
+          weight: m.weight ?? null,
+          height: m.height ?? null,
         })),
       ].filter(Boolean)
     }
@@ -184,7 +184,7 @@ async function getPlannerData(searchParams) {
             .eq('family_id', familyId),
           supabase
             .from('managed_members')
-            .select('id, name, date_of_birth, weight_kg, height_cm, gender')
+            .select('id, name, date_of_birth, weight, height, gender')
             .eq('family_id', familyId),
         ])
 
@@ -216,8 +216,8 @@ async function getPlannerData(searchParams) {
             ...m,
             display_name: m.name,
             type: 'managed',
-            weight: m.weight_kg ?? null,
-            height: m.height_cm ?? null,
+            weight: m.weight ?? null,
+            height: m.height ?? null,
           })),
         ].filter(Boolean)
       } else {

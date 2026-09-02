@@ -1,15 +1,17 @@
 import { useState, useRef, useCallback } from 'react';
+import { useToast } from '@/components/ui/Toast';
 
 export function useVoice() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const toast = useToast();
   const recognitionRef = useRef(null);
   const utteranceRef = useRef(null);
 
   const startListening = useCallback((onResult) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser.');
+      toast.error('Speech recognition is not supported here. Type instead.');
       return;
     }
     const recognition = new SpeechRecognition();
