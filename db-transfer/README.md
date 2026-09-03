@@ -6,7 +6,7 @@
 |---|---|
 | `mintyfit-db-transfer.sql` | **Combined schema + data** — run this in the target Supabase SQL Editor |
 | `01-schema.sql` | Schema only (tables, indexes, functions, triggers, policies) |
-| `02-data.sql` | Data only (1,228 rows across 35 tables as INSERT statements) |
+| `02-data.sql` | ~~Data only~~ — removed as duplicate; canonical copy lives at `supabase/migrations/042_import_data.sql` |
 | `03-auth-users.sql` | Auth users (6) with passwords — run BEFORE schema+data |
 | `03-auth-users.json` | Auth users in JSON format (Dashboard import compatible) |
 | `export-data.mjs` | Node.js script to re-export public data |

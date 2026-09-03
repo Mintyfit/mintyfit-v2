@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { computeBMR, explainBMR } from '@/lib/nutrition/portionCalc'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
@@ -17,6 +17,15 @@ const GOALS = [
   { value: 'metabolic_health', label: 'Metabolic health' },
   { value: 'general_wellness', label: 'General wellness' },
 ]
+
+const inputStyle = {
+  width: '100%', padding: '10px 12px',
+  border: '1px solid var(--border)', borderRadius: '8px',
+  background: 'var(--bg-page)', color: 'var(--text-1)',
+  fontSize: '14px', outline: 'none',
+}
+
+const labelStyle = { display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }
 
 function Section({ title, children }) {
   return (
@@ -42,27 +51,25 @@ function WeightSparkline({ logs }) {
   const W = 200
   const H = 50
 
-  const points = recent.map((log, i) => {
-    const x = (i / (recent.length - 1)) * W
-    const y = H - ((log.weight - min) / range) * (H - 10) - 5
-    return `${x},${y}`
-  }).join(' ')
+  const points = recent.map((log, i) => ({
+    x: (i / (recent.length - 1)) * W,
+    y: H - ((log.weight - min) / range) * (H - 10) - 5,
+  }))
+  const pointsAttr = points.map(p => `${p.x},${p.y}`).join(' ')
 
   return (
     <svg width={W} height={H} style={{ display: 'block' }}>
       <polyline
-        points={points}
+        points={pointsAttr}
         fill="none"
         stroke="var(--primary)"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {recent.map((log, i) => {
-        const x = (i / (recent.length - 1)) * W
-        const y = H - ((log.weight - min) / range) * (H - 10) - 5
-        return <circle key={i} cx={x} cy={y} r="3" fill="var(--primary)" />
-      })}
+      {points.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="3" fill="var(--primary)" />
+      ))}
     </svg>
   )
 }
@@ -80,24 +87,31 @@ function age(profile) {
 }
 
 function BMRBreakdown({ profile, weightLogs, isMetric }) {
-  const a = age(profile)
-  // Fall back to latest weight_log if profile.weight isn't set
-  const latestLogged = weightLogs && weightLogs.length ? Number(weightLogs[0].weight) : null
-  const weight = Number(profile.weight) || latestLogged || null
-  const gender = profile.gender || profile.sex || null
-  const user = {
-    weight,
-    height: profile.height,
-    age: a,
-    gender,
-    body_fat_pct: profile.body_fat_pct,
-    pregnancy: profile.pregnancy,
-    lactation: profile.lactation,
-  }
-  const bmr = computeBMR(user)
-  const explained = bmr ? explainBMR(user) : null
-  const sedentaryTDEE = bmr ? Math.round(bmr * 1.2 / 10) * 10 : null
-  const needs = bmr ? computeMemberDailyNeeds({ ...user, baseDailyCalories: sedentaryTDEE }) : null
+  const { bmr, explained, sedentaryTDEE, needs, user, a } = useMemo(() => {
+    const a = age(profile)
+    // Fall back to latest weight_log if profile.weight isn't set
+    const latestLogged = weightLogs && weightLogs.length ? Number(weightLogs[0].weight) : null
+    const weight = Number(profile.weight) || latestLogged || null
+    const gender = profile.gender || profile.sex || null
+    const user = {
+      weight,
+      height: profile.height,
+      age: a,
+      gender,
+      body_fat_pct: profile.body_fat_pct,
+      pregnancy: profile.pregnancy,
+      lactation: profile.lactation,
+    }
+    const bmr = computeBMR(user)
+    const explained = bmr ? explainBMR(user) : null
+    const sedentaryTDEE = bmr ? Math.round(bmr * 1.2 / 10) * 10 : null
+    const needs = bmr ? computeMemberDailyNeeds({ ...user, baseDailyCalories: sedentaryTDEE }) : null
+    return { bmr, explained, sedentaryTDEE, needs, user, a }
+  }, [
+    profile.weight, profile.height, profile.date_of_birth, profile.age,
+    profile.gender, profile.sex, profile.body_fat_pct, profile.pregnancy, profile.lactation,
+    weightLogs,
+  ])
 
   return (
     <Section title="Energy Needs (BMR)">
@@ -204,10 +218,14 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
   const { profile: initialProfile, weightLogs: initialWeightLogs, nutritionistLink } = initialData
 
   const [profile, setProfile] = useState(initialProfile || {})
-  const [weightLogs, setWeightLogs] = useState(initialWeightLogs)
+  const [weightLogs, setWeightLogs] = useState(initialWeightLogs || [])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState(null)
+  const [nutritionist, setNutritionist] = useState(nutritionistLink)
+  const savedTimer = useRef(null)
+
+  useEffect(() => () => clearTimeout(savedTimer.current), [])
 
   // Weight log form
   const [newWeight, setNewWeight] = useState('')
@@ -249,7 +267,8 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         throw new Error(body.error || 'Save failed')
       }
       setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      clearTimeout(savedTimer.current)
+      savedTimer.current = setTimeout(() => setSaved(false), 3000)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -295,8 +314,9 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         throw new Error(d.error || `Server returned ${res.status}`)
       }
       const nutritionistName = d.nutritionistName || 'your nutritionist'
+      setNutritionist(d.link || { profiles: { full_name: d.nutritionistName || 'Your nutritionist' } })
+      setNutritionistEmail('')
       toast.success(`You are now connected to ${nutritionistName}'s account.`)
-      window.location.reload()
     } catch (err) {
       console.error('[connect-client] Error:', err)
       setError(err.message || 'Unknown error')
@@ -308,8 +328,9 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
   async function disconnectNutritionist() {
     if (!(await confirmDialog({ title: 'Disconnect nutritionist?', body: 'They will no longer see your meal plans or nutrition data.', confirmLabel: 'Disconnect', destructive: true }))) return
     try {
-      await fetch('/api/nutritionist/connect', { method: 'DELETE' })
-      window.location.reload()
+      const res = await fetch('/api/nutritionist/connect', { method: 'DELETE' })
+      if (!res.ok) throw new Error('Disconnect failed')
+      setNutritionist(null)
     } catch {}
   }
 
@@ -323,15 +344,6 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
     }
     setProfile(prev => ({ ...prev, allergies: next }))
   }
-
-  const inputStyle = {
-    width: '100%', padding: '10px 12px',
-    border: '1px solid var(--border)', borderRadius: '8px',
-    background: 'var(--bg-page)', color: 'var(--text-1)',
-    fontSize: '14px', outline: 'none',
-  }
-
-  const labelStyle = { display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '24px 16px 80px' }}>
@@ -625,11 +637,11 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
 
       {/* Nutritionist */}
       <Section title="Working with a nutritionist?">
-        {nutritionistLink ? (
+        {nutritionist ? (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <div style={{ fontWeight: '600', color: 'var(--text-1)' }}>
-                {nutritionistLink.profiles?.full_name || 'Your nutritionist'}
+                {nutritionist.profiles?.full_name || 'Your nutritionist'}
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>
                 Status: Active · Can view your meal plans, nutrition stats

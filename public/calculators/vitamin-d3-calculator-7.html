@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vitamin D3 Calculator</title>
+    <meta name="description" content="Personalized vitamin D3 dosage calculator — based on your current levels, body composition, sun exposure, and lifestyle.">
+    <link rel="canonical" href="https://mintyfit.com/blog/comprehensive-vitamin-d3-calculator">
+    <title>Vitamin D3 Calculator - MintyFit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -26,47 +30,6 @@
             background: rgba(255, 255, 255, 0.95);
             overflow: hidden;
             backdrop-filter: blur(10px);
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            padding: 3rem 1rem;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: movePattern 20s linear infinite;
-        }
-        
-        @keyframes movePattern {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
-        }
-        
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: white;
-            margin: 0 0 0.5rem 0;
-            position: relative;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
-        }
-        
-        .header p {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.95);
-            margin: 0;
-            position: relative;
         }
         
         .content {
@@ -221,88 +184,6 @@
         .result-label {
             font-size: 1rem;
             opacity: 0.95;
-        }
-        
-        .factors-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-        
-        @media (max-width: 768px) {
-            .factors-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        
-        .factor-item {
-            background: rgba(255, 255, 255, 0.15);
-            padding: 0.75rem;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .factor-label {
-            font-size: 0.85rem;
-            opacity: 0.9;
-            margin-bottom: 0.25rem;
-        }
-        
-        .factor-value {
-            font-size: 1.1rem;
-            font-weight: 700;
-            font-family: 'Space Mono', monospace;
-        }
-        
-        .function-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-            transition: all 0.3s ease;
-        }
-        
-        .function-item:hover {
-            transform: translateX(4px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .function-item.optimal {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: white;
-        }
-        
-        .function-item.adequate {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-        }
-        
-        .function-item.insufficient {
-            background: linear-gradient(135deg, #868f96 0%, #596164 100%);
-            color: white;
-        }
-        
-        .function-name {
-            font-weight: 600;
-            flex: 1;
-        }
-        
-        .function-levels {
-            font-size: 0.85rem;
-            opacity: 0.95;
-            font-family: 'Space Mono', monospace;
-        }
-        
-        .function-status {
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: rgba(255, 255, 255, 0.25);
-            margin-left: 1rem;
         }
         
         .cofactor-item {
@@ -1250,62 +1131,6 @@
                     };
                 }
                 
-                // Sex radio buttons (re-attach listeners after render)
-                const sexRadios = document.querySelectorAll('input[name="sex"]');
-                sexRadios.forEach(radio => {
-                    radio.onchange = function() {
-                        console.log('Sex changed to:', this.value);
-                        setState({ sex: this.value });
-                    };
-                });
-                
-                // Activity level radio buttons
-                const activityRadios = document.querySelectorAll('input[name="activityLevel"]');
-                activityRadios.forEach(radio => {
-                    radio.onchange = function() {
-                        setState({ activityLevel: this.value });
-                    };
-                });
-                
-                // Skin tone radio buttons
-                const skinRadios = document.querySelectorAll('input[name="skinTone"]');
-                skinRadios.forEach(radio => {
-                    radio.onchange = function() {
-                        setState({ skinTone: this.value });
-                    };
-                });
-                
-                // Season radio buttons
-                const seasonRadios = document.querySelectorAll('input[name="season"]');
-                seasonRadios.forEach(radio => {
-                    radio.onchange = function() {
-                        setState({ season: this.value });
-                    };
-                });
-                
-                // Weather radio buttons
-                const weatherRadios = document.querySelectorAll('input[name="weather"]');
-                weatherRadios.forEach(radio => {
-                    radio.onchange = function() {
-                        setState({ weather: this.value });
-                    };
-                });
-                
-                // Outdoor time radio buttons
-                const outdoorRadios = document.querySelectorAll('input[name="outdoorTime"]');
-                outdoorRadios.forEach(radio => {
-                    radio.onchange = function() {
-                        setState({ outdoorTime: this.value });
-                    };
-                });
-                
-                // Sunscreen use radio buttons
-                const sunscreenRadios = document.querySelectorAll('input[name="sunscreenUse"]');
-                sunscreenRadios.forEach(radio => {
-                    radio.onchange = function() {
-                        setState({ sunscreenUse: this.value });
-                    };
-                });
             }, 10);
         }
 
@@ -1314,20 +1139,14 @@
         }
 
         // Initial render
-        console.log('Starting calculator initialization...');
-        console.log('Detected location:', detectedLocation);
-        console.log('Initial state:', state);
-        
         try {
             render();
-            console.log('Initial render complete');
         } catch (error) {
             console.error('Error during initial render:', error);
             document.getElementById('app').innerHTML = `
                 <div style="padding: 2rem; background: #ffebee; border: 2px solid #f44336; border-radius: 8px; margin: 2rem;">
                     <h2 style="color: #c62828;">Calculator Error</h2>
-                    <p><strong>Error:</strong> ${error.message}</p>
-                    <p><strong>Stack:</strong> ${error.stack}</p>
+                    <p>Something went wrong loading the calculator. Please refresh the page.</p>
                 </div>
             `;
         }
@@ -1335,20 +1154,30 @@
         // Send height to parent for iframe resizing
         function sendHeight() {
             const height = document.documentElement.scrollHeight;
-            window.parent.postMessage({ type: 'resize', height: height }, '*');
+            window.parent.postMessage({ type: 'resize', height: height }, window.location.origin);
+        }
+        
+        // Throttle resize messages to one per animation frame — the
+        // MutationObserver otherwise fires a postMessage storm on slider drags.
+        let heightRaf = 0;
+        function scheduleSendHeight() {
+            if (heightRaf) return;
+            heightRaf = requestAnimationFrame(() => {
+                heightRaf = 0;
+                sendHeight();
+            });
         }
         
         setTimeout(sendHeight, 100);
         setTimeout(sendHeight, 500);
         setTimeout(sendHeight, 1000);
         
-        window.addEventListener('resize', sendHeight);
+        window.addEventListener('resize', scheduleSendHeight);
         
-        const observer = new MutationObserver(sendHeight);
+        const observer = new MutationObserver(scheduleSendHeight);
         observer.observe(document.body, { 
             childList: true, 
-            subtree: true, 
-            attributes: true 
+            subtree: true
         });
     </script>
 </body>

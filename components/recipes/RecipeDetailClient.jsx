@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -12,8 +12,14 @@ import { createClient } from '@/lib/supabase/client'
 
 import { NutritionDelta, IngredientAlternativesSheet, DonutChart, NutritionSection, SidebarNutrition, MEAL_COLORS } from './RecipeNutrition'
 // ── Main component ────────────────────────────────────────────────────────────
-export default function RecipeDetailClient({ recipe, members: initialMembers, familyId: initialFamilyId }) {
+export default function RecipeDetailClient({ recipe: initialRecipe, members: initialMembers, familyId: initialFamilyId }) {
   const router = useRouter()
+  // Local copy of the recipe — edit-save updates this via setRecipe instead of
+  // mutating the server-provided prop (Object.assign(recipe, …) anti-pattern).
+  const [recipe, setRecipe] = useState(initialRecipe)
+  // Next.js reuses this client component when navigating between recipes —
+  // re-sync when the server hands us a different one.
+  useEffect(() => { setRecipe(initialRecipe) }, [initialRecipe])
   const [members, setMembers] = useState(initialMembers || [])
   const [familyId, setFamilyId] = useState(initialFamilyId || null)
   const [activeEaters, setActiveEaters] = useState(new Set()) // member IDs who are eating this meal
@@ -50,6 +56,22 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
   const [shoppingPromptMode, setShoppingPromptMode] = useState('main')
   // 'steps' = ingredients inline with each step (default); 'list' = all ingredients first, then numbered steps
   const [viewMode, setViewMode] = useState('steps')
+
+  // Single auth helper — replaces several copy-pasted createClient()+getUser() blocks
+  const getAuth = useCallback(async () => {
+    const supabase = createClient()
+    if (!supabase) return { supabase: null, user: null }
+    const { data: { user } } = await supabase.auth.getUser()
+    return { supabase, user }
+  }, [])
+
+  // Tracked timer for transient button states — cleared on re-trigger and unmount
+  const statusTimer = useRef(null)
+  const flashStatus = useCallback((setter) => {
+    if (statusTimer.current) clearTimeout(statusTimer.current)
+    statusTimer.current = setTimeout(() => setter('idle'), 3000)
+  }, [])
+  useEffect(() => () => { if (statusTimer.current) clearTimeout(statusTimer.current) }, [])
 
   // Raw / cooked nutrition toggle
   const [showRawNutrition, setShowRawNutrition] = useState(false)
@@ -245,8 +267,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
 
   const handleSelectAlternative = useCallback(async (ingredient, alt) => {
     const key = ingredient._originalName?.toLowerCase() || ingredient.name?.toLowerCase()
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { supabase, user } = await getAuth()
 
     if (alt === null) {
       // Restore original
@@ -279,7 +300,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
       }
     }
     setShowAlternativesFor(null)
-  }, [recipe.id])
+  }, [recipe.id, getAuth])
 
   function toggleEater(memberId) {
     setActiveEaters(prev => {
@@ -295,14 +316,19 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
   // The family meal target = sum of personal targets → batchScale = target / recipeKcal.
   // Each member's share = their personal target / family target.
   // Guests add a calorie-based scaling factor but are excluded from saved nutrition.
-  const eatingMembers = members.filter(m => activeEaters.has(m.id))
+  // Memoized: computeMealBudget/computeMemberDailyNeeds iterate 47 nutrient keys
+  // per member — they must not re-run on unrelated renders (e.g. edit typing).
+  const eatingMembers = useMemo(() => members.filter(m => activeEaters.has(m.id)), [members, activeEaters])
   const hasMembers = eatingMembers.length > 0
   const hasGuests = showGuests && guestCount > 0
 
   const mealType = recipe.meal_type || 'dinner'
-  const memberBudget = hasMembers
-    ? computeMealBudget(eatingMembers, recipe.nutrition?.totals, mealType, null, mealsPerDay)
-    : null
+  const memberBudget = useMemo(
+    () => hasMembers
+      ? computeMealBudget(eatingMembers, recipe.nutrition?.totals, mealType, null, mealsPerDay)
+      : null,
+    [hasMembers, eatingMembers, recipe.nutrition?.totals, mealType, mealsPerDay]
+  )
 
   const recipeTotalCal = recipe.nutrition?.totals?.energy_kcal
     || (recipe.nutrition?.perServing?.energy_kcal * (recipe.base_servings || 1))
@@ -321,16 +347,18 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
     : 1
 
   // Personal daily nutrient needs for RDA denominators — sum across checked members
-  const memberDailyNeeds = hasMembers
-    ? eatingMembers.reduce((acc, m) => {
-        const needs = computeMemberDailyNeeds(m)
-        if (!needs) return acc
-        for (const [k, v] of Object.entries(needs)) {
-          if (typeof v === 'number') acc[k] = (acc[k] || 0) + v
-        }
-        return acc
-      }, {})
-    : null
+  const memberDailyNeeds = useMemo(() => {
+    if (!hasMembers) return null
+    const acc = {}
+    for (const m of eatingMembers) {
+      const needs = computeMemberDailyNeeds(m)
+      if (!needs) continue
+      for (const [k, v] of Object.entries(needs)) {
+        if (typeof v === 'number') acc[k] = (acc[k] || 0) + v
+      }
+    }
+    return acc
+  }, [hasMembers, eatingMembers])
 
   // Goal pulled from the first checked member (used for "key nutrients" picker)
   const memberGoal = eatingMembers[0]?.goals?.[0] || 'default'
@@ -341,9 +369,8 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
     setAddingToPlan(true)
     setAddPlanMsg(null)
     try {
-      const supabase = createClient()
+      const { supabase, user } = await getAuth()
       if (!supabase) throw new Error('no client')
-      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
         window.location.href = '/onboarding'
         return
@@ -462,8 +489,8 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
         setSaveEditError(err.error || 'Failed to save')
         return
       }
-      // Update the in-memory recipe so the page reflects changes without reload
-      Object.assign(recipe, editedRecipe)
+      // Update the local recipe state so the page reflects changes without reload
+      setRecipe(editedRecipe)
       const { invalidateCache } = await import('@/hooks/useCachedData')
       invalidateCache('recipes:')
       setIsEditing(false)
@@ -511,6 +538,26 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
     })
   }
 
+  // Collect the checked ingredients (deduped by lowercase name) from all steps.
+  // Shared by the three shopping-list paths — was the same loop copy-pasted 3×.
+  function collectCheckedIngredients() {
+    const seen = new Set()
+    const selected = []
+    for (const step of (recipe.steps || [])) {
+      for (const ing of (step.ingredients || [])) {
+        const key = ing.name?.toLowerCase()
+        if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
+        seen.add(key)
+        selected.push({
+          ingredient_name: ing.name,
+          amount: ing.amount || null,
+          unit: ing.unit || null,
+        })
+      }
+    }
+    return selected
+  }
+
   async function addItemsToShoppingList(clearFirst = false) {
     if (clearFirst) {
       await fetch('/api/shopping-list', {
@@ -523,21 +570,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
     try {
       let body
       if (checkedIngredients.size > 0) {
-        const seen = new Set()
-        const selected = []
-        for (const step of (recipe.steps || [])) {
-          for (const ing of (step.ingredients || [])) {
-            const key = ing.name?.toLowerCase()
-            if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
-            seen.add(key)
-            selected.push({
-              ingredient_name: ing.name,
-              amount: ing.amount || null,
-              unit: ing.unit || null,
-            })
-          }
-        }
-        body = JSON.stringify({ recipe_id: recipe.id, ingredients: selected })
+        body = JSON.stringify({ recipe_id: recipe.id, ingredients: collectCheckedIngredients() })
       } else {
         body = JSON.stringify({ recipe_id: recipe.id })
       }
@@ -548,19 +581,17 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
       })
       if (!res.ok) throw new Error('failed')
       setShoppingState('success')
-      setTimeout(() => setShoppingState('idle'), 3000)
+      flashStatus(setShoppingState)
     } catch {
       setShoppingState('error')
-      setTimeout(() => setShoppingState('idle'), 3000)
+      flashStatus(setShoppingState)
     }
     setShowShoppingPrompt(false)
   }
 
   async function handleShoppingListClick() {
     if (shoppingState === 'loading') return
-    const supabase = createClient()
-    if (!supabase) return
-    const { data: { user } } = await supabase.auth.getUser()
+    const { user } = await getAuth()
     if (!user) { window.location.href = '/onboarding'; return }
     try {
       const res = await fetch('/api/shopping-list/count')
@@ -579,9 +610,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
 
   async function addSelectedToShoppingList() {
     if (selectedShoppingState === 'loading') return
-    const supabase = createClient()
-    if (!supabase) return
-    const { data: { user } } = await supabase.auth.getUser()
+    const { user } = await getAuth()
     if (!user) { window.location.href = '/onboarding'; return }
     try {
       const res = await fetch('/api/shopping-list/count')
@@ -597,20 +626,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
   }
 
   async function addSelectedToShoppingListDirect() {
-    const seen = new Set()
-    const selected = []
-    for (const step of (recipe.steps || [])) {
-      for (const ing of (step.ingredients || [])) {
-        const key = ing.name?.toLowerCase()
-        if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
-        seen.add(key)
-        selected.push({
-          ingredient_name: ing.name,
-          amount: ing.amount || null,
-          unit: ing.unit || null,
-        })
-      }
-    }
+    const selected = collectCheckedIngredients()
     if (!selected.length) return
     setSelectedShoppingState('loading')
     setShowShoppingPrompt(false)
@@ -622,10 +638,10 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
       })
       if (!res.ok) throw new Error('failed')
       setSelectedShoppingState('success')
-      setTimeout(() => setSelectedShoppingState('idle'), 3000)
+      flashStatus(setSelectedShoppingState)
     } catch {
       setSelectedShoppingState('error')
-      setTimeout(() => setSelectedShoppingState('idle'), 3000)
+      flashStatus(setSelectedShoppingState)
     }
   }
 
@@ -636,20 +652,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
       body: JSON.stringify({ clear_all: true }),
     })
     setShowShoppingPrompt(false)
-    const seen = new Set()
-    const selected = []
-    for (const step of (recipe.steps || [])) {
-      for (const ing of (step.ingredients || [])) {
-        const key = ing.name?.toLowerCase()
-        if (!key || !checkedIngredients.has(key) || seen.has(key)) continue
-        seen.add(key)
-        selected.push({
-          ingredient_name: ing.name,
-          amount: ing.amount || null,
-          unit: ing.unit || null,
-        })
-      }
-    }
+    const selected = collectCheckedIngredients()
     if (!selected.length) return
     setSelectedShoppingState('loading')
     try {
@@ -660,10 +663,10 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
       })
       if (!res.ok) throw new Error('failed')
       setSelectedShoppingState('success')
-      setTimeout(() => setSelectedShoppingState('idle'), 3000)
+      flashStatus(setSelectedShoppingState)
     } catch {
       setSelectedShoppingState('error')
-      setTimeout(() => setSelectedShoppingState('idle'), 3000)
+      flashStatus(setSelectedShoppingState)
     }
   }
 
@@ -674,6 +677,29 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
     const scaled = isScaled ? amount * combinedFraction : amount
     return scaled < 1 ? Math.round(scaled * 100) / 100 : Math.round(scaled * 10) / 10
   }
+
+  // List-view ingredients (deduped by name, with swaps applied).
+  // Memoized — was an IIFE rebuilding this Map on every render.
+  const flatIngredients = useMemo(() => {
+    if (viewMode !== 'list' || isEditing) return []
+    const seen = new Map()
+    for (const step of (recipe.steps || [])) {
+      for (const ing of (step.ingredients || [])) {
+        const key = ing.name?.toLowerCase()
+        if (!key) continue
+        const swap = swappedIngredients.get(key)
+        const displayName = swap ? swap.name : ing.name
+        const displayAmount = swap
+          ? scaleAmount((ing.amount || 1) * (swap.amount_factor ?? 1))
+          : scaleAmount(ing.amount)
+        if (!seen.has(key)) {
+          seen.set(key, { key, displayName, displayAmount, unit: ing.unit, originalKey: key, isSwapped: !!swap, original: ing })
+        }
+      }
+    }
+    return [...seen.values()]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, isEditing, recipe.steps, swappedIngredients, isScaled, combinedFraction])
 
   // ── Raw / cooked nutrition toggle handler ────────────────────────────────────
   function handleToggleRawCooked(forceRefresh = false) {
@@ -971,29 +997,11 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
           )}
         </div>
         {/* List view: aggregated ingredients (deduped by name) before the numbered steps */}
-        {!isEditing && viewMode === 'list' && (() => {
-          const seen = new Map()
-          for (const step of (recipe.steps || [])) {
-            for (const ing of (step.ingredients || [])) {
-              const key = ing.name?.toLowerCase()
-              if (!key) continue
-              const swap = swappedIngredients.get(key)
-              const displayName = swap ? swap.name : ing.name
-              const displayAmount = swap
-                ? scaleAmount((ing.amount || 1) * (swap.amount_factor ?? 1))
-                : scaleAmount(ing.amount)
-              if (!seen.has(key)) {
-                seen.set(key, { key, displayName, displayAmount, unit: ing.unit, originalKey: key, isSwapped: !!swap, original: ing })
-              }
-            }
-          }
-          const flat = [...seen.values()]
-          if (flat.length === 0) return null
-          return (
+        {!isEditing && viewMode === 'list' && flatIngredients.length > 0 && (
             <div style={{ marginBottom: '1.5rem', padding: '1rem 1.125rem', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px' }}>
               <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: '0 0 0.75rem' }}>Ingredients</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                {flat.map(item => {
+                {flatIngredients.map(item => {
                   const checked = checkedIngredients.has(item.key)
                   return (
                     <li key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -1038,8 +1046,7 @@ export default function RecipeDetailClient({ recipe, members: initialMembers, fa
                 })}
               </ul>
             </div>
-          )
-        })()}
+        )}
         {(isEditing ? editedRecipe.steps : recipe.steps || []).map((step, i) => {
           const isside = step.component === 'side'
           const stepIngredients = step.ingredients || []

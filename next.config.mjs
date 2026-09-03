@@ -53,6 +53,16 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
+      {
+        // Standalone calculator iframes: cache briefly (edited in place, so not
+        // immutable), and keep them out of the search index — they exist only
+        // to be embedded inside blog posts.
+        source: '/calculators/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
+          { key: 'X-Robots-Tag', value: 'noindex' },
+        ],
+      },
     ]
   },
 }
