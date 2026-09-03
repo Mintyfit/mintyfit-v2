@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext'
+import { canUsePhotoFoodLog } from '@/lib/usageLimits'
 
 export function useSubscription() {
   const { profile } = useAuth()
@@ -9,6 +10,8 @@ export function useSubscription() {
   const canUseAI = true
   const isPro = tier === 'pro' || tier === 'nutritionist'
   const isNutritionistPlan = tier === 'nutritionist'
+  const isFamily = tier === 'family'
+  const canUsePhotoLog = canUsePhotoFoodLog(tier)
 
-  return { tier, canUseAI, isPro, isNutritionistPlan }
+  return { tier, canUseAI, isPro, isNutritionistPlan, isFamily, canUsePhotoLog }
 }

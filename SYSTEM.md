@@ -27,6 +27,7 @@ Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabas
 | Supabase client | `@supabase/ssr` | `createBrowserClient` (browser), `createServerClient` (SSR/RSC) |
 | AI recipes | Claude Haiku via `/api/claude` Route Handler | `claude-haiku-4-5-20251001` |
 | AI food lookup | Grok via `/api/grok` Route Handler | Journal nutrition estimation |
+| AI photo food log | Claude Haiku vision via `/api/food-photo` Route Handler | Family tier only; decompose-then-sum portion estimation |
 | AI images | Ideogram via `/api/ideogram` Route Handler | |
 | Payments | Stripe | Checkout + portal via Supabase Edge Functions |
 | Deployment | Vercel | Route Handlers + Server Components |

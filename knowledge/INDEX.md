@@ -49,6 +49,7 @@
 | `sessions/2026-09-03-sw-stale-html-hotfix.md` | Intermittent unstyled pages + /recipes "Something went wrong" — root cause: sw.js SWR-cached HTML referencing dead chunk hashes after deploys; fix: network-first pages, VERSION bump, ChunkLoadError auto-reload |
 | `sessions/2026-09-03-large-file-audit-perf-fixes.md` | Large-file audit + fix-all: magnesium calc rewritten off Babel/Tailwind CDN; planner serial-await + cache-race fixes; RecipeDetail/Statistics/MyAccount memoization; 13.5MB duplicate SQL deleted; subagent bug-claim hallucination caught by source verification |
 | `sessions/2026-09-03-calorie-budget-sharing-model.md` | Made `computeMealBudget` calorie-budget share the single sharing model: member toggles now recompute+persist `personal_nutrition`; Statistics per-member cards use calorie-budget split (was equal-split); menus/apply stores budget not raw totals; AGENTS.md data-flow rewritten |
+| `sessions/2026-09-03-photo-food-logging.md` | Photo food logging (Family tier only): `/api/food-photo` Haiku vision route, decompose-then-sum prompt, editable component grams in JournalEntryForm. CRITICAL env findings: `next build` spawn UNKNOWN / 0xC0000409 = Windows commit exhaustion → `experimental.cpus: 1` workaround; junction+npm ci wiped main node_modules |
 
 ### Prompts
 | File | Purpose |

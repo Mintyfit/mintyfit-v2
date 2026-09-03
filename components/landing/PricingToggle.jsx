@@ -24,6 +24,7 @@ const PRO_FEATURES = [
 const FAMILY_FEATURES = [
   'Up to 6 family accounts + unlimited kids',
   'Everything in Pro for every member',
+  'Photo food logging (AI vision)',
   'Shared meal planning',
   'Family nutrition dashboard',
   'Shared shopping list',
