@@ -47,6 +47,8 @@
 | `sessions/2026-09-01-phase0-hardening.md` | Full evaluation + MASTER-PLAN.md + Phase 0 critical fixes (Stripe tiers, GDPR, XSS, upserts, usage limits, column bugs) |
 | `sessions/2026-09-02-chat-journal-planner-sync.md` | Minty Chat journal logging invisible on /plan — root cause: planner localStorage week cache; fix: shared `lib/planner/planCache.js` bust+event contract |
 | `sessions/2026-09-03-sw-stale-html-hotfix.md` | Intermittent unstyled pages + /recipes "Something went wrong" — root cause: sw.js SWR-cached HTML referencing dead chunk hashes after deploys; fix: network-first pages, VERSION bump, ChunkLoadError auto-reload |
+| `sessions/2026-09-03-large-file-audit-perf-fixes.md` | Large-file audit + fix-all: magnesium calc rewritten off Babel/Tailwind CDN; planner serial-await + cache-race fixes; RecipeDetail/Statistics/MyAccount memoization; 13.5MB duplicate SQL deleted; subagent bug-claim hallucination caught by source verification |
+| `sessions/2026-09-03-calorie-budget-sharing-model.md` | Made `computeMealBudget` calorie-budget share the single sharing model: member toggles now recompute+persist `personal_nutrition`; Statistics per-member cards use calorie-budget split (was equal-split); menus/apply stores budget not raw totals; AGENTS.md data-flow rewritten |
 
 ### Prompts
 | File | Purpose |

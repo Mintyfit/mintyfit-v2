@@ -2,6 +2,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { enrichMember } from '@/lib/member/enrichMember'
 import PlannerClient from '@/components/planner/PlannerClient'
+import EstimatedMemberBanner from '@/components/planner/EstimatedMemberBanner'
 import ClientViewBanner from '@/components/nutritionist/ClientViewBanner'
 
 export const metadata = {
@@ -238,9 +239,15 @@ export default async function PlanPage({ searchParams }) {
     const name = data.clientProfile.display_name || data.clientProfile.full_name || 'client'
     return (
       <ClientViewBanner clientName={name} pageLabel="plan" backHref="/plan">
+        <EstimatedMemberBanner members={data.members} />
         <PlannerClient {...data} />
       </ClientViewBanner>
     )
   }
-  return <PlannerClient {...data} />
+  return (
+    <>
+      <EstimatedMemberBanner members={data.members} />
+      <PlannerClient {...data} />
+    </>
+  )
 }

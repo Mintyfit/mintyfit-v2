@@ -39,3 +39,8 @@
 ---
 *Last updated: 2026-04-06*
 *Confidence: High — learned from v1 and Next.js patterns*
+
+- **Verify subagent/review bug claims against source before fixing**: A code-review subagent reported a "critical math bug" in `public/calculators/vitamin-d3-calculator-7.html` (claimed `break;` inside a comment → switch fall-through → wrong dose). The real file had a correct `break;`. Applying the "fix" blindly would have introduced the very bug reported. Same session: a second agent reported React calculator components "never used" — `BlogCalculatorEmbed` is imported by `BlogContent.jsx`. Hit 2026-09. Rule: for any claimed bug with line numbers, read those exact lines before editing.
+- **Multiple fire-and-forget `.then()` chains writing one cache key**: three parallel fetch chains each did `cacheGet` → merge → `cacheSet` on the same `week:` key (PlannerClient). Chains resolving out of order silently dropped datasets. Also: no stale-response guard — fast week navigation let an older week's response clobber the newer week's state. Fix: one `Promise.all`, one cache write, `cancelled` flag in effect cleanup. Fixed 2026-09.
+- **Untracked `setTimeout` for transient UI states**: `setTimeout(() => setState('idle'), 3000)` copy-pasted 6× (RecipeDetailClient) — fires setState after unmount, overlapping timers clear indicators early. Fix: ref-tracked timer, clear before re-arm, clear on unmount.
+- **Mutating a server prop to reflect edits**: `Object.assign(recipe, editedRecipe)` in RecipeDetailClient — mutates the RSC prop; breaks on component reuse and confuses React. Fix: rename prop `initialRecipe`, hold local `recipe` state, sync via effect (same pattern as `members`).

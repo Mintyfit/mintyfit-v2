@@ -31,3 +31,13 @@ Nutrition is pre-computed at write time and stored on the record. Never compute 
 ---
 *Last updated: 2026-04-06*
 *Confidence: High — established architecture decisions*
+
+## Parallel Queries in One Effect
+
+When an effect needs multiple independent Supabase datasets (e.g. planner week: entries + activities + journals):
+- Fire them in ONE `Promise.all` — never 3 serial awaits, never 3 fire-and-forget `.then()` chains.
+- Do exactly ONE cache write after all resolve (per-chain read-merge-write races drop data).
+- Add a `cancelled` flag in the effect cleanup so stale responses can't clobber newer state.
+- `Promise.resolve({ data: null })` as the placeholder for conditionally-skipped queries keeps the destructuring shape.
+
+(Applied in PlannerClient week/month fetch + refreshDay, 2026-09.)
