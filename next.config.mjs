@@ -34,6 +34,14 @@ const nextConfig = {
         ],
       },
       {
+        // Browsers must re-check for service worker updates on every visit —
+        // a stale sw.js means stale caching strategy in the field.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+        ],
+      },
+      {
         source: '/:path*\\.(png|webp|jpg|jpeg|gif|svg|ico|avif)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },

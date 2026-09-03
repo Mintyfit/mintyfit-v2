@@ -31,6 +31,7 @@
 
 ## Caching
 
+- **NEVER serve Next.js HTML stale (SWR) from a service worker**: Cached HTML references content-hashed `/_next/static/*` chunks that disappear after each redeploy. Result: CSS chunk 404 → unstyled page; JS chunk 404 → ChunkLoadError → "Something went wrong" error boundary. Self-heals after a few visits (background revalidation), so it looks intermittent and breaks again after every deploy. Hit in production 2026-09 (sw.js v1, SWR on public pages). Fix: page navigations must be **network-first**, cache used only as offline fallback. Static assets/images stay cache-first — hashed URLs make that safe. Also: bump `VERSION` in sw.js on any strategy change (activate purges old-version caches), serve `/sw.js` with `Cache-Control: no-cache`, and auto-reload once on ChunkLoadError in `app/error.jsx` for deploy-while-tab-open skew.
 - **Planner week cache hides external writes**: `PlannerClient` caches week data (entries/activities/journals) in localStorage under `mintyfit:plan:week:{userId}:...` with a 30-min TTL and serves it without revalidating. Any write to `calendar_entries`/`food_journal`/`daily_activities` made OUTSIDE PlannerClient (e.g. Minty Chat journal logging) is invisible on /plan until TTL expiry. Fix pattern: call `bustPlanWeekCache(userId)` + dispatch `JOURNAL_SAVED_EVENT` from `lib/planner/planCache.js` after the write; PlannerClient listens and runs `refreshDay()`.
 
 ---

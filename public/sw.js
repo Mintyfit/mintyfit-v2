@@ -3,14 +3,19 @@
  * Strategies:
  *  - App shell & fonts (/_next/static, /fonts): cache-first (immutable headers)
  *  - Images (static + Supabase storage + Ideogram CDN): cache-first, 30d expiry
- *  - PUBLIC pages only (/, /recipes, /menus, /blog, /pricing): stale-while-revalidate
+ *  - PUBLIC pages only (/, /recipes, /menus, /blog, /pricing): network-first,
+ *    cache kept ONLY as an offline fallback.
+ *    (HTML must never be served stale-while-revalidate: cached HTML references
+ *    content-hashed /_next/static chunks that disappear after a redeploy,
+ *    causing missing CSS and ChunkLoadError crashes.)
  *  - Everything else (authenticated pages, /api/*, /auth/*): network-only
  *
  * Authenticated HTML is NEVER cached — per-user data must not leak across
  * sessions on a shared device.
  */
 
-const VERSION = 'v1';
+// Bump on every sw.js change — activate purges caches from older versions.
+const VERSION = 'v2';
 const STATIC_CACHE = `mintyfit-static-${VERSION}`;
 const PAGES_CACHE = `mintyfit-pages-${VERSION}`;
 const IMAGES_CACHE = `mintyfit-images-${VERSION}`;
@@ -81,16 +86,17 @@ async function fetchAndCache(request, cache, { maxEntries } = {}) {
   return response;
 }
 
-async function staleWhileRevalidate(request, cacheName) {
+// Network-first: online users always get fresh HTML whose chunk references
+// match the current deployment. The cached copy is used only when offline.
+async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  const network = fetch(request)
-    .then((response) => {
-      if (response.ok) cache.put(request, response.clone());
-      return response;
-    })
-    .catch(() => null);
-  return cached || (await network) || cached || Response.error();
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch {
+    return (await cache.match(request)) || Response.error();
+  }
 }
 
 self.addEventListener('fetch', (event) => {
@@ -129,9 +135,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Public page navigations: stale-while-revalidate
+  // Public page navigations: network-first, cache is offline fallback only
   if (sameOrigin && request.mode === 'navigate' && isPublicPage(url)) {
-    event.respondWith(staleWhileRevalidate(request, PAGES_CACHE));
+    event.respondWith(networkFirst(request, PAGES_CACHE));
     return;
   }
 });

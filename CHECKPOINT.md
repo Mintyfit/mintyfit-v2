@@ -133,6 +133,7 @@
 - [DONE] 3.4: Entitlement gating — ✓ canUseVoiceAssistant(tier) server-side in both routes (403 UPGRADE_REQUIRED) + client teaser card with /pricing link
 
 ### Phase 4 — Consolidation (ongoing)
+- [DONE] HOTFIX 2026-09-03: Intermittent unstyled pages + "Something went wrong" on /recipes for logged-out users — root cause: sw.js served public-page HTML stale-while-revalidate; after each deploy the cached HTML referenced dead content-hashed chunks (CSS 404 → unstyled page; JS 404 → ChunkLoadError → error boundary). Self-healed after a few visits via background revalidation, broke again after the next deploy. Fix: pages now network-first (cache = offline fallback only), SW VERSION v1→v2 (purges poisoned v1 caches), /sw.js served no-cache, app/error.jsx auto-reloads once on ChunkLoadError (covers deploy-while-tab-open skew). Build clean. **Redeploy to propagate.**
 - [DONE] 4.2a: extractJSON deduped — ✓ 8 copies → lib/utils/extractJSON.js (canonical depth-tracking variant)
 - [DONE] 4.2b: MEAL_TYPES deduped — ✓ 9 copies → mealBudget.js exports MEAL_TYPES (5-slot) + RECIPE_MEAL_TYPES (4-slot)
 - [DONE] 4.2c: toDateKey deduped — ✓ 4 function copies → lib/utils/dateKey.js

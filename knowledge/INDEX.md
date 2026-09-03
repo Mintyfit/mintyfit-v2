@@ -46,6 +46,7 @@
 | `sessions/2026-04-09-session07-session09.md` | Sessions 07+09 — Statistics, Account, Family, Nutritionist; full audit; SYSTEM.md updated |
 | `sessions/2026-09-01-phase0-hardening.md` | Full evaluation + MASTER-PLAN.md + Phase 0 critical fixes (Stripe tiers, GDPR, XSS, upserts, usage limits, column bugs) |
 | `sessions/2026-09-02-chat-journal-planner-sync.md` | Minty Chat journal logging invisible on /plan — root cause: planner localStorage week cache; fix: shared `lib/planner/planCache.js` bust+event contract |
+| `sessions/2026-09-03-sw-stale-html-hotfix.md` | Intermittent unstyled pages + /recipes "Something went wrong" — root cause: sw.js SWR-cached HTML referencing dead chunk hashes after deploys; fix: network-first pages, VERSION bump, ChunkLoadError auto-reload |
 
 ### Prompts
 | File | Purpose |

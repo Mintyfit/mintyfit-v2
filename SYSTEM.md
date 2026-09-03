@@ -415,7 +415,7 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 
 ### PWA / Caching (added 2026-09-01)
 
-- `public/manifest.json` + `public/sw.js` (service worker): static assets & fonts cache-first; public pages (/, /recipes, /menus, /blog, /pricing, /pages) stale-while-revalidate; recipe images cache-first 30d. **Authenticated HTML and /api/* are never cached.** Registered production-only via `components/shared/ServiceWorkerRegistrar.jsx`.
+- `public/manifest.json` + `public/sw.js` (service worker): static assets & fonts cache-first; public pages (/, /recipes, /menus, /blog, /pricing, /pages) **network-first — cache is an offline fallback only** (never serve HTML stale: it references content-hashed `/_next/static` chunks that vanish on redeploy → missing CSS / ChunkLoadError); recipe images cache-first 30d. **Authenticated HTML and /api/* are never cached.** Registered production-only via `components/shared/ServiceWorkerRegistrar.jsx`. Bump `VERSION` in sw.js on any strategy change (purges old caches on activate); `/sw.js` is served `no-cache` via next.config headers so updates propagate.
 - Client data cache: `hooks/useCachedData.js` (localStorage + TTL + SWR). Invalidate after writes via `invalidateCache('recipes:')` etc.
 
 ### Post-Deploy Checklist (not yet done)
