@@ -79,16 +79,36 @@ export default function DayAgenda({
 
   // Per-entry consumer toggle. Lets one card hold "Dad + kids" while a
   // sibling card holds "Mom only" in the same meal slot. Writes directly
-  // to the entry row, then refreshes the day.
-  async function toggleConsumer(entryId, memberId, currentIds) {
+  // to the entry row, then refreshes the day. Adding/removing a consumer
+  // changes their calorie-budget share, so personal_nutrition is recomputed
+  // for the new consumer set (legacy rows scale by consumer-count ratio).
+  async function toggleConsumer(entryId, memberId, currentIds, entry) {
     const supabase = createClient()
     if (!supabase) return
-    const next = new Set(currentIds || [])
+    const prevIds = currentIds || []
+    const next = new Set(prevIds)
     if (next.has(memberId)) next.delete(memberId)
     else next.add(memberId)
+    const nextIds = Array.from(next)
+
+    const totals = entry?.recipes?.nutrition?.totals
+    let personalNutrition
+    if (totals && nextIds.length > 0) {
+      const consumers = members.filter(m => nextIds.includes(m.id))
+      personalNutrition = computeMealBudget(consumers, totals, entry.meal_type, null, 3).personalNutrition
+    } else if (totals) {
+      personalNutrition = null
+    } else {
+      const ratio = nextIds.length / Math.max(prevIds.length, 1)
+      const base = entry?.personal_nutrition
+      personalNutrition = base && typeof base === 'object'
+        ? Object.fromEntries(Object.entries(base).map(([k, v]) => [k, typeof v === 'number' ? v * ratio : v]))
+        : null
+    }
+
     await supabase
       .from('calendar_entries')
-      .update({ consumer_member_ids: Array.from(next) })
+      .update({ consumer_member_ids: nextIds, personal_nutrition: personalNutrition })
       .eq('id', entryId)
     onRefresh(dateKey)
   }
@@ -252,7 +272,7 @@ export default function DayAgenda({
                           return (
                             <button
                               key={m.id}
-                              onClick={() => toggleConsumer(entry.id, m.id, entry.consumer_member_ids)}
+                              onClick={() => toggleConsumer(entry.id, m.id, entry.consumer_member_ids, entry)}
                               title={checked ? `Remove ${m.display_name || m.first_name}` : `Add ${m.display_name || m.first_name}`}
                               style={{
                                 fontSize: '0.6875rem',

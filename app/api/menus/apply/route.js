@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { computeMealBudget } from '@/lib/nutrition/mealBudget'
+import { enrichMember } from '@/lib/member/enrichMember'
 
 // ── POST /api/menus/apply ─────────────────────────────────────────────────────
 // Body: { menu_id: string, start_date: 'YYYY-MM-DD' }
@@ -39,22 +41,38 @@ export async function POST(request) {
     const familyId = memberships?.[0]?.family_id || null
 
     let allowedConsumerIds = [user.id]
+    // Members keyed by id so we can compute the calorie-budget meal distribution.
+    const memberById = new Map()
     if (familyId) {
       const [{ data: linked }, { data: managed }] = await Promise.all([
         supabase
           .from('family_memberships')
-          .select('profile_id')
+          .select('profile_id, profiles(id, display_name, full_name, name, gender, date_of_birth, weight, height)')
           .eq('family_id', familyId)
           .eq('status', 'active'),
         supabase
           .from('managed_members')
-          .select('id')
+          .select('id, name, gender, date_of_birth, weight, height')
           .eq('family_id', familyId),
       ])
       allowedConsumerIds = [
         ...(linked || []).map(m => m.profile_id),
         ...(managed || []).map(m => m.id),
       ].filter(Boolean)
+      for (const l of linked || []) {
+        if (l.profiles?.id) memberById.set(l.profiles.id, l.profiles)
+      }
+      for (const m of managed || []) {
+        memberById.set(m.id, m)
+      }
+    } else {
+      // Solo user — their own profile is the only consumer.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, display_name, full_name, name, gender, date_of_birth, weight, height')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (profile?.id) memberById.set(profile.id, profile)
     }
 
     const requestedConsumers = Array.isArray(consumer_member_ids) ? consumer_member_ids : []
@@ -63,6 +81,18 @@ export async function POST(request) {
       ? allowedConsumerIds.filter(id => requestedSet.has(id))
       : allowedConsumerIds
     const finalConsumerIds = selectedConsumerIds.length ? selectedConsumerIds : allowedConsumerIds
+
+    // Enriched consumers (with baseDailyCalories) for calorie-budget scaling.
+    // enrichMember needs a numeric age — derive from date_of_birth when absent.
+    const consumerMembers = finalConsumerIds
+      .map(id => memberById.get(id))
+      .filter(Boolean)
+      .map(m => enrichMember({
+        ...m,
+        age: m.age ?? (m.date_of_birth
+          ? Math.max(0, Math.floor((Date.now() - new Date(m.date_of_birth).getTime()) / 31557600000))
+          : undefined),
+      }))
 
     // Fetch menu with its recipe assignments
     const { data: menu, error: menuErr } = await supabase
@@ -109,6 +139,14 @@ export async function POST(request) {
         const d = new Date(start_date)
         d.setDate(d.getDate() + i)
         const dateStr = d.toISOString().split('T')[0]
+        // Pre-compute personal_nutrition via calorie-budgeted meal distribution
+        // (recipe totals × batchScale for the consumer set) — same model the
+        // planner uses. Raw recipe totals must NOT be stored here: Statistics
+        // reads personal_nutrition directly and would under-report the family.
+        const totals = mrs[i].recipes.nutrition?.totals
+        const personalNutrition = (totals && consumerMembers.length > 0)
+          ? computeMealBudget(consumerMembers, totals, mealType, null, 3).personalNutrition
+          : (mrs[i].recipes.nutrition?.totals || mrs[i].recipes.nutrition?.perServing || null)
         rows.push({
           profile_id: user.id,
           family_id: familyId,
@@ -118,7 +156,7 @@ export async function POST(request) {
           recipe_name: mrs[i].recipes.title || '',
           member_id: null,
           consumer_member_ids: finalConsumerIds,
-          personal_nutrition: mrs[i].recipes.nutrition?.totals || mrs[i].recipes.nutrition?.perServing || null,
+          personal_nutrition: personalNutrition,
           origin: 'planned',
         })
       }

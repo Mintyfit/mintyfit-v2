@@ -2,8 +2,17 @@ import { toDateKey } from '@/lib/utils/dateKey'
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
+import { enrichMember } from '@/lib/member/enrichMember'
 import StatisticsClient from '@/components/statistics/StatisticsClient'
+import EstimatedMemberBanner from '@/components/planner/EstimatedMemberBanner'
 import ClientViewBanner from '@/components/nutritionist/ClientViewBanner'
+
+function ageFromDob(dob) {
+  if (!dob) return undefined
+  const d = new Date(dob)
+  if (isNaN(d.getTime())) return undefined
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 31557600000))
+}
 
 const HISTORY_DAYS = 60
 
@@ -39,7 +48,7 @@ async function getStatisticsData(effectiveUserId, supabase) {
       supabase
         .from('calendar_entries')
         .select(`
-          id, date_str, meal_type, member_id, personal_nutrition,
+          id, date_str, meal_type, member_id, consumer_member_ids, personal_nutrition,
           recipe_id, recipe_name,
           recipes(id, title, slug, image_url, image_thumb_url, nutrition, servings)
         `)
@@ -124,7 +133,11 @@ async function getStatisticsData(effectiveUserId, supabase) {
     for (const m of linkedMembers) membersById.set(m.id, m)
     for (const m of managedMembers) membersById.set(m.id, m)
 
+    // Enrich members (baseDailyCalories, fallback weight/height) so the
+    // calorie-budget per-consumer split in StatisticsClient has real targets —
+    // same model the planner uses. enrichMember needs a numeric age.
     const members = Array.from(membersById.values())
+      .map(m => enrichMember({ ...m, age: ageFromDob(m.date_of_birth) }))
 
     return {
       members,
@@ -191,6 +204,7 @@ export default async function StatisticsPage({ searchParams }) {
     const initialData = await getStatisticsData(clientId, supabase)
     return (
       <ClientViewBanner clientName={clientName} pageLabel="statistics" backHref="/statistics">
+        <EstimatedMemberBanner members={initialData.members} />
         <StatisticsClient
           userId={clientId}
           initialData={initialData}
@@ -205,11 +219,14 @@ export default async function StatisticsPage({ searchParams }) {
   const initialData = await getStatisticsData(user.id, supabase)
 
   return (
-    <StatisticsClient
-      userId={user.id}
-      initialData={initialData}
-      nutritionFields={NUTRITION_FIELDS}
-      viewingClient={false}
-    />
+    <>
+      <EstimatedMemberBanner members={initialData.members} />
+      <StatisticsClient
+        userId={user.id}
+        initialData={initialData}
+        nutritionFields={NUTRITION_FIELDS}
+        viewingClient={false}
+      />
+    </>
   )
 }

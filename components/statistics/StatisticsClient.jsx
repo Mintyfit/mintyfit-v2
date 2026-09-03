@@ -1,12 +1,13 @@
 'use client'
 
 import { toDateKey } from '@/lib/utils/dateKey'
-import { MEAL_TYPES } from '@/lib/nutrition/mealBudget'
+import { MEAL_TYPES, computeMealBudget } from '@/lib/nutrition/mealBudget'
 import { extractJSON } from '@/lib/utils/extractJSON'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
-import { computeTDEE } from '@/lib/nutrition/portionCalc'
+import { enrichMember } from '@/lib/member/enrichMember'
 import { useSubscription } from '@/hooks/useSubscription'
 import { Sparkles } from 'lucide-react'
 
@@ -78,17 +79,17 @@ function pct(value, target) {
 }
 
 
-// NOTE: computeTDEE is imported from lib/nutrition/portionCalc (single source
-// of truth). Never re-implement BMR/TDEE locally.
+// NOTE: member enrichment (BMR/TDEE, fallbacks) goes through
+// lib/member/enrichMember — never re-implement it locally.
 
 export default function StatisticsClient({ userId, initialData, nutritionFields }) {
   const { isPro } = useSubscription()
   const [period, setPeriod] = useState('7d')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
-  const [selectedMeals, setSelectedMeals] = useState(new Set(MEAL_TYPES))
-  const [selectedMembers, setSelectedMembers] = useState(new Set())
-  const [expandedGroups, setExpandedGroups] = useState(new Set(['Energy', 'Macronutrients']))
+  const [selectedMeals, setSelectedMeals] = useState(() => new Set(MEAL_TYPES))
+  const [selectedMembers, setSelectedMembers] = useState(() => new Set())
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set(['Energy', 'Macronutrients']))
   const [recipeCatalogue, setRecipeCatalogue] = useState(null) // lazy — loaded on first AI analysis
   const [analysisResult, setAnalysisResult] = useState(null)
   const [analysisLoading, setAnalysisLoading] = useState(false)
@@ -97,6 +98,16 @@ export default function StatisticsClient({ userId, initialData, nutritionFields 
   const members = initialData?.members || []
   const calendarEntries = initialData?.calendarEntries || []
   const journalEntries = initialData?.journalEntries || []
+
+  const nutritionFieldByKey = useMemo(
+    () => new Map(nutritionFields.map(f => [f.key, f])),
+    [nutritionFields]
+  )
+
+  const recipeById = useMemo(
+    () => new Map((recipeCatalogue || []).map(r => [r.id, r])),
+    [recipeCatalogue]
+  )
 
   const { from, to } = useMemo(() => getRange(period, customStart, customEnd), [period, customStart, customEnd])
 
@@ -111,17 +122,15 @@ export default function StatisticsClient({ userId, initialData, nutritionFields 
     const target = {}
 
     for (const member of filteredMembers) {
-      const weight = Number(member.weight) || 70
-      const height = Number(member.height) || 170
-      const age = ageFromDob(member.date_of_birth) || 30
-      const gender = member.gender || 'female'
-      const baseDailyCalories = computeTDEE(weight, height, age, gender) || 2000
+      // Shared enrichment (lib/member/enrichMember.js) — single source of
+      // truth for baseDailyCalories and age/gender weight/height fallbacks.
+      const enriched = enrichMember({ ...member, age: ageFromDob(member.date_of_birth) })
 
       const needs = computeMemberDailyNeeds({
-        weight,
-        age,
-        gender,
-        baseDailyCalories,
+        weight: enriched.weight,
+        age: enriched.age,
+        gender: enriched.gender,
+        baseDailyCalories: enriched.baseDailyCalories,
       })
 
       addNutrition(target, needs)
@@ -156,6 +165,7 @@ export default function StatisticsClient({ userId, initialData, nutritionFields 
         mealType: entry.meal_type,
         memberId: entry.member_id || null,
         consumerMemberIds: entry.consumer_member_ids || null,
+        recipeTotals: entry.recipes?.nutrition?.totals || null,
         label: entry.recipe_name || entry.recipes?.title || 'Recipe',
         nutrition,
       })
@@ -229,10 +239,23 @@ export default function StatisticsClient({ userId, initialData, nutritionFields 
           // Legacy per-member row — assign directly to this member
           addNutrition(mTotals, row.nutrition)
         } else if (row.consumerMemberIds?.includes(member.id)) {
-          // Pre-scaled personal_nutrition: split equally among the consumer
-          // members listed on the entry.
-          const share = 1 / row.consumerMemberIds.length
-          addNutrition(mTotals, row.nutrition, share)
+          // Calorie-budgeted per-member share — the same model the planner
+          // (computeMealBudgetDayBreakdown) uses, so /statistics and /plan agree.
+          // Each member's share = their calorie-target share of the meal.
+          if (row.recipeTotals) {
+            const consumers = members.filter(m => row.consumerMemberIds.includes(m.id))
+            const budget = computeMealBudget(consumers, row.recipeTotals, row.mealType, null, 3)
+            const me = budget.eaters.find(e => e.member.id === member.id)
+            if (me?.personNutrition) addNutrition(mTotals, me.personNutrition)
+          } else {
+            // No recipe totals (legacy / journal-style row): the stored
+            // personal_nutrition is the combined share — split by calorie-target
+            // share (NOT equally, which over-counts kids / under-counts adults).
+            const consumers = members.filter(m => row.consumerMemberIds.includes(m.id))
+            const totalTarget = consumers.reduce((s, m) => s + (m.baseDailyCalories || 2000), 0)
+            const share = totalTarget > 0 ? (member.baseDailyCalories || 2000) / totalTarget : 1 / row.consumerMemberIds.length
+            addNutrition(mTotals, row.nutrition, share)
+          }
         } else if (!row.memberId && !row.consumerMemberIds?.length) {
           // Legacy row with no consumer info — split across all members
           addNutrition(mTotals, row.nutrition, 1 / Math.max(members.length, 1))
@@ -285,12 +308,15 @@ export default function StatisticsClient({ userId, initialData, nutritionFields 
     const map = new Map()
 
     for (const row of visibleRows) {
-      if (!map.has(row.date)) map.set(row.date, [])
-      map.get(row.date).push(row)
+      if (!map.has(row.date)) map.set(row.date, { rows: [], totals: {} })
+      const day = map.get(row.date)
+      day.rows.push(row)
+      if (row.memberId) addNutrition(day.totals, row.nutrition)
+      else addNutrition(day.totals, row.nutrition, 1 / memberCountForShared)
     }
 
     return Array.from(map.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1))
-  }, [visibleRows])
+  }, [visibleRows, memberCountForShared])
 
   async function runAnalysis() {
     setAnalysisLoading(true)
@@ -631,7 +657,7 @@ Rules:
               borderRadius: 10, padding: '9px 14px', fontSize: 14, color: 'var(--text-3)',
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
-              <span>🔒</span> Premium feature — <a href="/pricing" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Upgrade</a>
+              <span>🔒</span> Premium feature — <Link href="/pricing" style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Upgrade</Link>
             </div>
           )}
         </div>
@@ -722,7 +748,7 @@ Rules:
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {analysisResult.recipeSuggestions.map((s, i) => {
-                    const recipe = (recipeCatalogue || []).find(r => r.id === s.id)
+                    const recipe = recipeById.get(s.id)
                     return (
                       <div key={i} style={{
                         background: '#F0FDF4', border: '1px solid #BBF7D0',
@@ -745,14 +771,14 @@ Rules:
                           </div>
                         )}
                         {recipe?.slug && (
-                          <a href={`/recipes/${recipe.slug}`} style={{
+                          <Link href={`/recipes/${recipe.slug}`} style={{
                             display: 'inline-block', marginTop: 8,
                             background: 'var(--primary)', color: 'white', border: 'none',
                             borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 600,
                             cursor: 'pointer', textDecoration: 'none',
                           }}>
                             View Recipe →
-                          </a>
+                          </Link>
                         )}
                       </div>
                     )
@@ -786,7 +812,7 @@ Rules:
               {isOpen && (
                 <div style={{ marginTop: 8 }}>
                   {group.keys.map(key => {
-                    const field = nutritionFields.find(f => f.key === key)
+                    const field = nutritionFieldByKey.get(key)
                     if (!field) return null
 
                     const value = avg[key] || 0
@@ -822,13 +848,7 @@ Rules:
         {rowsByDate.length === 0 ? (
           <p style={{ color: 'var(--text-3)', fontSize: 14 }}>No entries in selected range.</p>
         ) : (
-          rowsByDate.slice(0, 20).map(([date, rows]) => {
-            const dayTotals = {}
-            for (const row of rows) {
-              if (row.memberId) addNutrition(dayTotals, row.nutrition)
-              else addNutrition(dayTotals, row.nutrition, 1 / memberCountForShared)
-            }
-
+          rowsByDate.slice(0, 20).map(([date, { rows, totals: dayTotals }]) => {
             return (
               <div key={date} style={{ borderTop: '1px solid var(--border-light)', paddingTop: 10, marginTop: 10 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>

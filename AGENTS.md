@@ -43,14 +43,23 @@ All public URLs use clean descriptive slugs. No UUIDs, no database IDs in URLs.
 - `/blog/iron-rich-foods-for-families`
 
 ### Nutrition Data Flow — Do Not Break This
-1. Recipe nutrition estimated by Codex Haiku / USDA at creation → stored on recipe
-2. Family member BMR computed via `computeBMR()` from `lib/nutrition/portionCalc.js`
-3. Personal daily needs via `computeMemberDailyNeeds()` from `lib/nutrition/memberRDA.js`
-4. Calendar entries store `personal_nutrition` pre-computed at write time (recipe totals × sum of consumer BMI fractions). Immutable — Statistics reads this directly.
-7. DayStatsPanel uses RAW recipe totals (from joined recipes table) for per-member breakdown — each member's contribution = recipe.totals × their BMI fraction × activity factor. Per-member values are independent; unchecking a member removes only their share. Falls back to `personal_nutrition` for legacy rows without recipe join data.
+
+**Core model:** Each person has body measures (weight, sex, age, height) → BMR → daily calorie target (`baseDailyCalories`). Movement/activity adds to the target. A meal's food amounts & nutrients are sized to each person's target. Multiple people eating one meal = sum of their individual targets.
+
+1. Recipe nutrition estimated by Codex Haiku / USDA at creation → stored on recipe.
+2. `baseDailyCalories` per member via `enrichMember()` (BMR-based, `lib/member/enrichMember.js`). When weight/height are missing, it falls back to age/gender reference estimates and flags the member with `isEstimated` — `EstimatedMemberBanner` (on /plan and /statistics) warns and links to /my-family to add real measurements.
+3. Personal daily needs via `computeMemberDailyNeeds()` from `lib/nutrition/memberRDA.js`.
+4. **Calorie-budget share (`computeMealBudget`, `lib/nutrition/mealBudget.js`) is the canonical sharing model** — NOT BMI fraction (that's legacy fallback only). A member's share of a meal = their calorie-target share of the family meal: `personShare = personMealTarget / familyMealTarget`; `batchScale = familyMealTarget / recipeKcal`.
+5. **Write-time `personal_nutrition`** = `recipe.totals × batchScale` (the combined share for the current consumer set). It is recomputed and persisted on EVERY change to the consumer set:
+   - Adding a recipe (planner `saveRecipeToDay`, DayAgenda, RecipeDetail, `/api/menus/apply`, `/api/nutritionist/calendar`).
+   - **Toggling a consumer** (planner member toggle, DayAgenda per-entry toggle) — adding/removing a member changes their share, so `personal_nutrition` must be recomputed for the new set. Never update `consumer_member_ids` without also recomputing `personal_nutrition`. Macros change with it.
+   - Legacy rows without recipe join: scale stored value by consumer-count ratio.
+6. **Statistics reads `personal_nutrition` directly for household totals** (it's the combined share). **Per-member cards split by the calorie-budget model** (`computeMealBudget` from recipe totals when present; else calorie-target-share of the stored value) — NEVER equal-split (over-counts kids, under-counts adults).
+7. **DayStatsPanel** uses RAW recipe totals for the per-member breakdown (each member's contribution = recipe.totals × their calorie-budget share). Unchecking a member removes only their share. Falls back to `personal_nutrition` for legacy rows without recipe join data.
 
 ### Files You Must Not Duplicate Logic From
-- `lib/nutrition/portionCalc.js` — BMR, TDEE, BMI fraction (`getMemberBMIFraction`), activity factor
+- `lib/nutrition/mealBudget.js` — **calorie-budget meal sharing** (`computeMealBudget`, per-day breakdowns). THE sharing model.
+- `lib/nutrition/portionCalc.js` — BMR, TDEE, activity factor. (`getMemberBMIFraction` is legacy fallback only — do NOT build new logic on it.)
 - `lib/nutrition/memberRDA.js` — personal daily nutrient needs
 - `lib/nutrition/nutrition.js` — NUTRITION_FIELDS array, nutrient keys
 - `lib/member/enrichMember.js` — `enrichMember()` — computes baseDailyCalories, falls back to age/gender estimates when weight/height missing
