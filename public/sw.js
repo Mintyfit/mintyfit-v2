@@ -67,15 +67,17 @@ async function fetchAndCache(request, cache, { maxEntries } = {}) {
   const response = await fetch(request);
   if (!response.ok || response.status === 206) return response;
 
+  // Buffer the body ONCE: a ReadableStream can only be consumed by one
+  // reader, so we must never tee response.body into cache.put while also
+  // returning the original response (that breaks the page's copy →
+  // net::ERR_FAILED for JS/CSS chunks).
+  const body = await response.blob();
+  const meta = { status: response.status, statusText: response.statusText };
+
   // Store with a fetch timestamp header for expiry checks
   const headers = new Headers(response.headers);
   headers.set('sw-fetched-at', String(Date.now()));
-  const stamped = new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  });
-  await cache.put(request, stamped);
+  await cache.put(request, new Response(body, { ...meta, headers }));
 
   if (maxEntries) {
     const keys = await cache.keys();
@@ -83,7 +85,7 @@ async function fetchAndCache(request, cache, { maxEntries } = {}) {
       await cache.delete(keys[0]);
     }
   }
-  return response;
+  return new Response(body, { ...meta, headers: response.headers });
 }
 
 // Network-first: online users always get fresh HTML whose chunk references

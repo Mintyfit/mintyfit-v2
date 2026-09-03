@@ -36,3 +36,14 @@
 
 ## Supersedes
 - SYSTEM.md "PWA / Caching" bullet (updated in place).
+
+---
+
+## Part 2 (same day, follow-up report): "Application error: a client-side exception" + endless /recipes load
+
+Two more root causes, found by probing production with headless Playwright (`probe-recipes.js` pattern — fresh context, capture `pageerror`/`requestfailed`):
+
+1. **sw.js `fetchAndCache` stream bug** (present since TASK 1.2): `new Response(response.body)` + `cache.put(stamped)` consumed the body's single reader, then the original response was returned with a locked/disturbed stream → `net::ERR_FAILED` for JS/CSS chunks whenever the SW controlled the page with an empty static cache. Masked in v1 (chunks usually pre-cached before SW control); **exposed fleet-wide by my v1→v2 VERSION bump purging caches**. Fix: buffer body once via `response.blob()`, build two Responses from it. Rule: a ReadableStream has ONE reader — never pass `response.body` into another Response AND keep using the original.
+2. **All images were base64 in Postgres** (135 recipes/270 fields/10.6MB, 0 storage URLs): `resizeAndUploadImages()` silently falls back to data URLs when storage upload fails, and legacy v1 rows were base64 → /recipes HTML was 5.8MB. Migrated 139 recipes + 5 menus to Supabase Storage via service-role script (backup first, idempotent, 0 failures). `normalizeRecipe()` now strips heavy (>4KB) data URIs as a permanent guard.
+
+Verification pattern worth reusing: fetch live HTML and measure bytes + count `data:image` occurrences; DB probe via PostgREST with anon key; Playwright probe for ERR_FAILED chunks.

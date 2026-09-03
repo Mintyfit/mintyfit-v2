@@ -285,6 +285,7 @@ All tables in Supabase PostgreSQL. RLS enabled on everything.
 
 **`recipes`** — All recipes
 - id, profile_id, title, description, meal_type, food_type, cuisine_type, servings, instructions (jsonb), nutrition (jsonb: {totals, perServing}), image_url, image_thumb_url, is_public, slug, created_at
+- ⚠️ `image_url`/`image_thumb_url` must be **Supabase Storage URLs** (`recipe-images` bucket), never base64 data URIs — 2026-09-03 migration moved 139 legacy recipes + 5 menus to storage (data URIs in RSC payloads made /recipes HTML 5.8 MB). `normalizeRecipe()` strips any heavy (>4 KB) data URI as a safety net.
 
 **`recipe_ingredient_swaps`** — Persisted ingredient swaps per user per recipe
 - id, profile_id (FK→profiles), recipe_id (FK→recipes), original_name, replacement_name, replacement_note, amount_factor
