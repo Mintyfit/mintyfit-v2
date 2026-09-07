@@ -140,7 +140,7 @@
 - Decompose `RecipeDetailClient.jsx` (2,204 lines → ~6 components + `useRecipeScaling`), `PlannerClient.jsx` prop drilling.
 - Single `extractJSON`/`toDateKey`/`MEAL_TYPES` in lib/; remove 7×/16×/8× duplications.
 - `eslint.ignoreDuringBuilds` → false; fix surfaced issues.
-- Inline styles → Tailwind/tokens per-screen as touched; fix dark-mode var names (`--text-primary`→`--text-1` etc.) on blog/pricing/pages.
+- Inline styles → Tailwind/tokens per-screen as touched; ~~fix dark-mode var names (`--text-primary`→`--text-1` etc.) on blog/pricing/pages~~ DONE 2026-09-07 (pricing + blog fixed; audit other screens as touched).
 - Smoke-test script (staging Supabase): family create → managed kid visible → plan save → stats render → tier upgrade → GDPR delete.
 - Primitives: Modal (focus trap), ConfirmDialog, Toast, FormField — replace `alert()`/`confirm()`.
 

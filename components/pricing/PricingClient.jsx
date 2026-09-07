@@ -141,22 +141,22 @@ export default function PricingClient() {
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '3rem 1rem' }}>
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-primary, #111827)' }}>
+        <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--text-1)' }}>
           Simple, Family-First Pricing
         </h1>
-        <p style={{ fontSize: '1.125rem', color: 'var(--text-secondary, #6b7280)', marginBottom: '2rem', maxWidth: 500, margin: '0 auto 2rem' }}>
+        <p style={{ fontSize: '1.125rem', color: 'var(--text-3)', marginBottom: '2rem', maxWidth: 500, margin: '0 auto 2rem' }}>
           One plan per family. Not per person. Start free — no credit card required.
         </p>
 
         {/* Toggle */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', background: 'var(--card-bg, #f9fafb)', padding: '0.5rem 1rem', borderRadius: '999px', border: '1px solid var(--border-color, #e5e7eb)' }}>
-          <span style={{ fontWeight: annual ? 400 : 600, color: annual ? 'var(--text-secondary, #6b7280)' : 'var(--text-primary, #111827)' }}>Monthly</span>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', background: 'var(--bg-card)', padding: '0.5rem 1rem', borderRadius: '999px', border: '1px solid var(--border)' }}>
+          <span style={{ fontWeight: annual ? 400 : 600, color: annual ? 'var(--text-3)' : 'var(--text-1)' }}>Monthly</span>
           <button
             onClick={() => setAnnual(!annual)}
             style={{ width: 44, height: 24, borderRadius: '999px', background: annual ? '#10b981' : '#d1d5db', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s' }}>
             <span style={{ display: 'block', width: 20, height: 20, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: annual ? 22 : 2, transition: 'left 0.2s' }} />
           </button>
-          <span style={{ fontWeight: annual ? 600 : 400, color: annual ? 'var(--text-primary, #111827)' : 'var(--text-secondary, #6b7280)' }}>
+          <span style={{ fontWeight: annual ? 600 : 400, color: annual ? 'var(--text-1)' : 'var(--text-3)' }}>
             Annual <span style={{ color: '#10b981', fontSize: '0.8rem' }}>({annualSavings(20)})</span>
           </span>
         </div>
@@ -170,8 +170,8 @@ export default function PricingClient() {
 
           return (
             <div key={plan.name} style={{
-              background: isHighlight ? `linear-gradient(135deg, #7c3aed, #8b5cf6)` : 'var(--card-bg, #fff)',
-              borderRadius: '1rem', padding: '2rem', border: isHighlight ? 'none' : '1px solid var(--border-color, #e5e7eb)',
+              background: isHighlight ? `linear-gradient(135deg, #7c3aed, #8b5cf6)` : 'var(--bg-card)',
+              borderRadius: '1rem', padding: '2rem', border: isHighlight ? 'none' : '1px solid var(--border)',
               position: 'relative', color: isHighlight ? '#fff' : 'inherit',
               boxShadow: isHighlight ? '0 8px 40px rgba(139,92,246,0.35)' : 'none',
               transform: isHighlight ? 'scale(1.03)' : 'none',
@@ -226,7 +226,7 @@ export default function PricingClient() {
       {user && (
         <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
           <button onClick={manageSubscription} disabled={loading === 'manage'}
-            style={{ padding: '0.75rem 2rem', background: 'transparent', border: '1.5px solid var(--border-color, #d1d5db)', borderRadius: '0.5rem', cursor: 'pointer', color: 'var(--text-primary, #374151)', fontWeight: 500 }}>
+            style={{ padding: '0.75rem 2rem', background: 'transparent', border: '1.5px solid var(--border)', borderRadius: '0.5rem', cursor: 'pointer', color: 'var(--text-2)', fontWeight: 500 }}>
             {loading === 'manage' ? 'Loading…' : 'Manage Current Subscription →'}
           </button>
         </div>
@@ -245,18 +245,18 @@ export default function PricingClient() {
 
       {/* FAQ */}
       <div style={{ maxWidth: 700, margin: '0 auto' }}>
-        <h2 style={{ fontSize: '1.75rem', fontWeight: 700, textAlign: 'center', marginBottom: '2rem', color: 'var(--text-primary, #111827)' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: 700, textAlign: 'center', marginBottom: '2rem', color: 'var(--text-1)' }}>
           Frequently Asked Questions
         </h2>
         {FAQ.map((item, i) => (
-          <div key={i} style={{ borderBottom: '1px solid var(--border-color, #e5e7eb)', paddingBottom: '1rem', marginBottom: '1rem' }}>
+          <div key={i} style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }}>
             <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
               style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: '0.75rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-primary, #111827)' }}>{item.q}</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-1)' }}>{item.q}</span>
               <span style={{ color: '#10b981', fontSize: '1.25rem', flexShrink: 0 }}>{openFaq === i ? '−' : '+'}</span>
             </button>
             {openFaq === i && (
-              <p style={{ margin: '0 0 0.75rem', color: 'var(--text-secondary, #6b7280)', lineHeight: 1.7 }}>{item.a}</p>
+              <p style={{ margin: '0 0 0.75rem', color: 'var(--text-3)', lineHeight: 1.7 }}>{item.a}</p>
             )}
           </div>
         ))}
@@ -264,14 +264,14 @@ export default function PricingClient() {
 
       {/* Final CTA */}
       <div style={{ textAlign: 'center', marginTop: '4rem' }}>
-        <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-primary, #111827)' }}>
+        <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-1)' }}>
           Ready to feed your family smarter?
         </h3>
         <Link href="/onboarding"
           style={{ display: 'inline-block', padding: '1rem 2.5rem', background: '#10b981', color: '#fff', borderRadius: '0.5rem', textDecoration: 'none', fontWeight: 700, fontSize: '1.1rem' }}>
           Start Free — No Card Required
         </Link>
-        <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--text-secondary, #9ca3af)' }}>
+        <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--text-4)' }}>
           5 AI recipes free every month. Upgrade when you need more.
         </p>
       </div>

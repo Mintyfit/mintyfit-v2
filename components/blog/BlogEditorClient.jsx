@@ -74,7 +74,7 @@ export default function BlogEditorClient({ post, isNew }) {
     router.push('/blog')
   }
 
-  const inputStyle = { width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-color, #d1d5db)', fontSize: '1rem', boxSizing: 'border-box', fontFamily: 'inherit', background: 'var(--input-bg, #fff)', color: 'var(--text-primary, #111827)' }
+  const inputStyle = { width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', fontSize: '1rem', boxSizing: 'border-box', fontFamily: 'inherit', background: 'var(--bg-card)', color: 'var(--text-1)' }
 
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: '2rem 1rem' }}>

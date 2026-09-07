@@ -119,7 +119,7 @@ export default async function BlogPostPage({ params }) {
         <BlogPostHeader post={post} isSuperAdmin={isSuperAdmin} />
 
         {/* Breadcrumb */}
-        <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-secondary, #6b7280)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+        <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-3)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
           <Link href="/" style={{ color: '#10b981', textDecoration: 'none', flexShrink: 0 }}>Home</Link>
           {' / '}
           <Link href="/blog" style={{ color: '#10b981', textDecoration: 'none', flexShrink: 0 }}>Blog</Link>
@@ -138,11 +138,11 @@ export default async function BlogPostPage({ params }) {
           </div>
         )}
 
-        <h1 style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.3, marginBottom: '1rem', color: 'var(--text-primary, #111827)' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700, lineHeight: 1.3, marginBottom: '1rem', color: 'var(--text-1)' }}>
           {post.title}
         </h1>
 
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2rem', color: 'var(--text-secondary, #6b7280)', fontSize: '0.875rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2rem', color: 'var(--text-3)', fontSize: '0.875rem' }}>
           <span>By {authorName}</span>
           <span>·</span>
           <span>{date}</span>
@@ -170,17 +170,17 @@ export default async function BlogPostPage({ params }) {
         {/* Related posts */}
         {related.length > 0 && (
           <div>
-            <h3 style={{ fontWeight: 600, fontSize: '1.25rem', marginBottom: '1.25rem', color: 'var(--text-primary, #111827)' }}>Related Articles</h3>
+            <h3 style={{ fontWeight: 600, fontSize: '1.25rem', marginBottom: '1.25rem', color: 'var(--text-1)' }}>Related Articles</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
               {related.map(r => (
                 <Link key={r.id} href={`/blog/${r.slug}`}
-                  style={{ textDecoration: 'none', color: 'inherit', background: 'var(--card-bg, #f9fafb)', borderRadius: '0.5rem', padding: '1rem', border: '1px solid var(--border-color, #e5e7eb)', display: 'block' }}>
+                  style={{ textDecoration: 'none', color: 'inherit', background: 'var(--bg-card)', borderRadius: '0.5rem', padding: '1rem', border: '1px solid var(--border)', display: 'block' }}>
                   {r.image_url && (
                     <div style={{ position: 'relative', height: 120, borderRadius: '0.375rem', overflow: 'hidden', marginBottom: '0.75rem' }}>
                       <img src={r.image_url} alt={r.title} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   )}
-                  <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary, #111827)' }}>{r.title}</p>
+                  <p style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-1)' }}>{r.title}</p>
                 </Link>
               ))}
             </div>
@@ -188,7 +188,7 @@ export default async function BlogPostPage({ params }) {
         )}
 
         {/* Back link */}
-        <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color, #e5e7eb)' }}>
+        <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
           <Link href="/blog" style={{ color: '#10b981', textDecoration: 'none', fontWeight: 500 }}>
             ← Back to Blog
           </Link>

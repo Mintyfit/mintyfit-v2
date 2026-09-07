@@ -50,6 +50,7 @@
 | `sessions/2026-09-03-large-file-audit-perf-fixes.md` | Large-file audit + fix-all: magnesium calc rewritten off Babel/Tailwind CDN; planner serial-await + cache-race fixes; RecipeDetail/Statistics/MyAccount memoization; 13.5MB duplicate SQL deleted; subagent bug-claim hallucination caught by source verification |
 | `sessions/2026-09-03-calorie-budget-sharing-model.md` | Made `computeMealBudget` calorie-budget share the single sharing model: member toggles now recompute+persist `personal_nutrition`; Statistics per-member cards use calorie-budget split (was equal-split); menus/apply stores budget not raw totals; AGENTS.md data-flow rewritten |
 | `sessions/2026-09-03-photo-food-logging.md` | Photo food logging (Family tier only): `/api/food-photo` Haiku vision route, decompose-then-sum prompt, editable component grams in JournalEntryForm. CRITICAL env findings: `next build` spawn UNKNOWN / 0xC0000409 = Windows commit exhaustion → `experimental.cpus: 1` workaround; junction+npm ci wiped main node_modules |
+| `sessions/2026-09-07-dark-mode-tokens.md` | /pricing cards + FAQ invisible in dark mode — root cause: non-existent CSS vars (`--text-primary`/`--card-bg`/etc.) silently falling back to light hex; renamed to real tokens (`--text-1..4`, `--bg-card`, `--border`) across pricing + blog files |
 
 ### Prompts
 | File | Purpose |

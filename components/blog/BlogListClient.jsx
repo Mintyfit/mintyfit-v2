@@ -27,8 +27,8 @@ function PostCard({ post }) {
   return (
     <Link href={`/blog/${post.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <article style={{
-        background: 'var(--card-bg, #fff)', borderRadius: '0.75rem', overflow: 'hidden',
-        border: '1px solid var(--border-color, #e5e7eb)', transition: 'box-shadow 0.2s',
+        background: 'var(--bg-card)', borderRadius: '0.75rem', overflow: 'hidden',
+        border: '1px solid var(--border)', transition: 'box-shadow 0.2s',
         display: 'flex', flexDirection: 'column', height: '100%',
       }}
         onMouseEnter={e => e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.10)'}
@@ -49,15 +49,15 @@ function PostCard({ post }) {
               ))}
             </div>
           )}
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', lineHeight: 1.35, color: 'var(--text-primary, #111827)' }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '0.5rem', lineHeight: 1.35, color: 'var(--text-1)' }}>
             {post.title}
           </h2>
           {excerpt && (
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary, #6b7280)', lineHeight: 1.6, flex: 1, marginBottom: '1rem' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-3)', lineHeight: 1.6, flex: 1, marginBottom: '1rem' }}>
               {excerpt.length > 140 ? excerpt.slice(0, 140) + '...' : excerpt}
             </p>
           )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-secondary, #9ca3af)', marginTop: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-4)', marginTop: 'auto' }}>
             <span>MintyFit Team</span>
             <span>{date}</span>
           </div>
@@ -88,10 +88,10 @@ export default function BlogListClient({ initialPosts }) {
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2rem 1rem' }}>
       <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-primary, #111827)' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.75rem', color: 'var(--text-1)' }}>
           Family Nutrition Blog
         </h1>
-        <p style={{ color: 'var(--text-secondary, #6b7280)', maxWidth: 500, margin: '0 auto' }}>
+        <p style={{ color: 'var(--text-3)', maxWidth: 500, margin: '0 auto' }}>
           Evidence-based articles on family nutrition, meal planning, and healthy living.
         </p>
       </div>
@@ -101,7 +101,7 @@ export default function BlogListClient({ initialPosts }) {
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1) }}
           placeholder="Search articles..."
-          style={{ width: '100%', maxWidth: 400, padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid var(--border-color, #d1d5db)', fontSize: '1rem', boxSizing: 'border-box', color: 'var(--text-primary, #111827)', background: 'var(--input-bg, #fff)' }}
+          style={{ width: '100%', maxWidth: 400, padding: '0.75rem 1rem', borderRadius: '0.5rem', border: '1px solid var(--border)', fontSize: '1rem', boxSizing: 'border-box', color: 'var(--text-1)', background: 'var(--bg-card)' }}
         />
       </div>
 
@@ -110,9 +110,9 @@ export default function BlogListClient({ initialPosts }) {
           <button key={cat} onClick={() => { setActiveCategory(cat); setPage(1) }}
             style={{
               padding: '0.4rem 1rem', borderRadius: '999px', border: '1.5px solid',
-              borderColor: activeCategory === cat ? '#10b981' : 'var(--border-color, #d1d5db)',
+              borderColor: activeCategory === cat ? '#10b981' : 'var(--border)',
               background: activeCategory === cat ? '#10b981' : 'transparent',
-              color: activeCategory === cat ? '#fff' : 'var(--text-secondary, #6b7280)',
+              color: activeCategory === cat ? '#fff' : 'var(--text-3)',
               cursor: 'pointer', fontSize: '0.875rem', fontWeight: activeCategory === cat ? 600 : 400,
             }}>
             {cat}
@@ -121,7 +121,7 @@ export default function BlogListClient({ initialPosts }) {
       </div>
 
       {pagePosts.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-secondary, #9ca3af)' }}>
+        <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-4)' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>No articles</div>
           <p>No articles found. Check back soon!</p>
         </div>
@@ -135,7 +135,7 @@ export default function BlogListClient({ initialPosts }) {
         <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
             <button key={p} onClick={() => { setPage(p); window.scrollTo(0, 0) }}
-              style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid', borderColor: page === p ? '#10b981' : 'var(--border-color, #d1d5db)', background: page === p ? '#10b981' : 'transparent', color: page === p ? '#fff' : 'var(--text-primary, #374151)', cursor: 'pointer' }}>
+              style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem', border: '1px solid', borderColor: page === p ? '#10b981' : 'var(--border)', background: page === p ? '#10b981' : 'transparent', color: page === p ? '#fff' : 'var(--text-2)', cursor: 'pointer' }}>
               {p}
             </button>
           ))}
