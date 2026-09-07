@@ -9,7 +9,43 @@ import Link from 'next/link'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 import { enrichMember } from '@/lib/member/enrichMember'
 import { useSubscription } from '@/hooks/useSubscription'
+import { useCachedData } from '@/hooks/useCachedData'
+import { createClient } from '@/lib/supabase/client'
 import { Sparkles } from 'lucide-react'
+
+const HISTORY_DAYS = 60
+
+// 60-day history (calendar entries + journals) fetched client-side through the
+// SWR cache — repeat visits render instantly from localStorage and revalidate
+// in the background. TTL is intentionally short so planner saves surface fast.
+function useStatsHistory(userId) {
+  return useCachedData(`stats:${userId}`, async () => {
+    const supabase = createClient()
+    if (!supabase || !userId) return { calendarEntries: [], journalEntries: [] }
+    const from = new Date()
+    from.setDate(from.getDate() - HISTORY_DAYS)
+    const fromKey = toDateKey(from)
+    const [cal, jour] = await Promise.all([
+      supabase
+        .from('calendar_entries')
+        .select(`
+          id, date_str, meal_type, member_id, consumer_member_ids, personal_nutrition,
+          recipe_id, recipe_name,
+          recipes(id, title, slug, image_url, image_thumb_url, nutrition, servings)
+        `)
+        .eq('profile_id', userId)
+        .gte('date_str', fromKey)
+        .order('date_str', { ascending: false }),
+      supabase
+        .from('food_journal')
+        .select('id, logged_date, meal_type, member_id, food_name, amount, unit, nutrition')
+        .eq('profile_id', userId)
+        .gte('logged_date', fromKey)
+        .order('logged_date', { ascending: false }),
+    ])
+    return { calendarEntries: cal?.data || [], journalEntries: jour?.data || [] }
+  }, { ttlMs: 90 * 1000 })
+}
 
 
 
@@ -95,9 +131,11 @@ export default function StatisticsClient({ userId, initialData, nutritionFields 
   const [analysisLoading, setAnalysisLoading] = useState(false)
   const [analysisError, setAnalysisError] = useState(null)
 
+  const { data: history } = useStatsHistory(userId)
+
   const members = initialData?.members || []
-  const calendarEntries = initialData?.calendarEntries || []
-  const journalEntries = initialData?.journalEntries || []
+  const calendarEntries = history?.calendarEntries || []
+  const journalEntries = history?.journalEntries || []
 
   const nutritionFieldByKey = useMemo(
     () => new Map(nutritionFields.map(f => [f.key, f])),

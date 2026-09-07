@@ -62,7 +62,7 @@ export default function NutritionistInviteClient({ token, invite, error, user })
     await acceptInvite()
   }
 
-  const nutritionistName = invite?.profiles?.name || 'A nutritionist'
+  const nutritionistName = invite?.profiles?.display_name || invite?.profiles?.full_name || 'A nutritionist'
 
   return (
     <>

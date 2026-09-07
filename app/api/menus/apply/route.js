@@ -47,7 +47,7 @@ export async function POST(request) {
       const [{ data: linked }, { data: managed }] = await Promise.all([
         supabase
           .from('family_memberships')
-          .select('profile_id, profiles(id, display_name, full_name, name, gender, date_of_birth, weight, height)')
+          .select('profile_id, profiles(id, display_name, full_name, gender, date_of_birth, weight, height)')
           .eq('family_id', familyId)
           .eq('status', 'active'),
         supabase

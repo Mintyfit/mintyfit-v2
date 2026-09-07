@@ -1,4 +1,3 @@
-import { toDateKey } from '@/lib/utils/dateKey'
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
@@ -14,8 +13,6 @@ function ageFromDob(dob) {
   return Math.max(0, Math.floor((Date.now() - d.getTime()) / 31557600000))
 }
 
-const HISTORY_DAYS = 60
-
 export const metadata = {
   title: 'Nutrition Statistics - MintyFit',
   description: 'Family nutrition analytics with date range, member filters, and nutrient breakdown.',
@@ -28,15 +25,10 @@ function normalizeName(row) {
 
 async function getStatisticsData(effectiveUserId, supabase) {
   try {
-    const today = new Date()
-    const historyFrom = new Date(today)
-    historyFrom.setDate(today.getDate() - HISTORY_DAYS)
-    const fromKey = toDateKey(historyFrom)
-
-    const [meResult, membershipsResult, calendarResult, journalResult, weightLogsResult] = await Promise.all([
+    const [meResult, membershipsResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, display_name, full_name, name, role, gender, date_of_birth, weight, height, subscription_tier')
+        .select('id, display_name, full_name, role, gender, date_of_birth, weight, height, subscription_tier')
         .eq('id', effectiveUserId)
         .maybeSingle(),
       supabase
@@ -45,28 +37,6 @@ async function getStatisticsData(effectiveUserId, supabase) {
         .eq('profile_id', effectiveUserId)
         .eq('status', 'active')
         .limit(1),
-      supabase
-        .from('calendar_entries')
-        .select(`
-          id, date_str, meal_type, member_id, consumer_member_ids, personal_nutrition,
-          recipe_id, recipe_name,
-          recipes(id, title, slug, image_url, image_thumb_url, nutrition, servings)
-        `)
-        .eq('profile_id', effectiveUserId)
-        .gte('date_str', fromKey)
-        .order('date_str', { ascending: false }),
-      supabase
-        .from('food_journal')
-        .select('id, logged_date, meal_type, member_id, food_name, amount, unit, nutrition')
-        .eq('profile_id', effectiveUserId)
-        .gte('logged_date', fromKey)
-        .order('logged_date', { ascending: false }),
-      supabase
-        .from('weight_logs')
-        .select('*')
-        .eq('profile_id', effectiveUserId)
-        .order('logged_date', { ascending: false })
-        .limit(60),
     ])
 
     const me = meResult?.data
@@ -81,7 +51,7 @@ async function getStatisticsData(effectiveUserId, supabase) {
       const [linkedResult, managedResult] = await Promise.all([
         supabase
           .from('family_memberships')
-          .select('profile_id, role, status, profiles(id, display_name, full_name, name, gender, date_of_birth, weight, height)')
+          .select('profile_id, role, status, profiles(id, display_name, full_name, gender, date_of_birth, weight, height)')
           .eq('family_id', familyId)
           .eq('status', 'active'),
         supabase
@@ -139,20 +109,10 @@ async function getStatisticsData(effectiveUserId, supabase) {
     const members = Array.from(membersById.values())
       .map(m => enrichMember({ ...m, age: ageFromDob(m.date_of_birth) }))
 
-    return {
-      members,
-      calendarEntries: calendarResult?.data || [],
-      journalEntries: journalResult?.data || [],
-      weightLogs: weightLogsResult?.data || [],
-    }
+    return { members }
   } catch (error) {
     console.error('Statistics data error:', error)
-    return {
-      members: [],
-      calendarEntries: [],
-      journalEntries: [],
-      weightLogs: [],
-    }
+    return { members: [] }
   }
 }
 

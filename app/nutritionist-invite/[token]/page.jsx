@@ -11,7 +11,7 @@ async function getInviteData(token, supabase) {
   try {
     const { data: invite } = await supabase
       .from('nutritionist_invites')
-      .select('id, nutritionist_id, email, status, expires_at, profiles(id, name)')
+      .select('id, nutritionist_id, email, status, expires_at, profiles(id, full_name, display_name)')
       .eq('token', token)
       .single()
 
