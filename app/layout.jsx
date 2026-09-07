@@ -26,7 +26,7 @@ import { ToastProvider } from '@/components/ui/Toast'
 import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import NavbarWrapper from '@/components/shared/NavbarWrapper'
 import AppFooter from '@/components/landing/AppFooter'
-import ServiceWorkerRegistrar from '@/components/shared/ServiceWorkerRegistrar'
+import ServiceWorkerCleanup from '@/components/shared/ServiceWorkerCleanup'
 import './globals.css'
 
 const montserrat = localFont({
@@ -88,7 +88,7 @@ export default function RootLayout({ children }) {
                 <NavbarWrapper />
                 <main style={{ minHeight: '100vh' }}>{children}</main>
                 <AppFooter />
-                <ServiceWorkerRegistrar />
+                <ServiceWorkerCleanup />
               </ConfirmProvider>
             </ToastProvider>
           </AuthProvider>

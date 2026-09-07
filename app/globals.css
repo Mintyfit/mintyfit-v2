@@ -27,14 +27,17 @@
   --text-2xl: 1.75rem;   /* 28px */
 }
 
-/* Mobile typography scaling: most components declare rem-based sizes inline,
-   so raising the root font-size scales the whole app proportionally.
-   17.5px ≈ +9%, 18px on narrow phones ≈ +12%. */
+/* Root font size — set explicitly on every platform.
+   Most components declare rem-based sizes inline, so the root scales the whole
+   app proportionally. We never rely on the browser/WebView default: Android
+   WebView's default is often ~14–15px (not 16px), which made text too small in
+   the installed app. Explicit sizes give a consistent, larger baseline. */
+html { font-size: 17px; }
 @media (max-width: 767px) {
-  html { font-size: 17.5px; }
+  html { font-size: 18px; }
 }
 @media (max-width: 380px) {
-  html { font-size: 18px; }
+  html { font-size: 18.5px; }
 }
 
 .dark {

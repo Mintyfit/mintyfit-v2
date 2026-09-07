@@ -143,6 +143,7 @@
 - [DONE] 4.3: Lint enabled in builds — ✓ eslint.ignoreDuringBuilds removed; build passes with "Linting and checking validity of types" green.
 - [DONE] 4.4: Smoke-test script — ✓ scripts/smoke-test.mjs (schema sanity, managed-member round-trip, calendar save, RPC auth guard, tier vocabulary, FTS). Needs SMOKE_TEST_USER_ID + staging project.
 - [DONE] 4.5: Primitives — ✓ components/ui/{Toast,Modal,ConfirmDialog}.jsx; providers wired in layout; ALL 24 alert()/confirm() call sites replaced. Bonus bugs fixed: GDPR delete button called POST (route only accepts DELETE — delete-account was broken); removed supabaseUrl leak remnant in MyAccountClient; deleted dead ProfileSection + NutritionistLinkStatus.
+- [DONE] HOTFIX 2026-09-07: Android app shell served stale pre-chat UI after login — root cause: installed WebView held old SW caches (service worker cache layer). Product decision: app must draw ALL content fresh from web, no SW cache. Fix: sw.js → self-purging no-op (no fetch handler; deletes all caches + unregisters on activate; VERSION v3-nocache); ServiceWorkerRegistrar → ServiceWorkerCleanup (unregisters all SW + purges Cache Storage on every page load); SYSTEM.md/AGENTS.md updated. Same commit: explicit root font-size (17px desktop / 18px ≤767px / 18.5px ≤380px) — was unset on desktop, so Android WebView default (~14–15px) made text too small.
 
 ### ⚠️ Manual steps required (website)
 1. Run migration 058 (usage RPC) — until then limits fail open (no breakage)

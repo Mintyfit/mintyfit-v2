@@ -182,7 +182,7 @@ AprillBuild/
 │
 ├── components/                       # UI components
 │   ├── ui/                           # Primitives: Toast (useToast), Modal (focus trap), ConfirmDialog (useConfirm) — NEVER use alert()/confirm()
-│   ├── shared/                       # NavbarWrapper, ShoppingCartLink, SafeHtml (ONLY sanitized-HTML site), ServiceWorkerRegistrar
+│   ├── shared/                       # NavbarWrapper, ShoppingCartLink, SafeHtml (ONLY sanitized-HTML site), ServiceWorkerCleanup
 │   ├── assistant/                    # AssistantPanel (Minty Chat) + AssistantFab — conversational search/create/log, paid tier
 │   ├── landing/                      # LandingClient (full landing page), AuthModal
 │   ├── recipes/                      # RecipesClient, RecipeCard, RecipeDetailClient, RecipeGeneratorClient, RecipeNutrition (extracted sub-components)
@@ -415,9 +415,10 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 - ⚠️ Verify GDPR delete on staging with a test account (all user tables should be empty after).
 - ⚠️ If Stripe price-ID fallback is needed in webhook: `supabase secrets set STRIPE_FAMILY_MONTHLY_PRICE_ID=... STRIPE_FAMILY_YEARLY_PRICE_ID=...` (plan_id metadata is the primary mechanism and needs no secrets).
 
-### PWA / Caching (added 2026-09-01)
+### PWA / Caching (service worker REMOVED 2026-09-07)
 
-- `public/manifest.json` + `public/sw.js` (service worker): static assets & fonts cache-first; public pages (/, /recipes, /menus, /blog, /pricing, /pages) **network-first — cache is an offline fallback only** (never serve HTML stale: it references content-hashed `/_next/static` chunks that vanish on redeploy → missing CSS / ChunkLoadError); recipe images cache-first 30d. **Authenticated HTML and /api/* are never cached.** Registered production-only via `components/shared/ServiceWorkerRegistrar.jsx`. Bump `VERSION` in sw.js on any strategy change (purges old caches on activate); `/sw.js` is served `no-cache` via next.config headers so updates propagate.
+- **No service worker caching — by product decision.** The Android app shell (and any PWA) must always draw content fresh from the web; a client-side SW cache let installed shells hold stale pre-release UI after deploys (e.g. old chat UI, 2026-09-07). `public/sw.js` is now a **self-purging no-op**: no `fetch` handler (network passthrough), and on activate it deletes every Cache Storage entry + unregisters itself. `components/shared/ServiceWorkerCleanup.jsx` (mounted in root layout) additionally unregisters all SW registrations + purges all caches on every page load. `/sw.js` is served `no-cache` via next.config headers so the purging worker propagates to existing installs. **Do NOT reintroduce a caching service worker.**
+- `public/manifest.json` remains (install metadata only — no caching behavior).
 - Client data cache: `hooks/useCachedData.js` (localStorage + TTL + SWR). Invalidate after writes via `invalidateCache('recipes:')` etc.
 
 ### Post-Deploy Checklist (not yet done)

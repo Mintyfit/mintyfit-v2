@@ -67,6 +67,9 @@ All public URLs use clean descriptive slugs. No UUIDs, no database IDs in URLs.
 ### Meal Types
 Always: `['breakfast', 'snack', 'lunch', 'snack2', 'dinner']`
 
+### No Service Worker Cache — Ever
+The Android app is a thin WebView shell and must always draw content fresh from the web — **no client-side cache layer** (product decision, 2026-09-07). A caching service worker let installed shells serve stale pre-release UI after deploys. `public/sw.js` is a self-purging no-op; `ServiceWorkerCleanup.jsx` unregisters workers + purges caches on every load. Do NOT reintroduce a caching SW.
+
 ### Family Architecture
 Two member types in a family:
 - **Linked members** — teens/adults with their own account (profile_id in family_memberships)
