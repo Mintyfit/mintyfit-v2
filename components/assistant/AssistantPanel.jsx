@@ -30,7 +30,7 @@ const nextId = () => ++msgId
  */
 export default function AssistantPanel({ members = [], onClose, autoFocus = false }) {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { tier } = useSubscription()
   const entitled = canUseVoiceAssistant(tier)
 
@@ -70,9 +70,11 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
   // ── Recipe generation inside the chat ────────────────────────────────────
   async function runGeneration(prompt, cardId) {
     try {
+      // Same unit preference as /recipes/generate (profile.units_preference)
+      const isMetric = profile?.units_preference !== 'imperial'
       const recipe = await generateRecipe(prompt, user?.id, (step, label) => {
         patch(cardId, { progressLabel: label })
-      }, {})
+      }, { isMetric })
       patch(cardId, { creating: false, recipe })
     } catch (err) {
       const limit = err.message?.startsWith('LIMIT_REACHED')
