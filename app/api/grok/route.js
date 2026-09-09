@@ -6,8 +6,8 @@ export const maxDuration = 60
 
 // Client-supplied model is ignored unless whitelisted — never let callers
 // pick arbitrary (expensive) upstream models.
-const ALLOWED_MODELS = ['grok-3-fast', 'grok-3']
-const DEFAULT_MODEL = 'grok-3-fast'
+const ALLOWED_MODELS = ['grok-3-fast', 'grok-3', 'grok-4.20-0309-non-reasoning', 'grok-4.3']
+const DEFAULT_MODEL = 'grok-4.20-0309-non-reasoning'
 const MAX_TOKENS_CEILING = 16384
 
 export async function POST(request) {

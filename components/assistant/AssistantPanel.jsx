@@ -34,9 +34,7 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
   const { tier } = useSubscription()
   const entitled = canUseVoiceAssistant(tier)
 
-  const [messages, setMessages] = useState([
-    { id: nextId(), role: 'assistant', text: 'Hi! Tell me what you\'d like — e.g. "a chicken salad for lunch", or "log: I had two eggs and toast".' },
-  ])
+  const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const inputRef = useRef(null)
@@ -85,6 +83,18 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
           : 'Generation failed. Try again?',
       })
     }
+  }
+
+  // Picking one of the 3 option cards starts generation for that variant
+  function pickOption(option) {
+    if (busy) return
+    setBusy(true)
+    const cardId = nextId()
+    setMessages(prev => [...prev,
+      { id: nextId(), role: 'user', text: option.title },
+      { id: cardId, role: 'assistant', creating: true, progressLabel: 'Starting…' },
+    ])
+    runGeneration(option.prompt, cardId).finally(() => setBusy(false))
   }
 
   // ── Journal save ─────────────────────────────────────────────────────────
@@ -146,12 +156,11 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
           createPrompt: data.createPrompt,
         })
       } else if (data.intent === 'create_recipe') {
-        const cardId = nextId()
-        setMessages(prev => [...prev, {
-          id: cardId, role: 'assistant', text: data.message,
-          creating: true, progressLabel: 'Starting…',
-        }])
-        runGeneration(data.recipe_prompt, cardId)
+        push({
+          role: 'assistant',
+          text: data.message,
+          options: data.options || [],
+        })
       } else if (data.intent === 'log_food') {
         push({ role: 'assistant', text: data.message, log: data.log })
       } else {
@@ -217,6 +226,65 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
         )}
       </div>
 
+      {messages.length === 0 ? (
+        /* Empty state — ONE large editable field (greeting replaced by input) */
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.625rem', minHeight: 180 }}>
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); setInput('') } }}
+            placeholder={'Ask for a meal or log a food — e.g. "chicken salad for lunch" or "I had two eggs and toast".'}
+            aria-label="Message Minty Chat"
+            rows={4}
+            style={{
+              flex: 1, resize: 'none', padding: '0.75rem 1rem', borderRadius: '12px',
+              border: '1px solid var(--border)', background: 'var(--bg-page)',
+              color: 'var(--text-1)', fontSize: 'var(--text-base)', lineHeight: 1.5,
+              outline: 'none', fontFamily: 'inherit',
+            }}
+          />
+          <div style={{ display: 'flex', gap: '0.375rem' }}>
+            <button
+              onClick={voice.isListening ? voice.stopListening : voice.startListening}
+              disabled={voice.isProcessing}
+              aria-label={voice.isListening ? 'Stop listening' : 'Voice input'}
+              style={{
+                width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                border: `2px solid ${voice.isListening ? 'var(--primary)' : 'var(--border)'}`,
+                background: voice.isListening ? 'rgba(61,138,62,0.12)' : 'var(--bg-card)',
+                color: voice.isListening ? 'var(--primary)' : 'var(--text-3)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Mic size={18} />
+            </button>
+            <button
+              onClick={() => { send(input); setInput('') }}
+              disabled={!input.trim() || busy}
+              aria-label="Send message"
+              style={{
+                flex: 1, height: 44, borderRadius: '22px', border: 'none',
+                background: input.trim() && !busy ? 'var(--primary)' : 'var(--border)',
+                color: input.trim() && !busy ? '#fff' : 'var(--text-4)',
+                cursor: input.trim() && !busy ? 'pointer' : 'default',
+                fontWeight: 600, fontSize: 'var(--text-sm)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
+              }}
+            >
+              <Send size={16} /> Send
+            </button>
+          </div>
+          {(voice.error || voice.upgradeRequired) && (
+            <div style={{ fontSize: 'var(--text-xs)', color: '#dc2626' }}>
+              {voice.upgradeRequired
+                ? <>Voice input needs Pro or Family — <Link href="/pricing" style={{ color: 'var(--primary)', fontWeight: 600 }}>upgrade</Link></>
+                : voice.error}
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
       {/* Messages */}
       <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.625rem', minHeight: 180 }}>
         {messages.map(m => (
@@ -241,9 +309,12 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
               </div>
             )}
 
-            {/* Recipe cards */}
+            {/* Recipe cards — existing catalogue matches */}
             {m.recipes?.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginTop: '0.375rem' }}>
+                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.125rem' }}>
+                  📖 From the catalogue
+                </div>
                 {m.recipes.map(r => (
                   <div key={r.id} style={{
                     display: 'flex', gap: '0.625rem', alignItems: 'center',
@@ -272,16 +343,47 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
                 ))}
                 {m.offerCreate && m.createPrompt && (
                   <button
-                    onClick={() => { send(`create: ${m.createPrompt}`) }}
+                    onClick={() => { send(`create 3 options for: ${m.createPrompt}`) }}
                     style={{
                       marginTop: '0.25rem', padding: '0.5rem 0.75rem', borderRadius: '10px',
                       border: '1px dashed var(--primary)', background: 'transparent',
                       color: 'var(--primary)', fontWeight: 600, fontSize: 'var(--text-sm)', cursor: 'pointer',
                     }}
                   >
-                    ✨ None of these — create a new one
+                    ✨ None of these — create a new recipe
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* Recipe creation options — pick one to generate */}
+            {m.options?.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginTop: '0.375rem' }}>
+                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.125rem' }}>
+                  ✨ Create a new recipe — pick one
+                </div>
+                {m.options.map((o, i) => (
+                  <button
+                    key={i}
+                    onClick={() => pickOption(o)}
+                    disabled={busy}
+                    style={{
+                      textAlign: 'left', cursor: busy ? 'default' : 'pointer',
+                      background: 'var(--bg-page)', border: '1px solid var(--border)',
+                      borderRadius: '10px', padding: '0.625rem 0.75rem',
+                      opacity: busy ? 0.6 : 1,
+                    }}
+                  >
+                    <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--text-1)' }}>
+                      {o.title}
+                    </div>
+                    {o.blurb && (
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-3)', lineHeight: 1.45, marginTop: 2 }}>
+                        {o.blurb}
+                      </div>
+                    )}
+                  </button>
+                ))}
               </div>
             )}
 
@@ -293,7 +395,16 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
             )}
             {m.recipe && (
               <div style={{ marginTop: '0.375rem', padding: '0.75rem', background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                {m.recipe.image && (
+                  <img src={m.recipe.image} alt={m.recipe.title} loading="lazy"
+                    style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.5rem' }} />
+                )}
                 <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-1)' }}>{m.recipe.title}</div>
+                {m.recipe.imageError && (
+                  <div style={{ fontSize: 'var(--text-xs)', color: '#b45309', marginTop: '0.25rem', lineHeight: 1.4 }}>
+                    ⚠️ Photo couldn't be generated — a placeholder was saved. You can regenerate the image from the recipe page later.
+                  </div>
+                )}
                 <button
                   onClick={() => router.push(`/recipes/${m.recipe.slug || m.recipe.id}`)}
                   style={{
@@ -419,6 +530,8 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
             ? <>Voice input needs Pro or Family — <Link href="/pricing" style={{ color: 'var(--primary)', fontWeight: 600 }}>upgrade</Link></>
             : voice.error}
         </div>
+      )}
+        </>
       )}
     </div>
   )

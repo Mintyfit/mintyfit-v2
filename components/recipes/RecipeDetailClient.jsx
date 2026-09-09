@@ -11,6 +11,8 @@ import { enrichMember } from '@/lib/member/enrichMember'
 import { createClient } from '@/lib/supabase/client'
 
 import { NutritionDelta, IngredientAlternativesSheet, DonutChart, NutritionSection, SidebarNutrition, MEAL_COLORS } from './RecipeNutrition'
+import RegenerateImageButton from './RegenerateImageButton'
+import RecipeChatPanel from './RecipeChatPanel'
 // ── Main component ────────────────────────────────────────────────────────────
 export default function RecipeDetailClient({ recipe: initialRecipe, members: initialMembers, familyId: initialFamilyId }) {
   const router = useRouter()
@@ -56,6 +58,8 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
   const [shoppingPromptMode, setShoppingPromptMode] = useState('main')
   // 'steps' = ingredients inline with each step (default); 'list' = all ingredients first, then numbered steps
   const [viewMode, setViewMode] = useState('steps')
+  // AI "adjust this recipe" chat panel
+  const [showRecipeChat, setShowRecipeChat] = useState(false)
 
   // Single auth helper — replaces several copy-pasted createClient()+getUser() blocks
   const getAuth = useCallback(async () => {
@@ -888,6 +892,21 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
         )}
       </div>
 
+      {/* ── Recipe image — directly under the heading on mobile only ── */}
+      <div className="rd-image-mobile show-mobile-780" style={{ marginBottom: '1.25rem' }}>
+        <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#f3f4f6' }}>
+          {recipe.image ? (
+            <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="100vw" priority />
+          ) : (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', color: 'var(--text-4)' }}>🍽️</div>
+          )}
+          <RegenerateImageButton
+            recipe={recipe}
+            onGenerated={(img, thumb) => setRecipe(r => ({ ...r, image: img, image_thumb: thumb || r.image_thumb }))}
+          />
+        </div>
+      </div>
+
       {/* Edit meta fields row — only shown in edit mode */}
       {isEditing && (
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem', padding: '0.875rem', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
@@ -936,16 +955,20 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
 
       <div className="rd-content">
         <div className="rd-main">
-        {/* ── Image ── */}
-        <div className="rd-section-image">
-          {recipe.image && (
-            <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#f3f4f6' }}>
+        {/* ── Image (desktop only — on mobile it sits under the heading) ── */}
+        <div className="rd-section-image hide-mobile-780">
+          <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#f3f4f6' }}>
+            {recipe.image ? (
               <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 780px) 100vw, 640px" priority />
-            </div>
-          )}
+            ) : (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', color: 'var(--text-4)' }}>🍽️</div>
+            )}
+            <RegenerateImageButton
+              recipe={recipe}
+              onGenerated={(img, thumb) => setRecipe(r => ({ ...r, image: img, image_thumb: thumb || r.image_thumb }))}
+            />
+          </div>
         </div>
-
-
 
         {/* ── Short description / Intro ── */}
         <div className="rd-section-intro">
@@ -1253,7 +1276,37 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
             >
               {shoppingState === 'loading' ? '⏳ Adding…' : shoppingState === 'success' ? '✅ Added!' : shoppingState === 'error' ? '❌ Failed' : '🛒 Add to Shopping List'}
             </button>
+            <button
+              onClick={() => setShowRecipeChat(v => !v)}
+              title="Describe a change and let AI adjust this recipe"
+              style={{
+                padding: '0.625rem 1.25rem', borderRadius: '10px',
+                background: showRecipeChat ? 'rgba(61,138,62,0.1)' : 'transparent',
+                border: '2px solid var(--primary)',
+                color: 'var(--primary)',
+                fontWeight: 600, fontSize: '0.9375rem', cursor: 'pointer',
+              }}
+            >
+              ✨ Adjust with AI
+            </button>
           </div>
+          )}
+          {showRecipeChat && !isEditing && (
+            <div style={{ marginTop: '0.875rem', maxWidth: 560, margin: '0.875rem auto 0' }}>
+              <RecipeChatPanel
+                recipe={recipe}
+                onClose={() => setShowRecipeChat(false)}
+                onApplied={(updatedRecipe, result) => {
+                  setRecipe(updatedRecipe)
+                  import('@/hooks/useCachedData').then(m => m.invalidateCache('recipes:'))
+                  // A fork created a NEW recipe — navigate to its page so the
+                  // URL/back-button reflect what the user is now viewing.
+                  if (result?.forked && result?.targetId && result.targetId !== recipe.id) {
+                    router.push(`/recipes/${updatedRecipe.slug || result.targetId}`)
+                  }
+                }}
+              />
+            </div>
           )}
         </div>
 

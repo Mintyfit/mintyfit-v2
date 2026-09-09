@@ -14,10 +14,12 @@ Never expose API keys to the client. All AI requests from client components POST
 ## Recipe Generation Pipeline
 
 1. `isFoodRelated()` guard — blocks non-food prompts
-2. Single Claude Haiku call → returns full recipe JSON (title, ingredients, steps, servings)
-3. Parallel: nutrition estimation (USDA first, Claude Haiku fallback) + image generation (Ideogram)
+2. Single Grok call (`grok-4.20-0309-non-reasoning`, via `/api/grok`) → full recipe JSON (title, ingredients, 5–9 detailed steps, servings). Prompt enforces 40–80-word instructions with °C/timing/sensory cues + a dedicated seasoning/prep step.
+3. Parallel: nutrition estimation (USDA first, Claude Haiku fallback) + image generation (Ideogram v3)
 4. Image resize + upload to Supabase Storage
 5. Insert into `recipes` table using Server Action (auth.getUser() at insert time)
+
+**Image provider note (2026-09):** Ideogram is the only image provider. If its account is out of credit the API returns HTTP 402 `insufficient_funds` and the recipe silently falls back to an SVG placeholder — check Ideogram billing first when images stop appearing. xAI `grok-imagine-image*` and OpenAI `gpt-image-*` were evaluated and are NOT wired in (too slow / unreachable from this environment).
 
 ## Nutrition Estimation
 

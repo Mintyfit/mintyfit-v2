@@ -12,7 +12,8 @@ export const maxDuration = 60
 //
 // Flow: intent classify (Haiku) → route:
 //   find_recipe   → Postgres FTS (migration 059, ILIKE fallback) → Haiku rerank
-//   create_recipe → returns refined prompt; client runs the generation pipeline
+//   create_recipe → returns 3 option cards (title + blurb + detailed prompt);
+//                   user picks one, client runs the generation pipeline
 //   log_food      → Grok parse into structured food entry (client confirms+saves)
 //   question      → short direct answer
 //
@@ -93,30 +94,47 @@ Return ONLY raw JSON (no markdown):
   "intent": "find_recipe" | "create_recipe" | "log_food" | "question",
   "search_query": "2-6 word core food query (find_recipe)",
   "meal_type": "breakfast|snack|lunch|snack2|dinner" or null,
-  "recipe_prompt": "complete generation prompt (create_recipe; include prior constraints from history)",
+  "recipe_options": [
+    {"title": "short recipe name", "blurb": "one sentence on contents and cooking style", "prompt": "detailed generation prompt for THIS variant"}
+  ],
   "journal_text": "exact food description (log_food)",
   "answer": "1-3 sentence direct answer (question)",
   "message": "one short friendly sentence acknowledging the request"
 }
 
 Rules:
-- create_recipe only when the user clearly wants a NEW recipe created ("create", "make", "invent", "generate"), or explicitly rejects existing options.
-- "I want a chicken salad" → find_recipe. "Create a chicken salad with no mayo" → create_recipe.
+- find_recipe when the user names a dish/food/meal they want ("beef burger", "chicken salad for lunch", "something with salmon") — the catalogue is searched first and existing matches are shown.
+- create_recipe ONLY when the user clearly wants a NEW recipe created ("create", "make", "invent", "generate", "new recipe"), or explicitly rejects existing options ("none of these", "something else", "show me new ideas").
+- For create_recipe return EXACTLY 3 genuinely different options (different cooking techniques, cuisines, or ingredient approaches to the same request). Titles 3-6 words. Blurbs ≤ 20 words, concrete and appetizing (what's in it + how it's cooked). Each "prompt" is a self-contained detailed brief: dish, key ingredients, cooking method, flavor profile, any constraints from the conversation history.
+- "beef burger" → find_recipe. "create a beef burger" → create_recipe (3 options). "none of these, make me a burger" → create_recipe.
 - "I had two eggs and toast" → log_food (past tense, already eaten).
 - Never invent nutrient numbers in answers.`,
       `${historyText ? `History:\n${historyText}\n\n` : ''}User: ${message}`,
-      700
+      1400
     )
 
     const routed = extractJSON(intentRaw)
 
     // ── 2. Route ────────────────────────────────────────────────────────────
-    if (routed.intent === 'create_recipe' && routed.recipe_prompt) {
-      return NextResponse.json({
-        intent: 'create_recipe',
-        message: routed.message || 'Creating that recipe for you…',
-        recipe_prompt: routed.recipe_prompt,
-      })
+    if (routed.intent === 'create_recipe') {
+      const options = (Array.isArray(routed.recipe_options) ? routed.recipe_options : [])
+        .filter(o => o && o.title && o.prompt)
+        .slice(0, 3)
+        .map(o => ({
+          title: String(o.title),
+          blurb: String(o.blurb || ''),
+          prompt: String(o.prompt),
+        }))
+      if (options.length) {
+        return NextResponse.json({
+          intent: 'create_recipe',
+          message: routed.message || 'Here are three takes — pick one and I\'ll create it:',
+          options,
+        })
+      }
+      // Haiku didn't produce usable options → treat as a catalogue search instead
+      routed.intent = 'find_recipe'
+      routed.search_query = routed.search_query || message
     }
 
     if (routed.intent === 'log_food' && routed.journal_text) {

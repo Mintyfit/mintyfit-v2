@@ -28,6 +28,7 @@ Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabas
 | AI recipes | Claude Haiku via `/api/claude` Route Handler | `claude-haiku-4-5-20251001` |
 | AI food lookup | Grok via `/api/grok` Route Handler | Journal nutrition estimation |
 | AI photo food log | Claude Haiku vision via `/api/food-photo` Route Handler | Family tier only; decompose-then-sum portion estimation |
+| AI recipe edit | Claude Haiku via `/api/recipe/edit` Route Handler | Chat-driven recipe change; preview→apply; owner edits in place, else single private "(My Version)" fork (`forked_from_id`); nutrition re-estimated server-side |
 | AI images | Ideogram via `/api/ideogram` Route Handler | |
 | Payments | Stripe | Checkout + portal via Supabase Edge Functions |
 | Deployment | Vercel | Route Handlers + Server Components |
@@ -185,7 +186,7 @@ AprillBuild/
 │   ├── shared/                       # NavbarWrapper, ShoppingCartLink, SafeHtml (ONLY sanitized-HTML site), ServiceWorkerCleanup
 │   ├── assistant/                    # AssistantPanel (Minty Chat) + AssistantFab — conversational search/create/log, paid tier
 │   ├── landing/                      # LandingClient (full landing page), AuthModal
-│   ├── recipes/                      # RecipesClient, RecipeCard, RecipeDetailClient, RecipeGeneratorClient, RecipeNutrition (extracted sub-components)
+│   ├── recipes/                      # RecipesClient, RecipeCard, RecipeDetailClient, RecipeGeneratorClient, RecipeNutrition (extracted sub-components), RecipeChatPanel ("Adjust with AI"), RegenerateImageButton
 │   ├── planner/                      # PlannerClient, PlannerSidebar (recipe/menu browser), WeekOverview, DayAgenda, plannerConstants.js, ActivityForm, JournalEntryForm, RecipePickerModal
 │   ├── shopping/                     # ShoppingListClient
 │   ├── menus/                        # MenusClient, MenuDetailClient
