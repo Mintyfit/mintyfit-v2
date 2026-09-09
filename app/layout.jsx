@@ -27,6 +27,7 @@ import { ConfirmProvider } from '@/components/ui/ConfirmDialog'
 import NavbarWrapper from '@/components/shared/NavbarWrapper'
 import AppFooter from '@/components/landing/AppFooter'
 import ServiceWorkerCleanup from '@/components/shared/ServiceWorkerCleanup'
+import DeploymentCheck from '@/components/shared/DeploymentCheck'
 import './globals.css'
 
 const montserrat = localFont({
@@ -78,9 +79,21 @@ export const metadata = {
 }
 
 export default function RootLayout({ children }) {
+  // Deployment id baked into the HTML at render time. DeploymentCheck compares
+  // it against /api/version to detect stale WebView cache loads. Must match
+  // the env precedence in app/api/version/route.js.
+  const buildId =
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.VERCEL_DEPLOYMENT_ID ||
+    'dev'
   return (
     <html lang="en" className={montserrat.variable}>
       <body suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__MINTY_BUILD__=${JSON.stringify(buildId)}`,
+          }}
+        />
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
@@ -89,6 +102,7 @@ export default function RootLayout({ children }) {
                 <main style={{ minHeight: '100vh' }}>{children}</main>
                 <AppFooter />
                 <ServiceWorkerCleanup />
+                <DeploymentCheck />
               </ConfirmProvider>
             </ToastProvider>
           </AuthProvider>

@@ -24,6 +24,16 @@ export function AuthProvider({ children }) {
     return data
   }
 
+  // A failed profile read (flaky mobile/WebView network) silently downgrades
+  // the user to tier 'free' (paywall teasers) for the whole session — retry
+  // once before giving up.
+  async function fetchProfileWithRetry(userId) {
+    const first = await fetchProfile(userId)
+    if (first) return first
+    await new Promise(r => setTimeout(r, 1500))
+    return fetchProfile(userId)
+  }
+
   useEffect(() => {
     if (!supabase) {
       setUser(null)
@@ -36,13 +46,13 @@ export function AuthProvider({ children }) {
       setUser(session?.user ?? null)
       setAuthReady(true)
       setLoading(false)
-      if (session?.user) fetchProfile(session.user.id).then(setProfile)
+      if (session?.user) fetchProfileWithRetry(session.user.id).then(setProfile)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
       setLoading(false)
-      if (session?.user) fetchProfile(session.user.id).then(setProfile)
+      if (session?.user) fetchProfileWithRetry(session.user.id).then(setProfile)
       else setProfile(null)
     })
 

@@ -893,7 +893,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
           {recipe.title}
         </h1>
       )}
-      {isEditing ? (
+      {isEditing && (
         <textarea
           value={editedRecipe.description || ''}
           onChange={e => setEditField('description', e.target.value)}
@@ -906,11 +906,29 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
             background: 'var(--bg-card)', resize: 'vertical',
           }}
         />
-      ) : recipe.description ? (
+      )}
+
+      {/* ── Recipe image — directly under the heading ── */}
+      <div style={{ marginBottom: '1rem' }}>
+        <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#f3f4f6' }}>
+          {recipe.image ? (
+            <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 780px) 100vw, 1100px" priority />
+          ) : (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', color: 'var(--text-4)' }}>🍽️</div>
+          )}
+          <RegenerateImageButton
+            recipe={recipe}
+            onGenerated={(img, thumb) => setRecipe(r => ({ ...r, image: img, image_thumb: thumb || r.image_thumb }))}
+          />
+        </div>
+      </div>
+
+      {/* ── Intro text — shown once, under the image ── */}
+      {!isEditing && (recipe.intro || recipe.description) && (
         <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem', lineHeight: 1.6, marginBottom: '1rem' }}>
-          {recipe.description}
+          {recipe.intro || recipe.description}
         </p>
-      ) : null}
+      )}
 
       {/* Meta pills */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem', alignItems: 'center' }}>
@@ -924,21 +942,6 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
             ⏱ {totalTime} min total
           </span>
         )}
-      </div>
-
-      {/* ── Recipe image — directly under the heading on mobile only ── */}
-      <div className="rd-image-mobile show-mobile-780" style={{ marginBottom: '1.25rem' }}>
-        <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#f3f4f6' }}>
-          {recipe.image ? (
-            <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="100vw" priority />
-          ) : (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', color: 'var(--text-4)' }}>🍽️</div>
-          )}
-          <RegenerateImageButton
-            recipe={recipe}
-            onGenerated={(img, thumb) => setRecipe(r => ({ ...r, image: img, image_thumb: thumb || r.image_thumb }))}
-          />
-        </div>
       </div>
 
       {/* Edit meta fields row — only shown in edit mode */}
@@ -989,30 +992,6 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
 
       <div className="rd-content">
         <div className="rd-main">
-        {/* ── Image (desktop only — on mobile it sits under the heading) ── */}
-        <div className="rd-section-image hide-mobile-780">
-          <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#f3f4f6' }}>
-            {recipe.image ? (
-              <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 780px) 100vw, 640px" priority />
-            ) : (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', color: 'var(--text-4)' }}>🍽️</div>
-            )}
-            <RegenerateImageButton
-              recipe={recipe}
-              onGenerated={(img, thumb) => setRecipe(r => ({ ...r, image: img, image_thumb: thumb || r.image_thumb }))}
-            />
-          </div>
-        </div>
-
-        {/* ── Short description / Intro ── */}
-        <div className="rd-section-intro">
-          {recipe.intro && (
-            <p style={{ color: 'var(--text-2)', fontSize: '0.9375rem', lineHeight: 1.6, fontStyle: 'italic' }}>
-              {recipe.intro}
-            </p>
-          )}
-        </div>
-
         {/* ── Instructions ── */}
         <div className="rd-section-instructions">
           <section style={{ marginBottom: '2rem' }}>

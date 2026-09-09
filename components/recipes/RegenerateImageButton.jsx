@@ -35,6 +35,10 @@ export default function RegenerateImageButton({ recipe, onGenerated, variant = '
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Regeneration failed')
+      // Bust the localStorage catalogue cache (private recipes list) so the
+      // new photo shows up on /recipes without waiting for the TTL.
+      const { invalidateCache } = await import('@/hooks/useCachedData')
+      invalidateCache('recipes:')
       onGenerated?.(data.image, data.image_thumb)
     } catch (err) {
       setError(err.message || 'Could not regenerate the image — try again.')
@@ -55,7 +59,9 @@ export default function RegenerateImageButton({ recipe, onGenerated, variant = '
           padding: '0.45rem 0.8rem', borderRadius: '8px',
           border: '1px solid rgba(0,0,0,0.15)',
           background: busy ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.95)',
-          color: 'var(--text-1)', fontWeight: 600, fontSize: '0.8rem',
+          // Hardcoded dark text — the button background is always light, so a
+          // theme variable would go white-on-white in dark mode.
+          color: '#111827', fontWeight: 600, fontSize: '0.8rem',
           cursor: busy ? 'default' : 'pointer',
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         }}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { revalidateTag } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 export const maxDuration = 90
@@ -104,6 +104,7 @@ export async function POST(request) {
     return NextResponse.json({ error: `Recipe update failed: ${updateErr.message}` }, { status: 500 })
   }
 
-  revalidateTag('recipes') // recipe detail public fast-path cache
+  revalidateTag('recipes')    // recipe detail public fast-path cache
+  revalidatePath('/recipes')  // catalogue ISR page (time-based only — must be busted explicitly)
   return NextResponse.json({ image: finalImage, image_thumb: finalThumb })
 }

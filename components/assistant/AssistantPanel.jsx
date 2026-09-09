@@ -30,9 +30,13 @@ const nextId = () => ++msgId
  */
 export default function AssistantPanel({ members = [], onClose, autoFocus = false }) {
   const router = useRouter()
-  const { user, profile } = useAuth()
+  const { user, profile, loading: authLoading } = useAuth()
   const { tier } = useSubscription()
   const entitled = canUseVoiceAssistant(tier)
+  // The tier lives on `profile`, which loads async after `user`. Until it
+  // lands (or if the fetch is retrying on a flaky WebView network) we must
+  // NOT render the paywall — a paid user would briefly see "Upgrade to Pro".
+  const tierPending = authLoading || (!!user && !profile)
 
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -176,6 +180,20 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
   sendRef.current = send
 
   // ── Paywall teaser for free tier ─────────────────────────────────────────
+  // Neutral placeholder while the profile (which carries subscription_tier)
+  // is still loading — never flash the upgrade card at paid users.
+  if (tierPending) {
+    return (
+      <div style={{
+        background: 'var(--bg-card)', border: '1px solid var(--border)',
+        borderRadius: '14px', padding: '1.25rem', minHeight: 88,
+        display: 'flex', alignItems: 'center', gap: '0.5rem',
+      }}>
+        <Sparkles size={18} color="var(--primary)" />
+        <strong style={{ color: 'var(--text-1)', fontSize: 'var(--text-base)' }}>Minty Chat</strong>
+      </div>
+    )
+  }
   if (!entitled) {
     return (
       <div style={{
