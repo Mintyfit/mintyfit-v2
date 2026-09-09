@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -71,6 +71,8 @@ export async function POST(request) {
     // recipe disappears immediately instead of after `revalidate = 3600`.
     revalidatePath('/recipes')
     if (existing.slug) revalidatePath(`/recipes/${existing.slug}`)
+    // Bust the data cache used by the recipe detail public fast path.
+    revalidateTag('recipes')
     // Plan + statistics pages read calendar_entries; the rows are gone via
     // cascade FK, but revalidate anyway so SSR caches refresh on next visit.
     revalidatePath('/plan')

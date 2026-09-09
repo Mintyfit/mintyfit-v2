@@ -7,6 +7,7 @@ import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 import { formatWeight, formatHeight, fieldLabel, dbToDisplay, lbsToKg, inToCm } from '@/lib/unitConversion'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { invalidateCache } from '@/hooks/useCachedData'
 
 const DIETARY_TYPES = ['none', 'omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'pescatarian']
 const ALLERGENS = ['none', 'gluten', 'dairy', 'nuts', 'shellfish', 'soy', 'eggs', 'fish', 'peanuts']
@@ -266,6 +267,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error || 'Save failed')
       }
+      invalidateCache('members:') // recipe-page member cache holds weight/height/goals
       setSaved(true)
       clearTimeout(savedTimer.current)
       savedTimer.current = setTimeout(() => setSaved(false), 3000)
@@ -288,6 +290,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
       })
       if (!res.ok) throw new Error('Failed to log weight')
       const { log } = await res.json()
+      invalidateCache('members:') // weight feeds portion targets on the recipe page
       setWeightLogs(prev => [log, ...prev.filter(l => l.logged_date !== log.logged_date)])
       setNewWeight('')
       setWeightNote('')

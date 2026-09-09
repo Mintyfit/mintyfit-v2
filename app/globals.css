@@ -135,3 +135,14 @@ body {
 .app-bottom-nav-link:hover { background: rgba(61, 138, 62, 0.08); color: var(--primary); }
 .app-bottom-nav-link:active { background: rgba(61, 138, 62, 0.18); }
 .app-bottom-nav-link--active { color: var(--primary); font-weight: 600; }
+
+/* Skeleton loading placeholders (route loading.jsx files) */
+@keyframes mf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.mf-skeleton {
+  background: var(--bg-subtle);
+  border-radius: 8px;
+  animation: mf-pulse 1.4s ease-in-out infinite;
+}

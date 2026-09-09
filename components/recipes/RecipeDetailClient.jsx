@@ -9,10 +9,100 @@ import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 import { computeMealBudget } from '@/lib/nutrition/mealBudget'
 import { enrichMember } from '@/lib/member/enrichMember'
 import { createClient } from '@/lib/supabase/client'
+import { useCachedData } from '@/hooks/useCachedData'
 
 import { NutritionDelta, IngredientAlternativesSheet, DonutChart, NutritionSection, SidebarNutrition, MEAL_COLORS } from './RecipeNutrition'
 import RegenerateImageButton from './RegenerateImageButton'
 import RecipeChatPanel from './RecipeChatPanel'
+// ── Family member loading (client-side, SWR-cached) ─────────────────────────
+// The recipe page intentionally ships members=[] from the server so the recipe
+// content is never blocked behind the family/weight query chain. This fetcher
+// runs client-side and its result is cached in localStorage (useCachedData),
+// so repeat recipe views have members instantly.
+async function fetchFamilyMembers(userId) {
+  const supabase = createClient()
+  if (!supabase || !userId) return { members: [], familyId: null }
+  const { data: memberships } = await supabase
+    .from('family_memberships')
+    .select('family_id')
+    .eq('profile_id', userId)
+    .limit(1)
+
+  let loaded = []
+  let familyId = null
+  if (memberships?.length) {
+    familyId = memberships[0].family_id
+    const [{ data: linked }, { data: managed }] = await Promise.all([
+      supabase
+        .from('family_memberships')
+        .select('profile_id, profiles(id, full_name, display_name, first_name, weight, height, age, gender, goals)')
+        .eq('family_id', familyId),
+      supabase
+        .from('managed_members')
+        .select('id, name, date_of_birth, weight, height, gender')
+        .eq('family_id', familyId),
+    ])
+
+    // Latest weight_log per linked member (RLS scopes this to own rows)
+    const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
+    let weightByProfile = new Map()
+    if (linkedProfileIds.length > 0) {
+      const { data: logs } = await supabase
+        .from('weight_logs')
+        .select('profile_id, weight')
+        .in('profile_id', linkedProfileIds)
+        .order('logged_date', { ascending: false })
+      if (logs) {
+        for (const log of logs) {
+          if (!weightByProfile.has(log.profile_id)) {
+            weightByProfile.set(log.profile_id, log.weight)
+          }
+        }
+      }
+    }
+
+    loaded = [
+      ...(linked || []).map(l => ({
+        ...l.profiles,
+        type: 'linked',
+        weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
+      })),
+      ...(managed || []).map(m => {
+        const age = m.date_of_birth
+          ? Math.floor((Date.now() - new Date(m.date_of_birth)) / 31557600000)
+          : null
+        return {
+          ...m,
+          age,
+          goals: [],
+          display_name: m.name,
+          type: 'managed',
+          weight: m.weight ?? null,
+          height: m.height ?? null,
+        }
+      }),
+    ].filter(Boolean)
+  } else {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, full_name, display_name, first_name, weight, height, age, gender, goals')
+      .eq('id', userId)
+      .maybeSingle()
+    if (profile) {
+      const { data: logs } = await supabase
+        .from('weight_logs')
+        .select('weight')
+        .eq('profile_id', userId)
+        .order('logged_date', { ascending: false })
+        .limit(1)
+      profile.weight = logs?.[0]?.weight ?? null
+      loaded = [{ ...profile, type: 'linked' }]
+    }
+  }
+  // Enrich each member via shared utility (lib/member/enrichMember.js)
+  return { members: loaded.map(m => enrichMember(m)).filter(Boolean), familyId }
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function RecipeDetailClient({ recipe: initialRecipe, members: initialMembers, familyId: initialFamilyId }) {
   const router = useRouter()
@@ -104,8 +194,8 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
   const [saveEditError, setSaveEditError] = useState(null)
 
   // Check ownership client-side.
-  // Always fetch profile_id with the authenticated client — the ISR page uses
-  // an anon client which may return a stale or masked profile_id.
+  // Public recipe pages are served from the shared data cache, so ownership
+  // must always be verified with the authenticated browser client.
   useEffect(() => {
     if (!recipe.id) return
     const supabase = createClient()
@@ -122,99 +212,43 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
     })
   }, [recipe.id])
 
-  // Load family members client-side as fallback when server didn't provide them
+  // Load family members client-side (server ships members=[] for speed).
+  // Cached via useCachedData — repeat recipe views render members instantly
+  // from localStorage and revalidate in the background.
+  const [memberUserId, setMemberUserId] = useState(null)
   useEffect(() => {
-    if (initialMembers && initialMembers.length > 0) return
     const supabase = createClient()
     if (!supabase) return
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      const { data: memberships } = await supabase
-        .from('family_memberships')
-        .select('family_id')
-        .eq('profile_id', user.id)
-        .limit(1)
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setMemberUserId(user?.id || null)
+    })
+  }, [])
 
-      let loaded = []
-      if (memberships?.length) {
-        const familyId = memberships[0].family_id
-        setFamilyId(familyId)
-        const [{ data: linked }, { data: managed }] = await Promise.all([
-          supabase
-            .from('family_memberships')
-            .select('profile_id, profiles(id, full_name, display_name, first_name, weight, height, age, gender, goals)')
-            .eq('family_id', familyId),
-          supabase
-            .from('managed_members')
-            .select('id, name, date_of_birth, weight, height, gender')
-            .eq('family_id', familyId),
-        ])
+  const wantsMembers = !initialMembers || initialMembers.length === 0
+  const { data: memberData } = useCachedData(
+    wantsMembers && memberUserId ? `members:${memberUserId}` : null,
+    () => fetchFamilyMembers(memberUserId),
+    { ttlMs: 5 * 60 * 1000 }
+  )
 
-        // Fetch latest weight_log for each linked member (weight lives in weight_logs, not on profiles)
-        const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
-        let weightByProfile = new Map()
-        if (linkedProfileIds.length > 0) {
-          const { data: logs } = await supabase
-            .from('weight_logs')
-            .select('profile_id, weight')
-            .in('profile_id', linkedProfileIds)
-            .order('logged_date', { ascending: false })
-          if (logs) {
-            for (const log of logs) {
-              if (!weightByProfile.has(log.profile_id)) {
-                weightByProfile.set(log.profile_id, log.weight)
-              }
-            }
-          }
-        }
-
-        loaded = [
-          ...(linked || []).map(l => ({
-            ...l.profiles,
-            type: 'linked',
-            weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
-          })),
-          ...(managed || []).map(m => {
-            const age = m.date_of_birth
-              ? Math.floor((Date.now() - new Date(m.date_of_birth)) / 31557600000)
-              : null
-            return {
-              ...m,
-              age,
-              goals: [],
-              display_name: m.name,
-              type: 'managed',
-              weight: m.weight ?? null,
-              height: m.height ?? null,
-            }
-          }),
-        ].filter(Boolean)
-      } else {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, full_name, display_name, first_name, weight, height, age, gender, goals')
-          .eq('id', user.id)
-          .maybeSingle()
-        if (profile) {
-          const { data: logs } = await supabase
-            .from('weight_logs')
-            .select('weight')
-            .eq('profile_id', user.id)
-            .order('logged_date', { ascending: false })
-            .limit(1)
-          profile.weight = logs?.[0]?.weight ?? null
-          loaded = [{ ...profile, type: 'linked' }]
-        }
-      }
-      // Enrich each member via shared utility (lib/member/enrichMember.js)
-      loaded = loaded.map(m => enrichMember(m))
-      if (loaded.length) {
-        setMembers(loaded)
+  const appliedMembersSig = useRef(null)
+  useEffect(() => {
+    if (!wantsMembers || !memberData) return
+    const next = memberData.members || []
+    // Only (re)apply when the member SET actually changed — background SWR
+    // revalidation with identical members must not reset the user's eater
+    // checkboxes mid-interaction.
+    const sig = next.map(m => m.id).join(',')
+    if (appliedMembersSig.current !== sig) {
+      appliedMembersSig.current = sig
+      if (next.length) {
+        setMembers(next)
         // Default: no eaters checked → base recipe shown.
         setActiveEaters(new Set())
       }
-    })
-  }, [])
+    }
+    if (memberData.familyId) setFamilyId(memberData.familyId)
+  }, [memberData, wantsMembers])
 
   // Load saved swaps for this recipe from Supabase
   useEffect(() => {

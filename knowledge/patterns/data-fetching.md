@@ -41,3 +41,12 @@ When an effect needs multiple independent Supabase datasets (e.g. planner week: 
 - `Promise.resolve({ data: null })` as the placeholder for conditionally-skipped queries keeps the destructuring shape.
 
 (Applied in PlannerClient week/month fetch + refreshDay, 2026-09.)
+
+## Loading UX & Caching (2026-09-09 perf pass)
+
+- **Root `app/loading.jsx` does NOT re-show on client navigations** — once revealed, React transition semantics keep the old UI. Every slow/dynamic route needs its OWN segment-level `loading.jsx` (that's what produces instant loading states on nav). Skeletons use `.mf-skeleton` from globals.css.
+- **Public recipe detail** uses `unstable_cache` (`recipe-public-by-slug`, tag `recipes`, 300s revalidate) with an `is_public=true` filter — private rows never enter the shared cache. Every recipe mutation route MUST call `revalidateTag('recipes')`.
+- **`generateMetadata` + page share one query** via React `cache()` — never query twice per request.
+- **Family members load client-side** on the recipe page (`useCachedData('members:{userId}')`, 5-min TTL, `invalidateCache('members:')` on family/weight writes). RLS scopes weight_logs to own rows in both server and browser contexts, so SSR member loading has no data advantage.
+- **Middleware** skips `supabase.auth.getUser()` when no `sb-*` cookie exists (anonymous fast path).
+- SSR pages: fire all queries keyed by the same id in ONE `Promise.all` batch; /plan went from 5 serial RTTs to 2 batches.

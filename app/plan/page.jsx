@@ -149,36 +149,48 @@ async function getPlannerData(searchParams) {
   }
 
   if (!viewingClient) {
-    // Normal flow: get own profile + family data
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Normal flow: own profile + family data.
+    // Batch 1 — everything keyed by user.id fires in parallel (was 3 serial
+    // round trips: profile → weight_logs → memberships).
+    let profile = null
+    let memberships = null
+    let latestWeight = null
+    try {
+      const [profileRes, membershipsRes, weightRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target')
+          .eq('id', user.id)
+          .maybeSingle(),
+        supabase
+          .from('family_memberships')
+          .select('family_id, role')
+          .eq('profile_id', user.id)
+          .limit(1),
+        supabase
+          .from('weight_logs')
+          .select('weight')
+          .eq('profile_id', user.id)
+          .order('logged_date', { ascending: false })
+          .limit(1),
+      ])
+      profile = profileRes.data
+      memberships = membershipsRes.data
+      latestWeight = weightRes.data?.[0]?.weight ?? null
+    } catch { /* fall through to solo-member fallback below */ }
 
     if (profile) {
-      const { data: logs } = await supabase
-        .from('weight_logs')
-        .select('weight')
-        .eq('profile_id', user.id)
-        .order('logged_date', { ascending: false })
-        .limit(1)
-      profile.weight = profile.weight ?? logs?.[0]?.weight ?? null
+      profile.weight = profile.weight ?? latestWeight
     }
 
     let members = []
     let familyId = null
     try {
-      const { data: memberships } = await supabase
-        .from('family_memberships')
-        .select('family_id, role')
-        .eq('profile_id', user.id)
-        .limit(1)
-
       if (memberships?.length) {
         familyId = memberships[0].family_id
 
-        const [{ data: linked }, { data: managed }] = await Promise.all([
+        // Batch 2 — family members + their weight logs in parallel.
+        const [{ data: linked }, { data: managed }, { data: wlogs }] = await Promise.all([
           supabase
             .from('family_memberships')
             .select('profile_id, role, profiles(id, full_name, display_name, first_name, weight, height, age, gender, goals, daily_calories_target)')
@@ -187,22 +199,17 @@ async function getPlannerData(searchParams) {
             .from('managed_members')
             .select('id, name, date_of_birth, weight, height, gender')
             .eq('family_id', familyId),
-        ])
-
-        const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
-        let weightByProfile = new Map()
-        if (linkedProfileIds.length > 0) {
-          const { data: logs } = await supabase
+          supabase
             .from('weight_logs')
             .select('profile_id, weight')
-            .in('profile_id', linkedProfileIds)
-            .order('logged_date', { ascending: false })
-          if (logs) {
-            for (const log of logs) {
-              if (!weightByProfile.has(log.profile_id)) {
-                weightByProfile.set(log.profile_id, log.weight)
-              }
-            }
+            .eq('profile_id', user.id) // RLS scopes weight_logs to own rows anyway
+            .order('logged_date', { ascending: false }),
+        ])
+
+        const weightByProfile = new Map()
+        for (const log of wlogs || []) {
+          if (!weightByProfile.has(log.profile_id)) {
+            weightByProfile.set(log.profile_id, log.weight)
           }
         }
 

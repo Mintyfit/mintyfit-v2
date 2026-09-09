@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { enforceUsageLimit, canUseVoiceAssistant } from '@/lib/usageLimits'
 import { getNutritionData } from '@/lib/nutrition/nutrition'
@@ -301,6 +302,7 @@ Return ONLY this JSON:
     return NextResponse.json({ error: 'Failed to save the change' }, { status: 500 })
   }
 
+  revalidateTag('recipes') // recipe detail public fast-path cache
   return NextResponse.json({
     applied: true,
     isOwner,

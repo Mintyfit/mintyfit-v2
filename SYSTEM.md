@@ -422,6 +422,15 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 - `public/manifest.json` remains (install metadata only — no caching behavior).
 - Client data cache: `hooks/useCachedData.js` (localStorage + TTL + SWR). Invalidate after writes via `invalidateCache('recipes:')` etc.
 
+### 🔄 Server/Data Caching & Loading UX (2026-09-09 perf pass)
+
+- **Route-level `loading.jsx` skeletons** exist for `/recipes`, `/recipes/[slug]`, `/plan`, `/statistics` (shared `.mf-skeleton` pulse utility in globals.css). These are what show on client-side navigation — the root `app/loading.jsx` alone does NOT re-show on transitions (already-revealed Suspense boundary), so every slow dynamic route needs its OWN loading.jsx.
+- **Recipe detail (`/recipes/[slug]`)**: `force-dynamic`, but public recipes are served from the Vercel Data Cache via `unstable_cache` (`recipe-public-by-slug`, tag `recipes`, 300s safety revalidate) — repeat views skip Supabase entirely. Private recipes + legacy slug fallbacks go through the cookie-auth path. `generateMetadata` + page share ONE query via React `cache()`. **Family members are NOT loaded server-side** — RecipeDetailClient hydrates them via `useCachedData('members:{userId}')` (5-min TTL; invalidated by `invalidateCache('members:')` in MyFamily/MyAccount writes). RLS scopes weight_logs to own rows in both contexts, so server-side member loading had no data advantage.
+- **Recipe mutation routes** (`/api/recipe/{update,edit,delete,regenerate-image}`) MUST call `revalidateTag('recipes')` after writes so the data cache never serves stale recipes.
+- **`/plan` SSR** fetches profile + memberships + own weight in one `Promise.all`, then family members + weight logs in a second batch (was 5 serial round trips).
+- **Middleware** skips `supabase.auth.getUser()` entirely when no `sb-*` cookie is present (anonymous fast path — protected paths redirect straight to login).
+- Known pre-existing quirk: bad recipe slugs return HTTP 200 with the not-found UI (soft 404) — same on live before this pass.
+
 ### Post-Deploy Checklist (not yet done)
 
 - [ ] Switch `mintyfit.com` to new Vercel project

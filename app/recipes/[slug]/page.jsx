@@ -1,12 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createPublicClient } from '@/lib/supabase/server'
 import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
 import { notFound, permanentRedirect } from 'next/navigation'
-import { enrichMember } from '@/lib/member/enrichMember'
+import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 import RecipeDetailClient from '@/components/recipes/RecipeDetailClient'
 
-// Auth-aware: a private recipe must only be visible to its owner / family.
-// ISR would cache per-URL across users, leaking private rows — so we render
-// dynamically instead. Public recipes are still cheap (single indexed lookup).
+// Auth-aware in the fallback path: a private recipe must only be visible to its
+// owner / family, so the route as a whole cannot be statically cached per-URL.
+// Public recipes (the vast majority of traffic) are served from the Vercel Data
+// Cache via unstable_cache below — no Supabase round trip on repeat views.
+// Family members hydrate client-side in RecipeDetailClient (useCachedData).
 export const dynamic = 'force-dynamic'
 
 const UUID_RE       = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -17,10 +20,30 @@ const HEX_SUFFIX_RE = /-([0-9a-f]{4,12})$/i
 // slug still exists (e.g. after deduping recipes).
 const NUM_SUFFIX_RE = /-\d+$/
 
+// ── Public fast path ─────────────────────────────────────────────────────────
+// Exact-slug lookup of PUBLIC recipes, cached in the Vercel Data Cache.
+// Anonymous-safe by construction: the query filters is_public=true, so private
+// rows never enter the shared cache. Invalidated via revalidateTag('recipes')
+// from every recipe mutation route; 5-min revalidate as a safety net.
+const getCachedPublicRecipe = unstable_cache(
+  async (slug) => {
+    const supabase = createPublicClient()
+    const { data } = await supabase
+      .from('recipes')
+      .select('*')
+      .eq('slug', slug)
+      .eq('is_public', true)
+      .maybeSingle()
+    return data || null
+  },
+  ['recipe-public-by-slug'],
+  { tags: ['recipes'], revalidate: 300 }
+)
+
 // Resolve a recipe by slug, with graceful fallbacks for legacy URLs.
 // Returns { row, canonicalSlug } where canonicalSlug !== requested slug if
 // we matched via a fallback and the caller should redirect to clean it up.
-async function fetchRecipeRow(slug) {
+async function fetchRecipeRowAuth(slug) {
   // Use the cookie-aware server client so RLS lets owners see their own
   // private recipes (is_public=false). Anonymous visitors still get only
   // public rows via the same RLS policy.
@@ -81,85 +104,22 @@ async function fetchRecipeRow(slug) {
   return { row: null, canonicalSlug: null }
 }
 
-async function loadFamilyMembers(supabase, userId) {
-  try {
-    const { data: memberships } = await supabase
-      .from('family_memberships')
-      .select('family_id')
-      .eq('profile_id', userId)
-      .limit(1)
-
-    if (!memberships?.length) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id, full_name, display_name, first_name, weight, height, age, gender, goals')
-        .eq('id', userId)
-        .maybeSingle()
-      if (!profile) return { members: [], familyId: null }
-      const { data: logs } = await supabase
-        .from('weight_logs')
-        .select('weight')
-        .eq('profile_id', userId)
-        .order('logged_date', { ascending: false })
-        .limit(1)
-      profile.weight = profile.weight ?? logs?.[0]?.weight ?? null
-      return { members: [enrichMember({ ...profile, type: 'linked' })], familyId: null }
-    }
-
-    const familyId = memberships[0].family_id
-    const [{ data: linked }, { data: managed }] = await Promise.all([
-      supabase
-        .from('family_memberships')
-        .select('profile_id, profiles(id, full_name, display_name, first_name, weight, height, age, gender, goals)')
-        .eq('family_id', familyId),
-      supabase
-        .from('managed_members')
-        .select('id, name, date_of_birth, weight, height, gender')
-        .eq('family_id', familyId),
-    ])
-
-    const linkedProfileIds = (linked || []).map(l => l.profile_id).filter(Boolean)
-    let weightByProfile = new Map()
-    if (linkedProfileIds.length > 0) {
-      const { data: logs } = await supabase
-        .from('weight_logs')
-        .select('profile_id, weight')
-        .in('profile_id', linkedProfileIds)
-        .order('logged_date', { ascending: false })
-      if (logs) {
-        for (const log of logs) {
-          if (!weightByProfile.has(log.profile_id)) {
-            weightByProfile.set(log.profile_id, log.weight)
-          }
-        }
-      }
-    }
-
-    const members = [
-      ...(linked || []).map(l => enrichMember({
-        ...l.profiles,
-        type: 'linked',
-        weight: l.profiles?.weight ?? weightByProfile.get(l.profile_id) ?? null,
-      })),
-      ...(managed || []).map(m => enrichMember({
-        ...m,
-        display_name: m.name,
-        type: 'managed',
-        weight: m.weight ?? null,
-        height: m.height ?? null,
-      })),
-    ].filter(Boolean)
-
-    return { members, familyId }
-  } catch {
-    return { members: [], familyId: null }
+// React cache(): generateMetadata and the page component share ONE resolution
+// per request (previously the full query chain ran twice). Public recipes
+// resolve from the data cache without touching Supabase at all.
+const getRecipe = cache(async (slug) => {
+  // Fast path: public recipe, exact slug — served from Vercel Data Cache.
+  if (!UUID_RE.test(slug)) {
+    const pub = await getCachedPublicRecipe(slug)
+    if (pub) return { row: pub, canonicalSlug: pub.slug || slug }
   }
-}
-
+  // Slow path: private recipes (owner/family via RLS) and legacy slug fallbacks.
+  return fetchRecipeRowAuth(slug)
+})
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
-  const { row } = await fetchRecipeRow(slug)
+  const { row } = await getRecipe(slug)
   if (!row) return { title: 'Recipe — MintyFit' }
   return {
     title: `${row.title} — MintyFit`,
@@ -174,8 +134,7 @@ export async function generateMetadata({ params }) {
 
 export default async function RecipeDetailPage({ params }) {
   const { slug } = await params
-  const supabase = await createClient()
-  const { row, canonicalSlug } = await fetchRecipeRow(slug)
+  const { row, canonicalSlug } = await getRecipe(slug)
 
   if (!row) notFound()
 
@@ -186,18 +145,11 @@ export default async function RecipeDetailPage({ params }) {
 
   const recipe = normalizeRecipe(row)
 
-  // Load family members server-side so weight_logs queries bypass RLS —
-  // client-side direct queries are scoped to auth.uid() only.
-  let members = []
-  let familyId = null
-  try {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const result = await loadFamilyMembers(supabase, user.id)
-      members = result.members
-      familyId = result.familyId
-    }
-  } catch { /* pass empty members on error */ }
+  // Family members are NOT loaded server-side: the client hydrates them from
+  // a localStorage SWR cache (RecipeDetailClient), so logged-in users get the
+  // recipe content immediately instead of waiting on a serial family/weight
+  // query chain. (RLS scopes weight_logs to own rows in both contexts anyway,
+  // so server-side loading had no data advantage.)
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Recipe',
@@ -234,7 +186,7 @@ export default async function RecipeDetailPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <RecipeDetailClient recipe={recipe} members={members} familyId={familyId} />
+      <RecipeDetailClient recipe={recipe} members={[]} familyId={null} />
     </>
   )
 }

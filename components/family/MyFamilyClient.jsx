@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
+import { invalidateCache } from '@/hooks/useCachedData'
 
 function Section({ title, children }) {
   return (
@@ -212,6 +213,7 @@ function AddChildModal({ onClose, onAdd }) {
         throw new Error(d.error)
       }
       const { member } = await res.json()
+      invalidateCache('members:') // recipe-page member cache
       onAdd(member)
       onClose()
     } catch (err) {
@@ -446,6 +448,7 @@ export default function MyFamilyClient({ userId, initialData }) {
         throw new Error(d.error || 'Failed to update name')
       }
       const { profile } = await res.json()
+      invalidateCache('members:')
       setData(prev => ({
         ...prev,
         memberships: prev.memberships.map(m => {
@@ -483,6 +486,7 @@ export default function MyFamilyClient({ userId, initialData }) {
     try {
       const res = await fetch(`/api/family/members?memberId=${memberId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to remove member')
+      invalidateCache('members:')
       setData(prev => ({
         ...prev,
         memberships: prev.memberships.filter(m => m.profile_id !== memberId),
@@ -504,6 +508,7 @@ export default function MyFamilyClient({ userId, initialData }) {
     if (!(await confirmDialog({ title: 'Remove child?', body: `${name} and their nutrition profile will be removed from the family.`, confirmLabel: 'Remove', destructive: true }))) return
     try {
       await fetch(`/api/family/managed?id=${id}`, { method: 'DELETE' })
+      invalidateCache('members:')
       setData(prev => ({ ...prev, managedMembers: prev.managedMembers.filter(m => m.id !== id) }))
     } catch (err) {
       setError(err.message)

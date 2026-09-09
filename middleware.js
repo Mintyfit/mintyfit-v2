@@ -12,6 +12,26 @@ const PROTECTED_PATHS = [
 ]
 
 export async function middleware(request) {
+  const { pathname } = request.nextUrl
+  const isProtected = PROTECTED_PATHS.some(p => pathname.startsWith(p))
+
+  // Anonymous fast path: without a Supabase auth cookie (sb-*) no session can
+  // exist, so skip the getUser() network round trip entirely. Most site traffic
+  // is anonymous — this removes auth latency from every public page view.
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some(c => c.name.startsWith('sb-'))
+
+  if (!hasAuthCookie) {
+    if (isProtected) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      url.searchParams.set('auth', 'login')
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -37,9 +57,6 @@ export async function middleware(request) {
 
   // Refresh session — do not add logic between createServerClient and getUser
   const { data: { user } } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
-  const isProtected = PROTECTED_PATHS.some(p => pathname.startsWith(p))
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone()
