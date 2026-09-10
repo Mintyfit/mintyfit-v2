@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { callIdeogramApi } from '@/lib/recipe/ideogramServer'
 
 export const maxDuration = 60
 
+// Thin authenticated proxy so CLIENT code can generate images without ever
+// seeing the Ideogram API key. Server-side code must call callIdeogramApi()
+// directly instead of fetching this route (self-fetch hides provider errors
+// and breaks on cookie/origin edge cases).
 export async function POST(request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -10,25 +15,6 @@ export async function POST(request) {
 
   const body = await request.json()
 
-  const apiKey = process.env.IDEOGRAM_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'IDEOGRAM_API_KEY is not configured' }, { status: 500 })
-  }
-
-  try {
-    const response = await fetch('https://api.ideogram.ai/v1/ideogram-v3/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Api-Key': apiKey,
-      },
-      body: JSON.stringify(body),
-    })
-
-    const data = await response.json()
-    return NextResponse.json(data, { status: response.status })
-  } catch (error) {
-    console.error('Ideogram proxy error:', error)
-    return NextResponse.json({ error: 'Ideogram generation failed' }, { status: 500 })
-  }
+  const { status, data } = await callIdeogramApi(body)
+  return NextResponse.json(data, { status })
 }

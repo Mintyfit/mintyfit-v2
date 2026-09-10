@@ -117,7 +117,7 @@ AprillBuild/
 │   └── api/                          # Route Handlers (server-side only)
 │       ├── claude/route.js           # Claude API proxy
 │       ├── grok/route.js             # Grok API proxy
-│       ├── ideogram/route.js         # Ideogram proxy
+│       ├── ideogram/route.js         # Ideogram proxy (thin wrapper over lib/recipe/ideogramServer.js)
 │       ├── proxy-image/route.js      # Image resize/cache proxy
 │       ├── profile/route.js          # PATCH profile fields
 │       ├── weight/route.js           # POST/GET weight logs
@@ -155,7 +155,9 @@ AprillBuild/
 │   │   └── usdaNutrition.js          # USDA nutrient mapping
 │   ├── recipe/
 │   │   ├── recipeGenerator.js        # Generation pipeline
-│   │   ├── imageGeneration.js        # Image generation + storage
+│   │   ├── imageGeneration.js        # Image generation + storage (client)
+│   │   ├── ideogramServer.js         # SERVER ONLY — Ideogram API call (callIdeogramApi). Server routes call this DIRECTLY, never via fetch to /api/ideogram (self-fetch hides provider errors, breaks on cookie rotation)
+│   │   ├── saveRecipeImageServer.js  # SERVER ONLY — download+sharp-resize+service-role storage upload. /api/recipe/save-image is a thin wrapper
 │   │   ├── ingredientDatabase.js     # Ingredient nutrition lookup
 │   │   ├── ingredientSwap.js         # AI ingredient substitution
 │   │   └── foodGroups.js             # Food group classification
@@ -422,6 +424,7 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 - `public/manifest.json` remains (install metadata only — no caching behavior).
 - Client data cache: `hooks/useCachedData.js` (localStorage + TTL + SWR). Invalidate after writes via `invalidateCache('recipes:')` etc.
 - **Stale WebView self-heal (2026-09-09):** even with no SW, the Android WebView's own HTTP cache can hold stale HTML. `GET /api/version` (no-store) returns the running deployment id (`VERCEL_GIT_COMMIT_SHA || VERCEL_DEPLOYMENT_ID || 'dev'`); the root layout bakes the same value into the HTML as `window.__MINTY_BUILD__`; `components/shared/DeploymentCheck.jsx` (mounted in root layout) compares them on mount/focus/visible/5-min interval and, on mismatch, navigates to a cache-busting `?_fresh=` URL (new cache key = forced network fetch). Loop-guarded via `_fresh` param + sessionStorage flag. The shell must still load fresh once after this ships (clear app cache / reinstall) — the check only exists in builds from this commit on.
+- **Shell v1.2 (2026-09-10, `D:\WORKS\Minty\Android`, see its AGENTS.md):** Auto Backup disabled (`allowBackup="false"` + all domains excluded from cloud/D2D — restored WebView profiles made reinstalls useless) and `nukeStaleWebStateAfterUpgrade()` wipes WebView cache/cookies/storage once per versionCode, so every app update self-heals existing installs. Rebuild/release via `build-release.bat` there.
 
 ### 🔄 Server/Data Caching & Loading UX (2026-09-09 perf pass)
 

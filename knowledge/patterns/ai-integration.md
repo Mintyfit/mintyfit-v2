@@ -7,9 +7,11 @@
 All AI calls go through Next.js API routes that inject API keys server-side:
 - `app/api/claude/route.js` → Anthropic API (supports prompt caching via `cache_control`)
 - `app/api/grok/route.js` → Grok API (journal food nutrition lookup)
-- `app/api/ideogram/route.js` → Ideogram API (recipe images)
+- `app/api/ideogram/route.js` → Ideogram API (recipe images) — thin auth wrapper over `lib/recipe/ideogramServer.js`
 
 Never expose API keys to the client. All AI requests from client components POST to these routes.
+
+**Server-side callers call the lib, not the route:** `callIdeogramApi(body)` in `lib/recipe/ideogramServer.js` is the single Ideogram entry point (returns `{ok, status, data}`, never throws; `extractIdeogramImageUrl` / `describeIdeogramError` helpers). Route handlers must NOT `fetch()` their own API routes — self-fetch hides provider errors behind opaque messages and breaks on cookie rotation / origin resolution (regenerate-image incident, 2026-09-10). Same for storage saves: `saveRecipeImage()` in `lib/recipe/saveRecipeImageServer.js`; `/api/recipe/save-image` is its thin wrapper for clients.
 
 ## Recipe Generation Pipeline
 

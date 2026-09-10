@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { callIdeogramApi, extractIdeogramImageUrl, describeIdeogramError } from '@/lib/recipe/ideogramServer'
+import { saveRecipeImage } from '@/lib/recipe/saveRecipeImageServer'
 
 export const maxDuration = 90
 
 // ─── POST /api/recipe/regenerate-image ───────────────────────────────────────
 // Generates a fresh Ideogram photo for an EXISTING recipe (by id), saves it to
-// permanent storage via /api/recipe/save-image, and updates the recipe row.
+// permanent storage via saveRecipeImage(), and updates the recipe row.
 // Used for (a) recipes whose image is the SVG placeholder, and (b) replacing a
 // photo the user doesn't like. Only the recipe owner may regenerate.
+//
+// The Ideogram call and the storage save are made IN-PROCESS via the shared
+// libs — never via fetch() back into our own API routes. Self-fetching hid the
+// real provider error behind "Image provider returned no URL" and broke when
+// the forwarded cookies were stale (refresh-token rotation race with the outer
+// auth check) or the request origin didn't resolve publicly.
 //
 // Body: { recipeId: string }
 // Returns: { image, image_thumb }
@@ -47,47 +55,36 @@ export async function POST(request) {
     'shallow depth of field, appetizing colors, garnished with fresh herbs, rustic oak surface, ' +
     'high-resolution editorial quality, photorealistic';
 
-  // Call our own Ideogram proxy (injects the API key server-side)
-  const origin = new URL(request.url).origin
-  let imageUrl = null
-  try {
-    const ideoRes = await fetch(`${origin}/api/ideogram`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', cookie: request.headers.get('cookie') || '' },
-      body: JSON.stringify({
-        prompt: imagePrompt,
-        model: 'V_3',
-        aspect_ratio: '16x9',
-        style_type: 'REALISTIC',
-        magic_prompt_option: 'AUTO',
-        negative_prompt: 'blurry, low quality, distorted, cartoon, illustration, drawing, text, watermark',
-      }),
-    })
-    const ideoData = await ideoRes.json()
-    imageUrl = ideoData?.data?.[0]?.url || ideoData?.images?.[0]?.url || null
-  } catch (err) {
-    return NextResponse.json({ error: `Image generation failed: ${err.message}` }, { status: 502 })
+  // Call Ideogram directly (API key injected server-side by the lib)
+  const ideo = await callIdeogramApi({
+    prompt: imagePrompt,
+    model: 'V_3',
+    aspect_ratio: '16x9',
+    style_type: 'REALISTIC',
+    magic_prompt_option: 'AUTO',
+    negative_prompt: 'blurry, low quality, distorted, cartoon, illustration, drawing, text, watermark',
+  })
+  if (!ideo.ok) {
+    // Surface the provider's real reason (e.g. 402 insufficient_funds) so the
+    // user sees the actual problem instead of "no URL".
+    const reason = describeIdeogramError(ideo.data)
+    console.error('regenerate-image: Ideogram error', ideo.status, reason)
+    return NextResponse.json(
+      { error: `Image generation failed (${ideo.status}): ${reason}` },
+      { status: 502 }
+    )
   }
+  const imageUrl = extractIdeogramImageUrl(ideo.data)
   if (!imageUrl) {
+    console.error('regenerate-image: Ideogram success body had no URL:', JSON.stringify(ideo.data).slice(0, 300))
     return NextResponse.json({ error: 'Image provider returned no URL' }, { status: 502 })
   }
 
-  // Persist to permanent storage via our save-image route
+  // Persist to permanent storage in-process
   const pathKey = `${Date.now()}-${user.id.slice(0, 8)}`
-  let detailUrl = null, thumbUrl = null
-  try {
-    const saveRes = await fetch(`${origin}/api/recipe/save-image`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', cookie: request.headers.get('cookie') || '' },
-      body: JSON.stringify({ imageUrl, pathKey }),
-    })
-    if (saveRes.ok) {
-      const saved = await saveRes.json()
-      detailUrl = saved.detailUrl || null
-      thumbUrl = saved.thumbUrl || null
-    }
-  } catch (err) {
-    console.error('regenerate-image save failed:', err.message)
+  const { detailUrl, thumbUrl, error: saveError } = await saveRecipeImage(imageUrl, pathKey)
+  if (saveError) {
+    console.error('regenerate-image: storage save failed:', saveError)
   }
 
   // Fall back to the ephemeral URL only if storage failed (better than nothing;
