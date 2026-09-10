@@ -179,7 +179,7 @@ export default function Navbar() {
       {/* Mobile Menu Drawer */}
       {mobileMenuOpen && (
         <div className="mf-nav-mobile" style={{
-          flexDirection: 'column', position: 'fixed', top: 60, left: 0, right: 0, bottom: 0,
+          flexDirection: 'column', position: 'fixed', top: 60, left: 0, right: 0, bottom: 'calc(64px + env(safe-area-inset-bottom))',
           backgroundColor: 'var(--bg-nav)', zIndex: 199, overflowY: 'auto', padding: '8px 0 24px', borderTop: '1px solid var(--border)',
         }}>
           {DESKTOP_TABS.filter(t => !t.auth || user).map(t => {
