@@ -70,6 +70,12 @@ Always: `['breakfast', 'snack', 'lunch', 'snack2', 'dinner']`
 ### No Service Worker Cache — Ever
 The Android app is a thin WebView shell and must always draw content fresh from the web — **no client-side cache layer** (product decision, 2026-09-07). A caching service worker let installed shells serve stale pre-release UI after deploys. `public/sw.js` is a self-purging no-op; `ServiceWorkerCleanup.jsx` unregisters workers + purges caches on every load. Do NOT reintroduce a caching SW.
 
+### Android App Shell — `D:\WORKS\Minty\Android`
+Separate project (not this repo). Thin WebView → mintyfit.com; see **its own `AGENTS.md`** for full rules. Key facts:
+- **Build/release: double-click `build-release.bat`** (JDK env, signed AAB, optional Play production upload). Needs JAVA_HOME = Android Studio JBR; system java hangs.
+- Shell-side freshness: `allowBackup="false"` + all backup/transfer excluded (else reinstalls restore stale WebView state), plus `nukeStaleWebStateAfterUpgrade()` wipes WebView state once per versionCode.
+- Site-side freshness (this repo): `/api/version` + `DeploymentCheck` auto-reload stale builds. **Ship self-heal code immediately** — it only protects builds that contain it.
+
 ### Family Architecture
 Two member types in a family:
 - **Linked members** — teens/adults with their own account (profile_id in family_memberships)

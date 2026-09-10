@@ -152,6 +152,6 @@
 4. Add `GROQ_API_KEY` to Vercel env — until then voice falls back to Web Speech API (browsers) and fails gracefully in the app
 
 ### ⚠️ Manual steps required (Android app, D:\WORKS\Minty\Android)
-1. ~~Rebuild the app (Gradle)~~ — DONE 04-Sep-2026: NEW app-release.aab built with versionCode=2 / versionName=1.1 (previous Play Console upload was 11-Jun versionCode=1). Fix applied: androidx.fragment:1.8.9 added to force transitive fragment 1.1.0 (from play-services-base/basement via Firebase) up — lint InvalidFragmentVersionForActivityResult blocked the release build. NOTE: gradle builds need JAVA_HOME=C:\Program Files\Android\Android Studio\jbr
+1. ~~Rebuild the app (Gradle)~~ — DONE 04-Sep-2026 (v1.1/vc2), superseded: **v1.2 (versionCode 3) built and live on Play production 10-Sep-2026** (backup disabled + WebView state nuke on upgrade). Future rebuilds: double-click `build-release.bat` in the Android project (handles JAVA_HOME=Android Studio JBR, daemon workarounds, optional Play upload).
 2. Test on device: rotation state, mic permission prompt, voice in assistant — NOT YET DONE
-3. Upload the NEW AAB (versionCode=2) to Play Console — SHA-256 upload-key fingerprint: 36:A5:0C:27:ED:1C:F6:FB:EC:25:B4:D2:7C:80:81:B2:38:DC:11:0B:30:AD:6E:52:6A:ED:4C:DA:D5:2D:89:53 (alias mintyfit, keystore D:\WORKS\Minty\Android\mintyfit-release.jks)
+3. Upload-key SHA-256 fingerprint: 36:A5:0C:27:ED:1C:F6:FB:EC:25:B4:D2:7C:80:81:B2:38:DC:11:0B:30:AD:6E:52:6A:ED:4C:DA:D5:2D:89:53 (alias mintyfit, keystore D:\WORKS\Minty\Android\mintyfit-release.jks)
