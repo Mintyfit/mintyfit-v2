@@ -288,6 +288,12 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
       meal: recipe.meal_type || '',
       food: recipe.food_type || '',
     })
+    // Original quantity lets the API size the replacement realistically
+    // (amount_factor = suggestedAmount / originalAmount — see ingredient-alternatives route)
+    if (showAlternativesFor.amount > 0) {
+      params.set('amount', String(showAlternativesFor.amount))
+      params.set('unit', showAlternativesFor.unit || '')
+    }
     const otherIngredients = (recipe.steps || [])
       .flatMap(s => (s.ingredients || []).map(i => i.name))
       .filter(n => n.toLowerCase() !== showAlternativesFor.name?.toLowerCase())
@@ -1061,7 +1067,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                         <span style={{ textTransform: 'capitalize' }}>{item.displayName}</span>
                       </button>
                       <button
-                        onClick={e => { e.stopPropagation(); setShowAlternativesFor(item.isSwapped ? { name: item.displayName, _isSwapped: true, _originalName: item.originalKey } : item.original) }}
+                        onClick={e => { e.stopPropagation(); setShowAlternativesFor(item.isSwapped ? { name: item.displayName, _isSwapped: true, _originalName: item.originalKey, amount: item.original?.amount, unit: item.original?.unit } : item.original) }}
                         title={item.isSwapped ? `Swapped — tap to change` : 'Find alternatives'}
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1166,7 +1172,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
 
                 {/* Ingredients for this step — with checkboxes + swap. Hidden in list view (ingredients shown above). */}
                 {stepIngredients.length > 0 && viewMode !== 'list' && (
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.625rem', display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 0.625rem', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.375rem' }}>
                     {stepIngredients.map((ing, j) => {
                       const originalKey = ing.name?.toLowerCase()
                       const swap = swappedIngredients.get(originalKey)
@@ -1216,7 +1222,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                               e.stopPropagation()
                               setShowAlternativesFor(
                                 isSwapped
-                                  ? { name: displayName, _isSwapped: true, _originalName: originalKey }
+                                  ? { name: displayName, _isSwapped: true, _originalName: originalKey, amount: ing.amount, unit: ing.unit }
                                   : ing
                               )
                             }}

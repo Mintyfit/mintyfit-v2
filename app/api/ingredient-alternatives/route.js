@@ -135,17 +135,26 @@ function findHardcodedAlternatives(ingredientName) {
 // ── Claude Haiku fallback (same logic as getSwapSuggestions) ──────────────────
 const HAIKU = 'claude-haiku-4-5-20251001'
 
-async function getAISuggestions(ingredientName, recipeContext) {
-  const { title = '', cuisine_type = '', meal_type = '', food_type = '', otherIngredients = [] } = recipeContext
-  const otherList = otherIngredients.slice(0, 15).join(', ') || 'none listed'
+// Normalize common unit aliases so amounts are only compared in matching units
+function normalizeUnit(u) {
+  const unit = (u || '').toLowerCase().trim()
+  if (['g', 'gr', 'gram', 'grams'].includes(unit)) return 'g'
+  if (['ml', 'milliliter', 'milliliters', 'millilitre', 'millilitres'].includes(unit)) return 'ml'
+  return unit
+}
 
-  const prompt = `You are a culinary nutritionist. Suggest 4-5 ingredient alternatives for "${ingredientName}" in a ${cuisine_type} ${meal_type} recipe called "${title}".
+async function getAISuggestions(ingredientName, recipeContext) {
+  const { title = '', cuisine_type = '', meal_type = '', food_type = '', otherIngredients = [], amount, unit } = recipeContext
+  const otherList = otherIngredients.slice(0, 15).join(', ') || 'none listed'
+  const quantityDesc = amount ? `${amount} ${unit || ''}`.trim() : ''
+
+  const prompt = `You are a culinary nutritionist. Suggest 4-5 ingredient alternatives for "${ingredientName}"${quantityDesc ? ` (${quantityDesc})` : ''} in a ${cuisine_type} ${meal_type} recipe called "${title}".
 
 Other ingredients in this recipe: ${otherList}
 
 Rules:
 - Suggest ingredients that fit the cuisine and meal type
-- Adjust amounts appropriately (not always 1:1 by weight — e.g. swapping chicken for tofu needs a higher volume)
+- "amount" is the absolute amount of the alternative needed to replace the original quantity in THIS recipe${quantityDesc ? ` (original: ${quantityDesc})` : ''} — not always 1:1 by weight (e.g. swapping chicken for tofu needs a higher volume), but it MUST stay a realistic human portion for the dish
 - Give a brief, specific reason for each (dietary benefit, texture match, flavor profile)
 - Never suggest an ingredient already in the recipe
 - Return ONLY a valid JSON array, no markdown or prose
@@ -198,12 +207,17 @@ export async function GET(request) {
   }
 
   // 2. Fall back to AI-powered suggestions via Claude Haiku
+  const originalAmount = parseFloat(searchParams.get('amount'))
+  const originalUnit = normalizeUnit(searchParams.get('unit'))
+
   const recipeContext = {
     title: searchParams.get('title') || '',
     cuisine_type: searchParams.get('cuisine') || '',
     meal_type: searchParams.get('meal') || '',
     food_type: searchParams.get('food') || '',
     otherIngredients: searchParams.get('others')?.split(',').map(s => s.trim()).filter(Boolean) || [],
+    amount: Number.isFinite(originalAmount) && originalAmount > 0 ? originalAmount : null,
+    unit: originalUnit,
   }
 
   try {
@@ -213,11 +227,24 @@ export async function GET(request) {
       return Response.json({ alternatives: [], source: 'none' })
     }
 
-    const alternatives = suggestions.map(s => ({
-      name: s.name,
-      note: s.reason || '',
-      amount_factor: s.amount ? s.amount / 100 : 1,
-    }))
+    // amount_factor is a MULTIPLIER of the original ingredient's amount (client
+    // computes: originalAmount × amount_factor). The AI returns an absolute
+    // replacement amount, so convert it relative to the original quantity —
+    // never divide by 100 (that double-scales: 600 g × 4 = 2400 g bug).
+    // Only compare amounts in matching units; otherwise fall back to 1:1.
+    // Clamp to [0.1, 3] as a sanity guard against unrealistic portions.
+    const alternatives = suggestions.map(s => {
+      let factor = 1
+      const sAmt = parseFloat(s.amount)
+      if (
+        Number.isFinite(sAmt) && sAmt > 0 &&
+        Number.isFinite(originalAmount) && originalAmount > 0 &&
+        normalizeUnit(s.unit) === originalUnit && originalUnit
+      ) {
+        factor = Math.min(3, Math.max(0.1, sAmt / originalAmount))
+      }
+      return { name: s.name, note: s.reason || '', amount_factor: factor }
+    })
 
     return Response.json({ alternatives, source: 'ai' })
   } catch (error) {
