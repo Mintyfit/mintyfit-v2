@@ -1,4 +1,5 @@
 import { extractJSON } from '@/lib/utils/extractJSON'
+import { createAdminClient } from '@/lib/supabase/server'
 // ── Hardcoded substitution table (instant, free) ──────────────────────────────
 // Used as first-pass lookup. Falls back to Claude Haiku for anything not here.
 
@@ -143,6 +144,64 @@ function normalizeUnit(u) {
   return unit
 }
 
+function normalizeName(name) {
+  return (name || '').toLowerCase().trim().replace(/\s+/g, ' ')
+}
+
+// ── Shared DB cache (ingredient_alternatives table) ───────────────────────────
+// Stores RAW suggestions with absolute amounts; amount_factor is computed per
+// request against the caller's original quantity (withFactors below).
+
+async function readAlternativesCache(nameNormalized) {
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from('ingredient_alternatives')
+      .select('alternatives')
+      .eq('name_normalized', nameNormalized)
+      .maybeSingle()
+    return Array.isArray(data?.alternatives) && data.alternatives.length ? data.alternatives : null
+  } catch {
+    return null // cache failure must never block the AI path
+  }
+}
+
+async function writeAlternativesCache(nameNormalized, suggestions) {
+  try {
+    const rows = (suggestions || [])
+      .filter(s => s?.name)
+      .map(s => ({ name: s.name, amount: s.amount ?? null, unit: s.unit || '', reason: s.reason || '' }))
+    if (!rows.length) return
+    const supabase = createAdminClient()
+    await supabase
+      .from('ingredient_alternatives')
+      .upsert({ name_normalized: nameNormalized, alternatives: rows, source: 'ai' }, { onConflict: 'name_normalized' })
+  } catch (e) {
+    console.warn('ingredient_alternatives cache write failed:', e.message)
+  }
+}
+
+// amount_factor is a MULTIPLIER of the original ingredient's amount (client
+// computes: originalAmount × amount_factor). Suggestions carry an absolute
+// replacement amount, so convert it relative to the original quantity —
+// never divide by 100 (that double-scales: 600 g × 4 = 2400 g bug).
+// Only compare amounts in matching units; otherwise fall back to 1:1.
+// Clamp to [0.1, 3] as a sanity guard against unrealistic portions.
+function withFactors(suggestions, originalAmount, originalUnit) {
+  return suggestions.map(s => {
+    let factor = 1
+    const sAmt = parseFloat(s.amount)
+    if (
+      Number.isFinite(sAmt) && sAmt > 0 &&
+      Number.isFinite(originalAmount) && originalAmount > 0 &&
+      normalizeUnit(s.unit) === originalUnit && originalUnit
+    ) {
+      factor = Math.min(3, Math.max(0.1, sAmt / originalAmount))
+    }
+    return { name: s.name, note: s.reason || s.note || '', amount_factor: factor }
+  })
+}
+
 async function getAISuggestions(ingredientName, recipeContext) {
   const { title = '', cuisine_type = '', meal_type = '', food_type = '', otherIngredients = [], amount, unit } = recipeContext
   const otherList = otherIngredients.slice(0, 15).join(', ') || 'none listed'
@@ -206,10 +265,17 @@ export async function GET(request) {
     return Response.json({ alternatives: hardcoded, source: 'db' })
   }
 
-  // 2. Fall back to AI-powered suggestions via Claude Haiku
+  // 2. Shared DB cache (instant, free) — raw AI suggestions from prior lookups
   const originalAmount = parseFloat(searchParams.get('amount'))
   const originalUnit = normalizeUnit(searchParams.get('unit'))
+  const nameNormalized = normalizeName(ingredient)
 
+  const cached = await readAlternativesCache(nameNormalized)
+  if (cached) {
+    return Response.json({ alternatives: withFactors(cached, originalAmount, originalUnit), source: 'cache' })
+  }
+
+  // 3. Fall back to AI-powered suggestions via Claude Haiku, then cache
   const recipeContext = {
     title: searchParams.get('title') || '',
     cuisine_type: searchParams.get('cuisine') || '',
@@ -227,26 +293,9 @@ export async function GET(request) {
       return Response.json({ alternatives: [], source: 'none' })
     }
 
-    // amount_factor is a MULTIPLIER of the original ingredient's amount (client
-    // computes: originalAmount × amount_factor). The AI returns an absolute
-    // replacement amount, so convert it relative to the original quantity —
-    // never divide by 100 (that double-scales: 600 g × 4 = 2400 g bug).
-    // Only compare amounts in matching units; otherwise fall back to 1:1.
-    // Clamp to [0.1, 3] as a sanity guard against unrealistic portions.
-    const alternatives = suggestions.map(s => {
-      let factor = 1
-      const sAmt = parseFloat(s.amount)
-      if (
-        Number.isFinite(sAmt) && sAmt > 0 &&
-        Number.isFinite(originalAmount) && originalAmount > 0 &&
-        normalizeUnit(s.unit) === originalUnit && originalUnit
-      ) {
-        factor = Math.min(3, Math.max(0.1, sAmt / originalAmount))
-      }
-      return { name: s.name, note: s.reason || '', amount_factor: factor }
-    })
+    await writeAlternativesCache(nameNormalized, suggestions)
 
-    return Response.json({ alternatives, source: 'ai' })
+    return Response.json({ alternatives: withFactors(suggestions, originalAmount, originalUnit), source: 'ai' })
   } catch (error) {
     console.error('Ingredient alternatives AI fallback failed:', error.message)
     return Response.json({ alternatives: [], source: 'none' })

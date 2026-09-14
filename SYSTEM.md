@@ -296,6 +296,11 @@ All tables in Supabase PostgreSQL. RLS enabled on everything.
 - UNIQUE(profile_id, recipe_id, original_name)
 - RLS: auth.uid() = profile_id
 
+**`ingredient_alternatives`** — Shared cache of AI swap suggestions (migration 061)
+- id, name_normalized (unique), alternatives (jsonb: raw AI suggestions with ABSOLUTE amounts [{name, amount, unit, reason}]), source, created_at, updated_at
+- `/api/ingredient-alternatives` lookup order: hardcoded table → this cache → Haiku (then writes back). `amount_factor` is computed per request as cachedAmount ÷ originalAmount, so one row serves any recipe quantity
+- RLS: public SELECT; writes only via service role (route handler)
+
 **`calendar_entries`** — Meal plan (one row per member per recipe per slot)
 - id, profile_id, date_str (YYYY-MM-DD), meal_type, recipe_id, recipe_name, member_id, consumer_member_ids (uuid[]), personal_nutrition (jsonb), origin (planned|journal)
 - UNIQUE(family_id, date_str, meal_type, recipe_id, origin)
