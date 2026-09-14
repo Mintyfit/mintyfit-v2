@@ -52,7 +52,7 @@ function cacheSet(key, data) {
 const ENTRIES_SELECT = `
     id, date_str, meal_type, member_id, consumer_member_ids,
     family_id, origin,
-    recipes(id, title, slug, image_url, nutrition, servings)
+    recipes(id, title, slug, image_url, image_thumb_url, nutrition, servings)
   `
 
 function entriesQuery(supabase, { familyId, qUserId }) {
@@ -487,7 +487,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
     if (supabase) {
       const { data } = await supabase
         .from('recipes')
-        .select('id, title, slug, image_url, nutrition, meal_type')
+        .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
         .eq('id', pendingRecipe.recipe_id)
         .maybeSingle()
       if (data) recipe = data

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -24,6 +23,7 @@ export default function RecipeCard({ recipe, onFavouriteToggle }) {
   const mealStyle = MEAL_TYPE_COLORS[recipe.meal_type] || { bg: '#f3f4f6', color: '#374151' }
   const glLabel = recipe.glycemic_load ? GL_LABELS[recipe.glycemic_load] : null
   const slug = recipe.slug || recipe.id
+  const cardImg = recipe.image_thumb || recipe.image
 
   async function handleFavourite(e) {
     e.preventDefault()
@@ -65,13 +65,12 @@ export default function RecipeCard({ recipe, onFavouriteToggle }) {
       >
         {/* Image */}
         <div style={{ position: 'relative', aspectRatio: '16/9', background: '#f3f4f6' }}>
-          {recipe.image ? (
-            <Image
-              src={recipe.image}
+          {cardImg ? (
+            <img
+              src={cardImg}
               alt={recipe.title}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              style={{ objectFit: 'cover' }}
+              loading="lazy"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
             <div style={{

@@ -3,7 +3,6 @@
 import { MEAL_TYPES } from '@/lib/nutrition/mealBudget'
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
 import { computeMealBudget } from '@/lib/nutrition/mealBudget'
@@ -242,9 +241,9 @@ export default function DayAgenda({
                       marginLeft: isVariant ? '1.25rem' : 0,
                     }}
                   >
-                    {r?.image_url ? (
+                    {(r?.image_thumb_url || r?.image_url) ? (
                       <div style={{ width: imgSize, height: imgSize, borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', position: 'relative' }}>
-                        <Image src={r.image_url} alt={r.title} fill style={{ objectFit: 'cover' }} sizes={`${imgSize}px`} />
+                        <img src={r.image_thumb_url || r.image_url} alt={r.title} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
                     ) : null}
                     <div style={{ flex: 1, minWidth: 0 }}>

@@ -45,7 +45,7 @@ export default function PlannerSidebar({
     if (!supabase) { setSidebarLoading(false); return }
     let query = supabase
       .from('recipes')
-      .select('id, title, slug, image_url, nutrition, meal_type')
+      .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
       .or(`is_public.eq.true,profile_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .range(0, PAGE_SIZE - 1)
@@ -108,7 +108,7 @@ export default function PlannerSidebar({
     const to = from + PAGE_SIZE - 1
     let query = supabase
       .from('recipes')
-      .select('id, title, slug, image_url, nutrition, meal_type')
+      .select('id, title, slug, image_url, image_thumb_url, nutrition, meal_type')
       .or(`is_public.eq.true,profile_id.eq.${userId}`)
       .order('created_at', { ascending: false })
       .range(from, to)
@@ -205,8 +205,8 @@ export default function PlannerSidebar({
                           onDragEnd={onMenuDragEnd}
                           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
                         >
-                          {menu.image_url && (
-                            <img src={menu.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+{(menu.image_thumb_url || menu.image_url) && (
+<img src={menu.image_thumb_url || menu.image_url} alt="" loading="lazy" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
                           )}
                           <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                             {menu.name}
@@ -245,8 +245,8 @@ export default function PlannerSidebar({
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '0.375rem', background: 'var(--bg-page)', cursor: 'grab', userSelect: 'none' }}
                       >
                         <Link href={`/recipes/${r.slug || r.id}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, textDecoration: 'none', minWidth: 0 }} onClick={e => e.stopPropagation()}>
-                          {r.image_url && (
-                            <img src={r.image_url} alt="" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+{(r.image_thumb_url || r.image_url) && (
+<img src={r.image_thumb_url || r.image_url} alt="" loading="lazy" style={{ width: 36, height: 36, borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
                           )}
                           <span style={{ flex: 1, fontSize: '0.8125rem', color: 'var(--text-1)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                             {r.title}

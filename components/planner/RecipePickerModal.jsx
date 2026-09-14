@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { normalizeRecipe } from '@/lib/recipe/normalizeRecipe'
@@ -120,8 +119,8 @@ export default function RecipePickerModal({ mealType, userId, onSelect, onClose 
                   }}
                 >
                   <div style={{ width: 48, height: 48, borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', position: 'relative' }}>
-                    {recipe.image ? (
-                      <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="48px" />
+                    {(recipe.image_thumb || recipe.image) ? (
+                      <img src={recipe.image_thumb || recipe.image} alt={recipe.title} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>🍽️</div>
                     )}

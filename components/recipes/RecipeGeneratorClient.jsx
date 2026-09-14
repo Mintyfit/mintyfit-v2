@@ -2,7 +2,6 @@
 
 import { RECIPE_MEAL_TYPES as MEAL_TYPES } from '@/lib/nutrition/mealBudget'
 import { useState, useRef, useCallback } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { generateRecipe } from '@/lib/recipe/recipeGenerator'
@@ -240,7 +239,7 @@ export default function RecipeGeneratorClient() {
           {/* Image */}
           <div style={{ position: 'relative', aspectRatio: '16/9', background: '#f3f4f6' }}>
             {result.image ? (
-              <Image src={result.image} alt={result.title} fill style={{ objectFit: 'cover' }} sizes="680px" priority />
+              <img src={result.image} alt={result.title} fetchPriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', color: 'var(--text-4)' }}>🍽️</div>
             )}

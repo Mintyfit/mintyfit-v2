@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -31,8 +30,8 @@ function MenuCard({ menu }) {
       >
         {/* Image */}
         <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', background: '#f3f4f6', flexShrink: 0 }}>
-          {menu.image_url ? (
-            <Image src={menu.image_url} alt={menu.name} fill style={{ objectFit: 'cover' }} sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" />
+          {(menu.image_thumb_url || menu.image_url) ? (
+            <img src={menu.image_thumb_url || menu.image_url} alt={menu.name} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🥗</div>
           )}

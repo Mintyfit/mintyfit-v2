@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -53,7 +52,7 @@ function RecipeRow({ mr }) {
         {/* Thumbnail */}
         <div style={{ width: 56, height: 56, borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#f3f4f6', position: 'relative' }}>
           {imgSrc ? (
-            <Image src={imgSrc} alt={title || 'recipe'} fill style={{ objectFit: 'cover' }} sizes="56px" />
+            <img src={imgSrc} alt={title || 'recipe'} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>🍽️</div>
           )}
@@ -237,7 +236,7 @@ export default function MenuDetailClient({ menu, userId }) {
         {/* Hero image */}
         {menu.image_url && (
           <div style={{ position: 'relative', width: '100%', paddingTop: '40%', background: '#f3f4f6' }}>
-            <Image src={menu.image_url} alt={menu.name} fill style={{ objectFit: 'cover' }} priority sizes="860px" />
+            <img src={menu.image_url} alt={menu.name} fetchPriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.4))' }} />
           </div>
         )}

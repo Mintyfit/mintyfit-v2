@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import Link from 'next/link'
 import { NUTRITION_FIELDS } from '@/lib/nutrition/nutrition'
 import { computeMemberDailyNeeds } from '@/lib/nutrition/memberRDA'
@@ -912,7 +911,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
       <div style={{ marginBottom: '1rem' }}>
         <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: '16px', overflow: 'hidden', background: '#f3f4f6' }}>
           {recipe.image ? (
-            <Image src={recipe.image} alt={recipe.title} fill style={{ objectFit: 'cover' }} sizes="(max-width: 780px) 100vw, 1100px" priority />
+            <img src={recipe.image} alt={recipe.title} fetchPriority="high" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '4rem', color: 'var(--text-4)' }}>🍽️</div>
           )}
