@@ -270,9 +270,11 @@ All tables in Supabase PostgreSQL. RLS enabled on everything.
 
 **`family_memberships`** — Links profiles to a family
 - id, family_id (FK→families), profile_id (FK→profiles), role (admin|co-admin|member), status (active|removed), joined_at
+- RLS SELECT (mig 062): own rows + any row in own family + family creator, via `my_family_ids()` SECURITY DEFINER (avoids self-reference recursion). Without the family clause a linked member saw only herself → no consumer pills in DayAgenda.
 
 **`managed_members`** — Children/dependents with no auth account
 - id, family_id, managed_by (FK→profiles), name, gender, date_of_birth, weight_kg, height_cm, allergies (text[]), created_at
+- RLS SELECT (mig 062): own managed rows + any row in own family + family creator. Writes stay managed_by/creator-only.
 
 **`family_invites`** — Pending email invites
 - id, family_id, invited_by (FK→profiles), email, token (unique, gen_random_bytes(32)), status (pending|accepted|cancelled|expired), expires_at, created_at
