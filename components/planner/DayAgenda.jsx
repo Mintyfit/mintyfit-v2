@@ -159,8 +159,8 @@ export default function DayAgenda({
           {MEAL_TYPES.map(mt => {
             const enabled = (enabledMealTypes || MEAL_TYPES).includes(mt)
             return (
-              <label key={mt} title={MEAL_LABELS[mt]} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', cursor: 'pointer', color: enabled ? 'var(--text-1)' : 'var(--text-4)', opacity: enabled ? 1 : 0.5, flexShrink: 0 }}>
-                <input type="checkbox" checked={enabled} onChange={() => onToggleDayMeal(mt)} style={{ width: 14, height: 14, accentColor: 'var(--primary)', cursor: 'pointer' }} />
+              <label key={mt} title={MEAL_LABELS[mt]} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', cursor: 'pointer', color: enabled ? 'var(--text-1)' : 'var(--text-3)', opacity: enabled ? 1 : 0.75, flexShrink: 0 }}>
+                <input type="checkbox" checked={enabled} onChange={() => onToggleDayMeal(mt)} style={{ width: 'var(--control-check)', height: 'var(--control-check)', accentColor: 'var(--primary)', cursor: 'pointer' }} />
                 {MEAL_SHORT[mt]}
               </label>
             )
@@ -255,13 +255,13 @@ export default function DayAgenda({
                           {r?.title}
                         </Link>
                         {isLogged ? (
-                          <span style={{ fontSize: '0.6875rem', color: '#6366f1', background: 'rgba(99,102,241,0.12)', borderRadius: '4px', padding: '0.1rem 0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#6366f1', background: 'rgba(99,102,241,0.12)', borderRadius: '4px', padding: '0.1rem 0.375rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
                             Logged
                           </span>
                         ) : null}
                       </div>
                       {kcal != null ? (
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginTop: '0.125rem' }}>
+                        <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: '0.125rem' }}>
                           {Math.round(kcal)} kcal/serving
                         </div>
                       ) : null}
@@ -274,7 +274,7 @@ export default function DayAgenda({
                               onClick={() => toggleConsumer(entry.id, m.id, entry.consumer_member_ids, entry)}
                               title={checked ? `Remove ${m.display_name || m.first_name}` : `Add ${m.display_name || m.first_name}`}
                               style={{
-                                fontSize: '0.6875rem',
+                                fontSize: '0.8125rem',
                                 padding: '0.15rem 0.55rem',
                                 borderRadius: '999px',
                                 border: `1px solid ${checked ? 'var(--primary)' : 'var(--border)'}`,
@@ -312,10 +312,10 @@ export default function DayAgenda({
                   <span style={{ fontSize: '1rem' }}>J</span>
                   <div style={{ flex: 1 }}>
                     <span style={{ fontSize: '0.875rem', color: 'var(--text-1)', fontWeight: 500 }}>{je.food_name}</span>
-                    {je.amount ? <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginLeft: '0.375rem' }}>{je.amount} {je.unit}</span> : null}
-                    {je.nutrition?.energy_kcal ? <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginLeft: '0.375rem' }}>{Math.round(je.nutrition.energy_kcal)} kcal</span> : null}
+                    {je.amount ? <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginLeft: '0.375rem' }}>{je.amount} {je.unit}</span> : null}
+                    {je.nutrition?.energy_kcal ? <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginLeft: '0.375rem' }}>{Math.round(je.nutrition.energy_kcal)} kcal</span> : null}
                     {jeMember ? (
-                      <span style={{ fontSize: '0.6875rem', color: 'var(--primary)', background: 'rgba(61,138,62,0.1)', borderRadius: '4px', padding: '0.1rem 0.375rem', marginLeft: '0.375rem', fontWeight: 500 }}>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--primary)', background: 'rgba(61,138,62,0.1)', borderRadius: '4px', padding: '0.1rem 0.375rem', marginLeft: '0.375rem', fontWeight: 500 }}>
                         {jeMember.display_name || jeMember.first_name}
                       </span>
                     ) : null}
@@ -366,7 +366,7 @@ export default function DayAgenda({
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                   {activityKcal > 0 ? (
-                    <span style={{ fontSize: '0.75rem', color: '#6366f1', background: 'rgba(99,102,241,0.08)', borderRadius: '4px', padding: '0.1rem 0.375rem' }}>
+                    <span style={{ fontSize: '0.8125rem', color: '#6366f1', background: 'rgba(99,102,241,0.08)', borderRadius: '4px', padding: '0.1rem 0.375rem' }}>
                       +{activityKcal} active
                     </span>
                   ) : null}

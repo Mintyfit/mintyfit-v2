@@ -17,7 +17,7 @@ export default function ClientViewBanner({ clientName, pageLabel, backHref, chil
         <span style={{ fontWeight: 600 }}>
           Viewing {clientName}'s {pageLabel}
         </span>
-        <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
+        <span style={{ fontSize: '0.8125rem', opacity: 0.7 }}>
           Changes you make will save to their account
         </span>
         <Link href={backHref} style={{

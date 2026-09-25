@@ -39,7 +39,7 @@ function MenuCard({ menu }) {
           <div style={{
             position: 'absolute', bottom: '0.5rem', right: '0.5rem',
             background: 'rgba(0,0,0,0.65)', color: '#fff', borderRadius: '20px',
-            padding: '0.2rem 0.6rem', fontSize: '0.75rem', fontWeight: 600,
+            padding: '0.2rem 0.6rem', fontSize: '0.8125rem', fontWeight: 600,
           }}>
             {recipeCount} recipes
           </div>
@@ -59,12 +59,12 @@ function MenuCard({ menu }) {
           )}
           <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
             {menu.diet_type && (
-              <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '20px', background: 'rgba(61,138,62,0.1)', color: 'var(--primary)' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '20px', background: 'rgba(61,138,62,0.1)', color: 'var(--primary)' }}>
                 {menu.diet_type}
               </span>
             )}
             {menu.duration_weeks && (
-              <span style={{ fontSize: '0.6875rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '20px', background: 'var(--bg-page)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '20px', background: 'var(--bg-page)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
                 {menu.duration_weeks} weeks
               </span>
             )}

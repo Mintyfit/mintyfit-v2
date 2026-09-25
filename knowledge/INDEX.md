@@ -30,7 +30,7 @@
 |---|---|
 | `conventions/naming.md` | File naming, variable naming, database column naming |
 | `conventions/file-structure.md` | Where files go, the clean Next.js 15 App Router architecture |
-| `conventions/styling.md` | CSS approach, dark mode, responsive patterns |
+| `conventions/styling.md` | CSS approach, dark mode, responsive patterns, control tokens + contrast rules, typography floor |
 
 ### Decisions (why we chose X over Y)
 | File | Covers |
@@ -60,6 +60,9 @@
 | `sessions/2026-09-10-regenerate-image-self-fetch-fix.md` | Recipe page "Image provider returned no URL" — root cause: regenerate-image route self-fetched its own `/api/ideogram` with forwarded cookies; any inner failure surfaced opaquely. Fix: extracted `lib/recipe/ideogramServer.js` + `saveRecipeImageServer.js`; routes are thin wrappers; regenerate calls libs in-process and returns the REAL provider error. Rule: never self-fetch your own API route from a route handler |
 | `sessions/2026-09-10-webview-vh-zero-minty-chat.md` | Minty Chat invisible in the Android app for entitled users (teaser fine) — root cause: shell WebView created without explicit LayoutParams → Chromium 134 pins `vh` units at 0 for the WebView's lifetime → `max-height:70vh` collapsed the panel to a 2px line (same for all 80vh bottom sheets). Fix: MATCH_PARENT LayoutParams in the AndroidView factory (needs v1.3 release). Includes reusable CDP-over-adb + deep-link login debugging recipe |
 | `sessions/2026-09-14-image-optimizer-quota-fix.md` | ALL `next/image` images broke site-wide (gray box + alt text) — root cause: Vercel Hobby optimizer quota exhausted → `/_next/image` returns 402 `OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED`. Fix: removed next/image entirely; plain `<img>` with pre-sized storage variants (thumb on cards, detail on heroes, `image_thumb_url || image_url` pattern). Rule: do NOT reintroduce next/image without a quota plan |
+| `sessions/2026-09-21-mobile-chat-stale-bundle.md` | Mobile Minty Chat generated immediately (no 3 option cards) — root cause: WebView running pre-`30c1456` bundle; pre-`d1e0545` bundles have NO self-heal and stay stale until app update/cache clear. Verified old client code matches symptom exactly. v1.3 (vc4) live on Play nukes stale WebView state on upgrade. 4th staleness-class incident — check bundle age first for "mobile = old version" reports |
+| `sessions/2026-09-25-mobile-control-visibility.md` | Mobile checkboxes + swap icon "barely visible" and text small on device, but screenshots looked fine - root cause: controls sized in raw `px` (`width: 14`/`22`) which ignores the `html { font-size }` rem scale, AND control chrome used `--border`/`--text-4` at 1.19:1 / 2.54:1 (WCAG needs 3:1). Fix: `--control-check`/`--control-action`/`--tap-min`/`--control-line` tokens + app-wide type floor. Rule: screenshots hide mobile sizing/contrast bugs (DPR magnifies them) - use device PHOTOS to diagnose |
+| `sessions/2026-09-25-chat-reply-button-image-env.md` | Two bugs: (1) AI image gen "broken" - Ideogram API was HEALTHY (HTTP 200), root cause was a **rotated `IDEOGRAM_API_KEY` updated in `.env.local` but never in Vercel** (env `updatedAt` still 2026-04-06); every recipe after 2026-09-09 silently fell back to the SVG placeholder. Fix = update Vercel env + redeploy (env vars are baked in at build time). (2) Minty Chat reply button vanished = invisible disabled Send (`--border`/`--text-4`, AssistantPanel missed by the control-token pass) + input row clipped by `minHeight:180` + `overflow:hidden` under keyboard-resized viewport. Also `grok-imagine-image*` NOW works in 5-14s (supersedes the "hangs >3min" note) |
 
 ### Prompts
 | File | Purpose |

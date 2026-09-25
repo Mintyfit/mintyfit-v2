@@ -146,7 +146,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, jour
             Per member
           </h3>
           {onToggleMember && (
-            <p style={{ fontSize: '0.6875rem', color: 'var(--text-4)', margin: '0 0 0.625rem' }}>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-4)', margin: '0 0 0.625rem' }}>
               Tick the members who ate. Affects this day's totals and statistics.
             </p>
           )}
@@ -176,7 +176,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, jour
                         {member.display_name || member.first_name || member.name || member.full_name || 'Member'}
                       </span>
                     </label>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                    <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
                       {consumed} / {Math.round(target)}
                     </span>
                   </div>
@@ -188,7 +188,7 @@ export default function DayStatsPanel({ date, dateKey, entries, activities, jour
                     }} />
                   </div>
                   {activityKcal > 0 && (
-                    <div style={{ fontSize: '0.6875rem', color: '#6366f1', marginTop: 2 }}>+{activityKcal} kcal active</div>
+                    <div style={{ fontSize: '0.8125rem', color: '#6366f1', marginTop: 2 }}>+{activityKcal} kcal active</div>
                   )}
                 </div>
               )

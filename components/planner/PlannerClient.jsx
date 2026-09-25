@@ -762,7 +762,7 @@ export default function PlannerClient({ userId, familyId, profile, members, clie
                   >▶</button>
                 </>)}
                 {/* Week / Month toggle */}
-                <div style={{ display: 'inline-flex', border: '1.5px solid var(--border)', borderRadius: '8px', overflow: 'hidden', fontSize: '0.75rem', fontWeight: 600 }}>
+                <div style={{ display: 'inline-flex', border: '1.5px solid var(--border)', borderRadius: '8px', overflow: 'hidden', fontSize: '0.8125rem', fontWeight: 600 }}>
                   {['week', 'month'].map(v => (
                     <button
                       key={v}

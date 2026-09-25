@@ -17,7 +17,7 @@ const DESKTOP_TABS = [
   { id: 'menus',      path: '/menus',      label: 'Menus',    icon: ScrollText,   auth: false },
   { id: 'plan',       path: '/plan',       label: 'Plan',     icon: CalendarDays, auth: false },
   { id: 'statistics', path: '/statistics', label: 'Stats',    icon: BarChart2,    auth: false },
-  { id: 'shopping',   path: '/shopping-list', label: 'Shopping', icon: ShoppingCart, auth: false },
+  { id: 'shopping',   path: '/shopping-list', label: 'List', icon: ShoppingCart, auth: false },
   { id: 'blog',       path: '/blog',       label: 'Blog',    icon: Newspaper,    auth: false },
 ]
 
@@ -26,7 +26,7 @@ const MOBILE_TABS = [
   { id: 'menus',      path: '/menus',      label: 'Menus',    icon: ScrollText,   auth: false },
   { id: 'plan',       path: '/plan',       label: 'Plan',     icon: CalendarDays, auth: false },
   { id: 'statistics', path: '/statistics', label: 'Stats',    icon: BarChart2,    auth: false },
-  { id: 'shopping',   path: '/shopping-list', label: 'Shop', icon: ShoppingCart, auth: false },
+  { id: 'shopping',   path: '/shopping-list', label: 'List', icon: ShoppingCart, auth: false },
 ]
 
 function isTabActive(tab, pathname) {

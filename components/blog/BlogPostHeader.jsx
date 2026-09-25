@@ -27,7 +27,7 @@ export default function BlogPostHeader({ post, isSuperAdmin }) {
             border: '1px solid var(--border, #e5e7eb)',
             borderRadius: '8px',
             padding: '7px 14px',
-            fontSize: '16px',
+            fontSize: '1rem',
             fontWeight: 600,
             textDecoration: 'none',
           }}

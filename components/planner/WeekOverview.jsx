@@ -87,13 +87,13 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
           >
             {/* Day header */}
             <div style={{ textAlign: 'center', marginBottom: '0.625rem' }}>
-              <div className="wo-day-name" style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', color: isToday ? 'var(--primary)' : 'var(--text-3)', letterSpacing: '0.05em' }}>
+              <div className="wo-day-name" style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: isToday ? 'var(--primary)' : 'var(--text-3)', letterSpacing: '0.05em' }}>
                 {DAY_NAMES[idx]}
               </div>
               <div className="wo-day-num" style={{ fontSize: '1.25rem', fontWeight: 700, color: isToday ? 'var(--primary)' : 'var(--text-1)', lineHeight: 1.2 }}>
                 {date.getDate()}
               </div>
-              {isToday && <div className="wo-today" style={{ fontSize: '0.625rem', color: 'var(--primary)', fontWeight: 600 }}>TODAY</div>}
+              {isToday && <div className="wo-today" style={{ fontSize: '0.8125rem', color: 'var(--primary)', fontWeight: 600 }}>TODAY</div>}
             </div>
 
             {/* Meal slot dots */}
@@ -118,14 +118,14 @@ export default function WeekOverview({ weekDates, entries, activities, members, 
 
             {/* Calorie badge */}
             {totalCal > 0 && (
-              <div className="wo-kcal" style={{ textAlign: 'center', fontSize: '0.6875rem', color: 'var(--text-3)', marginBottom: '0.25rem' }}>
+              <div className="wo-kcal" style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-3)', marginBottom: '0.25rem' }}>
                 🔥 {totalCal} kcal
               </div>
             )}
 
             {/* Activity badge */}
             {hasActivity && (
-              <div className="wo-active" style={{ textAlign: 'center', fontSize: '0.6875rem', color: '#6366f1' }}>⚡ Active</div>
+              <div className="wo-active" style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#6366f1' }}>⚡ Active</div>
             )}
           </button>
         )

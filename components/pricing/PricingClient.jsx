@@ -177,7 +177,7 @@ export default function PricingClient() {
               transform: isHighlight ? 'scale(1.03)' : 'none',
             }}>
               {isHighlight && (
-                <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: '#fbbf24', color: '#92400e', padding: '0.25rem 1rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: '#fbbf24', color: '#92400e', padding: '0.25rem 1rem', borderRadius: '999px', fontSize: '0.8125rem', fontWeight: 700 }}>
                   MOST POPULAR
                 </div>
               )}

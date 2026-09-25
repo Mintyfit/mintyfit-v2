@@ -24,7 +24,7 @@ function NutrientPill({ label, value, unit = 'g', color = 'var(--primary)' }) {
       minWidth: '72px',
     }}>
       <span style={{ fontSize: '1rem', fontWeight: 700, color }}>{Math.round(value)}{unit}</span>
-      <span style={{ fontSize: '0.6875rem', color: 'var(--text-3)', marginTop: '2px' }}>{label}</span>
+      <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: '2px' }}>{label}</span>
     </div>
   )
 }
@@ -64,13 +64,13 @@ function RecipeRow({ mr }) {
           </p>
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
             {servings && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>👥 {servings} servings</span>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>👥 {servings} servings</span>
             )}
             {prepTime && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>⏱ {prepTime}min</span>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>⏱ {prepTime}min</span>
             )}
             {kcal && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-3)' }}>🔥 {Math.round(kcal)} kcal</span>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>🔥 {Math.round(kcal)} kcal</span>
             )}
           </div>
         </div>
@@ -288,17 +288,17 @@ export default function MenuDetailClient({ menu, userId }) {
           {/* Badges */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.875rem' }}>
             {menu.diet_type && (
-              <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.25rem 0.625rem', borderRadius: '20px', background: 'rgba(61,138,62,0.1)', color: 'var(--primary)' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, padding: '0.25rem 0.625rem', borderRadius: '20px', background: 'rgba(61,138,62,0.1)', color: 'var(--primary)' }}>
                 {menu.diet_type}
               </span>
             )}
             {menu.duration_weeks && (
-              <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem', borderRadius: '20px', background: 'var(--bg-page)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.8125rem', padding: '0.25rem 0.625rem', borderRadius: '20px', background: 'var(--bg-page)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
                 {menu.duration_weeks} week{menu.duration_weeks > 1 ? 's' : ''}
               </span>
             )}
             {allRecipes.length > 0 && (
-              <span style={{ fontSize: '0.75rem', padding: '0.25rem 0.625rem', borderRadius: '20px', background: 'var(--bg-page)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: '0.8125rem', padding: '0.25rem 0.625rem', borderRadius: '20px', background: 'var(--bg-page)', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
                 {allRecipes.length} recipe{allRecipes.length !== 1 ? 's' : ''}
               </span>
             )}

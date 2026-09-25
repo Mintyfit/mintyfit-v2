@@ -12,7 +12,7 @@ function Section({ title, children }) {
       borderRadius: '12px', padding: '20px', marginBottom: '16px',
     }}>
       {title && (
-        <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
           {title}
         </h2>
       )}
@@ -85,7 +85,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove, on
               width: '100%', padding: '6px 8px',
               border: '1px solid var(--primary)', borderRadius: '6px',
               background: 'var(--bg-page)', color: 'var(--text-1)',
-              fontSize: '14px', fontWeight: '600',
+              fontSize: '0.875rem', fontWeight: '600',
             }}
           />
         ) : (
@@ -94,7 +94,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove, on
             title={canRename ? 'Click to edit name' : ''}
             style={{
               fontWeight: '600', color: displayName ? 'var(--text-1)' : 'var(--text-4)',
-              fontSize: '14px', cursor: canRename ? 'pointer' : 'default',
+              fontSize: '0.875rem', cursor: canRename ? 'pointer' : 'default',
               fontStyle: displayName ? 'normal' : 'italic',
             }}
           >
@@ -102,7 +102,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove, on
             {isCurrentUser && <span style={{ color: 'var(--text-3)', fontWeight: '400' }}> (you)</span>}
           </div>
         )}
-        <div style={{ fontSize: '12px', color: 'var(--text-3)', textTransform: 'capitalize' }}>
+        <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', textTransform: 'capitalize' }}>
           {member.role}
         </div>
       </div>
@@ -114,7 +114,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove, on
               style={{
                 background: 'none', border: '1px solid var(--border)',
                 borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
-                fontSize: '12px', color: 'var(--text-2)',
+                fontSize: '0.8125rem', color: 'var(--text-2)',
               }}
             >
               {member.role === 'co-admin' ? 'Demote' : 'Make co-admin'}
@@ -125,7 +125,7 @@ function MemberRow({ member, isCurrentUser, userRole, onRoleChange, onRemove, on
             style={{
               background: 'none', border: '1px solid #fecaca',
               borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
-              fontSize: '12px', color: '#ef4444',
+              fontSize: '0.8125rem', color: '#ef4444',
             }}
           >
             Remove
@@ -150,15 +150,15 @@ function ManagedMemberRow({ member, canManage, onEdit, onRemove }) {
         width: '40px', height: '40px', borderRadius: '50%',
         background: '#e0e7ff', color: '#4f46e5',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontWeight: '700', fontSize: '16px', flexShrink: 0,
+        fontWeight: '700', fontSize: '1rem', flexShrink: 0,
       }}>
         👶
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: '600', color: 'var(--text-1)', fontSize: '14px' }}>
-          {member.name} <span style={{ color: 'var(--text-3)', fontWeight: '400', fontSize: '12px' }}>managed</span>
+        <div style={{ fontWeight: '600', color: 'var(--text-1)', fontSize: '0.875rem' }}>
+          {member.name} <span style={{ color: 'var(--text-3)', fontWeight: '400', fontSize: '0.8125rem' }}>managed</span>
         </div>
-        <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+        <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
           {ageStr}{member.weight && ` · ${member.weight} kg`}{member.height && ` · ${member.height} cm`}
         </div>
       </div>
@@ -169,7 +169,7 @@ function ManagedMemberRow({ member, canManage, onEdit, onRemove }) {
             style={{
               background: 'none', border: '1px solid var(--border)',
               borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
-              fontSize: '12px', color: 'var(--text-2)',
+              fontSize: '0.8125rem', color: 'var(--text-2)',
             }}
           >
             Edit
@@ -179,7 +179,7 @@ function ManagedMemberRow({ member, canManage, onEdit, onRemove }) {
             style={{
               background: 'none', border: '1px solid #fecaca',
               borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
-              fontSize: '12px', color: '#ef4444',
+              fontSize: '0.8125rem', color: '#ef4444',
             }}
           >
             Remove
@@ -227,14 +227,14 @@ function AddChildModal({ onClose, onAdd }) {
     width: '100%', padding: '10px 12px',
     border: '1px solid var(--border)', borderRadius: '8px',
     background: 'var(--bg-page)', color: 'var(--text-1)',
-    fontSize: '14px',
+    fontSize: '0.875rem',
   }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
       <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: '420px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '20px' }}>Add child</h3>
-        {error && <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: '8px', padding: '10px', marginBottom: '12px', fontSize: '13px' }}>{error}</div>}
+        <h3 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '20px' }}>Add child</h3>
+        {error && <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: '8px', padding: '10px', marginBottom: '12px', fontSize: '0.8125rem' }}>{error}</div>}
 
         <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
           {[
@@ -244,7 +244,7 @@ function AddChildModal({ onClose, onAdd }) {
             { label: 'Height (cm)', key: 'height', type: 'number' },
           ].map(f => (
             <div key={f.key}>
-              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '4px', fontWeight: '500' }}>{f.label}</label>
+              <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '4px', fontWeight: '500' }}>{f.label}</label>
               <input
                 type={f.type} value={form[f.key]}
                 onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
@@ -253,7 +253,7 @@ function AddChildModal({ onClose, onAdd }) {
             </div>
           ))}
           <div>
-            <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '4px', fontWeight: '500' }}>Gender</label>
+            <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '4px', fontWeight: '500' }}>Gender</label>
             <select value={form.gender} onChange={e => setForm(prev => ({ ...prev, gender: e.target.value }))} style={inputStyle}>
               <option value="">Select</option>
               <option value="male">Male</option>
@@ -264,8 +264,8 @@ function AddChildModal({ onClose, onAdd }) {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 18px', cursor: 'pointer', fontSize: '14px', color: 'var(--text-2)' }}>Cancel</button>
-          <button onClick={handleAdd} disabled={saving} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', cursor: 'pointer', fontSize: '14px', opacity: saving ? 0.7 : 1 }}>
+          <button onClick={onClose} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 18px', cursor: 'pointer', fontSize: '0.875rem', color: 'var(--text-2)' }}>Cancel</button>
+          <button onClick={handleAdd} disabled={saving} style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', cursor: 'pointer', fontSize: '0.875rem', opacity: saving ? 0.7 : 1 }}>
             {saving ? 'Adding…' : 'Add child'}
           </button>
         </div>
@@ -309,16 +309,16 @@ function NoFamilyView({ onCreateFamily, onCreate }) {
       maxWidth: '500px', margin: '0 auto',
     }}>
       <div style={{ fontSize: '48px', marginBottom: '16px' }}>👨‍👩‍👧‍👦</div>
-      <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '8px' }}>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '8px' }}>
         You&apos;re not part of a family yet
       </h2>
-      <p style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '24px' }}>
+      <p style={{ color: 'var(--text-3)', fontSize: '0.875rem', marginBottom: '24px' }}>
         Create a family to share meal plans, portions, and shopping lists with your loved ones.
       </p>
 
       {showCreate ? (
         <div style={{ textAlign: 'left' }}>
-          <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+          <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
             Family name
           </label>
           <input
@@ -329,20 +329,20 @@ function NoFamilyView({ onCreateFamily, onCreate }) {
             style={{
               width: '100%', padding: '10px 12px', border: '1px solid var(--border)',
               borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)',
-              fontSize: '14px', marginBottom: '12px',
+              fontSize: '0.875rem', marginBottom: '12px',
             }}
           />
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               onClick={() => setShowCreate(false)}
-              style={{ flex: 1, background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px', cursor: 'pointer', color: 'var(--text-2)', fontSize: '14px' }}
+              style={{ flex: 1, background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px', cursor: 'pointer', color: 'var(--text-2)', fontSize: '0.875rem' }}
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
               disabled={creating || !familyName.trim()}
-              style={{ flex: 1, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: '500', opacity: creating ? 0.7 : 1 }}
+              style={{ flex: 1, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500', opacity: creating ? 0.7 : 1 }}
             >
               {creating ? 'Creating…' : 'Create family'}
             </button>
@@ -352,7 +352,7 @@ function NoFamilyView({ onCreateFamily, onCreate }) {
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={() => setShowCreate(true)}
-            style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}
+            style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
           >
             Create a family
           </button>
@@ -518,7 +518,7 @@ export default function MyFamilyClient({ userId, initialData }) {
   if (!family) {
     return (
       <div style={{ maxWidth: '700px', margin: '0 auto', padding: '24px 16px 80px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '24px' }}>My Family</h1>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '24px' }}>My Family</h1>
         <NoFamilyView onCreate={() => window.location.reload()} />
       </div>
     )
@@ -527,17 +527,17 @@ export default function MyFamilyClient({ userId, initialData }) {
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '24px 16px 80px' }}>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '4px' }}>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '4px' }}>
           {family.name}
         </h1>
-        <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>
+        <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
           {memberships.length} linked member{memberships.length !== 1 ? 's' : ''}
           {managedMembers.length > 0 && ` · ${managedMembers.length} managed child${managedMembers.length !== 1 ? 'ren' : ''}`}
         </div>
       </div>
 
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '14px' }}>
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '0.875rem' }}>
           {error}
         </div>
       )}
@@ -578,7 +578,7 @@ export default function MyFamilyClient({ userId, initialData }) {
                   onChange={e => setInviteEmail(e.target.value)}
                   style={{
                     flex: 1, padding: '10px 12px', border: '1px solid var(--border)',
-                    borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '14px',
+                    borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.875rem',
                   }}
                 />
                 <button
@@ -587,23 +587,23 @@ export default function MyFamilyClient({ userId, initialData }) {
                   style={{
                     background: 'var(--primary)', color: '#fff', border: 'none',
                     borderRadius: '8px', padding: '10px 16px', cursor: 'pointer',
-                    fontSize: '14px', opacity: (inviting || !inviteEmail) ? 0.6 : 1, whiteSpace: 'nowrap',
+                    fontSize: '0.875rem', opacity: (inviting || !inviteEmail) ? 0.6 : 1, whiteSpace: 'nowrap',
                   }}
                 >
                   {inviting ? 'Sending…' : 'Invite'}
                 </button>
               </div>
               {inviteNote && (
-                <div style={{ marginTop: '8px', padding: '10px', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '12px', color: '#92400e' }}>
+                <div style={{ marginTop: '8px', padding: '10px', background: '#fef9c3', border: '1px solid #fde68a', borderRadius: '8px', fontSize: '0.8125rem', color: '#92400e' }}>
                   {inviteNote}
                 </div>
               )}
               {inviteResult && (
-                <div style={{ marginTop: '8px', padding: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '12px', color: '#15803d' }}>
+                <div style={{ marginTop: '8px', padding: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '0.8125rem', color: '#15803d' }}>
                   Invite link: <span style={{ fontWeight: '600', wordBreak: 'break-all' }}>{inviteResult}</span>
                   <button
                     onClick={() => navigator.clipboard.writeText(inviteResult)}
-                    style={{ marginLeft: '8px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '12px' }}
+                    style={{ marginLeft: '8px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.8125rem' }}
                   >
                     Copy
                   </button>
@@ -614,7 +614,7 @@ export default function MyFamilyClient({ userId, initialData }) {
               onClick={() => setShowAddChild(true)}
               style={{
                 background: 'none', border: '1px solid var(--border)', color: 'var(--text-2)',
-                borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontSize: '14px', whiteSpace: 'nowrap',
+                borderRadius: '8px', padding: '10px 16px', cursor: 'pointer', fontSize: '0.875rem', whiteSpace: 'nowrap',
               }}
             >
               + Add child
@@ -628,7 +628,7 @@ export default function MyFamilyClient({ userId, initialData }) {
               onClick={handleLeaveFamily}
               style={{
                 background: 'none', border: '1px solid #fecaca', color: '#ef4444',
-                borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '14px',
+                borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '0.875rem',
               }}
             >
               Leave family
@@ -643,19 +643,19 @@ export default function MyFamilyClient({ userId, initialData }) {
           {invites.filter(i => i.status === 'pending').map(invite => (
             <div key={invite.id} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: '14px',
+              padding: '10px 0', borderBottom: '1px solid var(--border)', fontSize: '0.875rem',
               gap: '8px', flexWrap: 'wrap',
             }}>
               <div>
                 <span style={{ color: 'var(--text-1)', fontWeight: '500' }}>{invite.email}</span>
-                <span style={{ color: 'var(--text-3)', fontSize: '12px', marginLeft: '8px' }}>
+                <span style={{ color: 'var(--text-3)', fontSize: '0.8125rem', marginLeft: '8px' }}>
                   Sent {new Date(invite.created_at).toLocaleDateString()}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{
                   padding: '2px 8px', borderRadius: '10px',
-                  background: '#fef9c3', color: '#a16207', fontSize: '12px',
+                  background: '#fef9c3', color: '#a16207', fontSize: '0.8125rem',
                 }}>
                   Pending
                 </span>
@@ -666,7 +666,7 @@ export default function MyFamilyClient({ userId, initialData }) {
                       style={{
                         background: 'none', border: '1px solid var(--border)',
                         borderRadius: '6px', padding: '3px 10px', cursor: 'pointer',
-                        fontSize: '12px', color: 'var(--primary)',
+                        fontSize: '0.8125rem', color: 'var(--primary)',
                       }}
                     >
                       Resend
@@ -676,7 +676,7 @@ export default function MyFamilyClient({ userId, initialData }) {
                       style={{
                         background: 'none', border: '1px solid #fecaca',
                         borderRadius: '6px', padding: '3px 10px', cursor: 'pointer',
-                        fontSize: '12px', color: '#ef4444',
+                        fontSize: '0.8125rem', color: '#ef4444',
                       }}
                     >
                       Delete

@@ -136,7 +136,12 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
     setBusy(true)
     push({ role: 'user', text: trimmed })
 
-    const history = messages.slice(-6).map(m => ({ role: m.role, content: m.text || '' }))
+    // Only real text turns belong in history — card-only messages (option
+    // cards, generation results) have no `text` and would send empty content.
+    const history = messages
+      .slice(-6)
+      .filter(m => typeof m.text === 'string' && m.text.trim())
+      .map(m => ({ role: m.role, content: m.text }))
     try {
       const res = await fetch('/api/assistant', {
         method: 'POST',
@@ -178,6 +183,17 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
   }
   const sendRef = useRef(send)
   sendRef.current = send
+
+  // Single entry point for Enter + the Send button. The input is cleared only
+  // once the text is actually handed to send() — clearing it unconditionally
+  // (`send(input); setInput('')`) silently ate the user's message whenever
+  // `busy` was true, which is exactly when the AI is still answering.
+  function submit() {
+    const text = input.trim()
+    if (!text || busy) return
+    setInput('')
+    send(text)
+  }
 
   // ── Paywall teaser for free tier ─────────────────────────────────────────
   // Neutral placeholder while the profile (which carries subscription_tier)
@@ -225,11 +241,15 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
       display: 'flex', flexDirection: 'column',
       background: 'var(--bg-card)', border: '1px solid var(--border)',
       borderRadius: '14px', overflow: 'hidden',
-      height: '100%', maxHeight: '70vh',
+      height: '100%',
+      // max() keeps a sane floor: in the Android WebView all vh units can compute
+      // to 0 (shell LayoutParams bug), which would collapse maxHeight to 0 and
+      // hide the whole chat — including the reply input.
+      maxHeight: 'max(17.5rem, 70vh)',
     }}>
       {/* Header */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '0.5rem',
+        display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0,
         padding: '0.625rem 0.875rem', borderBottom: '1px solid var(--border)',
       }}>
         <Sparkles size={16} color="var(--primary)" />
@@ -246,12 +266,12 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
 
       {messages.length === 0 ? (
         /* Empty state — ONE large editable field (greeting replaced by input) */
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.625rem', minHeight: 180 }}>
+        <div style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.625rem' }}>
           <textarea
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); setInput('') } }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
             placeholder={'Ask for a meal or log a food — e.g. "chicken salad for lunch" or "I had two eggs and toast".'}
             aria-label="Message Minty Chat"
             rows={4}
@@ -268,23 +288,24 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
               disabled={voice.isProcessing}
               aria-label={voice.isListening ? 'Stop listening' : 'Voice input'}
               style={{
-                width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                border: `2px solid ${voice.isListening ? 'var(--primary)' : 'var(--border)'}`,
+                width: 'var(--control-action)', height: 'var(--control-action)', borderRadius: '50%', flexShrink: 0,
+                border: `2px solid ${voice.isListening ? 'var(--primary)' : 'var(--control-line)'}`,
                 background: voice.isListening ? 'rgba(61,138,62,0.12)' : 'var(--bg-card)',
-                color: voice.isListening ? 'var(--primary)' : 'var(--text-3)',
+                color: voice.isListening ? 'var(--primary)' : 'var(--text-2)',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
               <Mic size={18} />
             </button>
             <button
-              onClick={() => { send(input); setInput('') }}
+              onClick={submit}
               disabled={!input.trim() || busy}
               aria-label="Send message"
               style={{
-                flex: 1, height: 44, borderRadius: '22px', border: 'none',
-                background: input.trim() && !busy ? 'var(--primary)' : 'var(--border)',
-                color: input.trim() && !busy ? '#fff' : 'var(--text-4)',
+                flex: 1, minHeight: 'var(--control-action)', borderRadius: '22px',
+                border: `2px solid ${input.trim() && !busy ? 'var(--primary)' : 'var(--control-line)'}`,
+                background: input.trim() && !busy ? 'var(--primary)' : 'var(--bg-card)',
+                color: input.trim() && !busy ? '#fff' : 'var(--text-2)',
                 cursor: input.trim() && !busy ? 'pointer' : 'default',
                 fontWeight: 600, fontSize: 'var(--text-sm)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.375rem',
@@ -304,7 +325,9 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
       ) : (
         <>
       {/* Messages */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.625rem', minHeight: 180 }}>
+      {/* Messages — minHeight: 0 lets this pane shrink so the input row below can
+          never be pushed past the panel's maxHeight and clipped. */}
+      <div ref={scrollRef} style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', padding: '0.875rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
         {messages.map(m => (
           <div key={m.id} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '92%' }}>
             {m.text && (
@@ -497,17 +520,17 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
         )}
       </div>
 
-      {/* Input row */}
-      <div style={{ display: 'flex', gap: '0.375rem', padding: '0.625rem', borderTop: '1px solid var(--border)' }}>
+      {/* Input row — flexShrink: 0 so it is never clipped by maxHeight */}
+      <div style={{ display: 'flex', gap: '0.375rem', padding: '0.625rem', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
         <button
           onClick={voice.isListening ? voice.stopListening : voice.startListening}
           disabled={voice.isProcessing}
           aria-label={voice.isListening ? 'Stop listening' : 'Voice input'}
           style={{
-            width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-            border: `2px solid ${voice.isListening ? 'var(--primary)' : 'var(--border)'}`,
+            width: 'var(--control-action)', height: 'var(--control-action)', borderRadius: '50%', flexShrink: 0,
+            border: `2px solid ${voice.isListening ? 'var(--primary)' : 'var(--control-line)'}`,
             background: voice.isListening ? 'rgba(61,138,62,0.12)' : 'var(--bg-card)',
-            color: voice.isListening ? 'var(--primary)' : 'var(--text-3)',
+            color: voice.isListening ? 'var(--primary)' : 'var(--text-2)',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
@@ -518,23 +541,24 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { send(input); setInput('') } }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
           placeholder={voice.isListening ? 'Listening…' : voice.isProcessing ? 'Transcribing…' : 'Ask for a meal, or log food…'}
           aria-label="Message Minty Chat"
           style={{
-            flex: 1, padding: '0.625rem 0.875rem', borderRadius: '22px',
-            border: '1px solid var(--border)', background: 'var(--bg-page)',
+            flex: 1, minWidth: 0, padding: '0.625rem 0.875rem', borderRadius: '22px',
+            border: '1px solid var(--control-line)', background: 'var(--bg-page)',
             color: 'var(--text-1)', fontSize: 'var(--text-base)', outline: 'none',
           }}
         />
         <button
-          onClick={() => { send(input); setInput('') }}
+          onClick={submit}
           disabled={!input.trim() || busy}
           aria-label="Send message"
           style={{
-            width: 44, height: 44, borderRadius: '50%', flexShrink: 0, border: 'none',
-            background: input.trim() && !busy ? 'var(--primary)' : 'var(--border)',
-            color: input.trim() && !busy ? '#fff' : 'var(--text-4)',
+            width: 'var(--control-action)', height: 'var(--control-action)', borderRadius: '50%', flexShrink: 0,
+            border: `2px solid ${input.trim() && !busy ? 'var(--primary)' : 'var(--control-line)'}`,
+            background: input.trim() && !busy ? 'var(--primary)' : 'var(--bg-card)',
+            color: input.trim() && !busy ? '#fff' : 'var(--text-2)',
             cursor: input.trim() && !busy ? 'pointer' : 'default',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}

@@ -33,7 +33,7 @@ export default function ShoppingCartLink({ active, style, className, children })
           borderRadius: '9px',
           background: 'var(--primary)',
           color: '#fff',
-          fontSize: '0.625rem',
+          fontSize: '0.8125rem',
           fontWeight: 700,
           display: 'flex',
           alignItems: 'center',

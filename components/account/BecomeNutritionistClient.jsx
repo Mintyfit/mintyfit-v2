@@ -48,7 +48,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
     width: '100%', padding: '12px 14px',
     border: '1px solid var(--border)', borderRadius: '8px',
     background: 'var(--bg-card)', color: 'var(--text-1)',
-    fontSize: '14px',
+    fontSize: '0.875rem',
   }
 
   async function handleSubmit(e) {
@@ -96,10 +96,10 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
       <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 20px' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{ fontSize: '64px', marginBottom: '16px' }}>🩺</div>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '8px' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '8px' }}>
             Your Nutritionist Profile
           </h1>
-          <p style={{ color: 'var(--text-3)', fontSize: '15px', lineHeight: 1.6 }}>
+          <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
             Manage your public profile that clients see when they connect with you.
           </p>
         </div>
@@ -108,14 +108,14 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
           background: 'var(--bg-card)', border: '1px solid var(--border)',
           borderRadius: '12px', padding: '24px', marginBottom: '20px',
         }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '20px' }}>
             Edit profile
           </h2>
 
           {error && (
             <div style={{
               background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px',
-              padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '14px',
+              padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '0.875rem',
             }}>
               {error}
             </div>
@@ -123,7 +123,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
           {success && (
             <div style={{
               background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px',
-              padding: '12px', marginBottom: '16px', color: '#2d6e2e', fontSize: '14px',
+              padding: '12px', marginBottom: '16px', color: '#2d6e2e', fontSize: '0.875rem',
             }}>
               Profile updated successfully.
             </div>
@@ -135,7 +135,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
                 width: '72px', height: '72px', borderRadius: '50%',
                 background: avatarUrl ? 'transparent' : 'var(--primary)',
                 color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '28px', fontWeight: '700', overflow: 'hidden', flexShrink: 0,
+                fontSize: '1.75rem', fontWeight: '700', overflow: 'hidden', flexShrink: 0,
               }}>
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -158,7 +158,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
                   style={{
                     padding: '8px 16px', borderRadius: '8px',
                     border: '1px solid var(--border)', background: 'var(--bg-card)',
-                    color: 'var(--text-2)', cursor: 'pointer', fontSize: '13px',
+                    color: 'var(--text-2)', cursor: 'pointer', fontSize: '0.8125rem',
                     opacity: uploadingAvatar ? 0.6 : 1,
                   }}
                 >
@@ -168,7 +168,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
                 Display name
               </label>
               <input
@@ -181,7 +181,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
                 Email
               </label>
               <input
@@ -193,7 +193,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
             </div>
 
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
                 Bio
               </label>
               <textarea
@@ -204,13 +204,13 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
                 maxLength={500}
                 style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
               />
-              <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px', textAlign: 'right' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: '4px', textAlign: 'right' }}>
                 {formData.bio.length}/500
               </div>
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+              <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
                 Credentials URL
               </label>
               <input
@@ -220,7 +220,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
                 placeholder="https://linkedin.com/in/your-profile"
                 style={inputStyle}
               />
-              <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: '4px' }}>
                 Link to your LinkedIn, professional website, or certification
               </div>
             </div>
@@ -232,7 +232,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
                 width: '100%', padding: '14px',
                 background: 'var(--primary)', color: '#fff',
                 border: 'none', borderRadius: '10px', cursor: 'pointer',
-                fontWeight: '700', fontSize: '16px',
+                fontWeight: '700', fontSize: '1rem',
                 opacity: submitting ? 0.7 : 1,
               }}
             >
@@ -261,10 +261,10 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
     return (
       <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center', padding: '40px 20px' }}>
         <div style={{ fontSize: '64px', marginBottom: '20px' }}>✓</div>
-        <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
           Application received
         </h1>
-        <p style={{ color: 'var(--text-3)', fontSize: '15px', marginBottom: '24px' }}>
+        <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem', marginBottom: '24px' }}>
           Thanks for applying! We'll review your application and email you within a few business days.
         </p>
         <Link
@@ -285,10 +285,10 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
     return (
       <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center', padding: '40px 20px' }}>
         <div style={{ fontSize: '64px', marginBottom: '20px' }}>⏳</div>
-        <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
           Application pending
         </h1>
-        <p style={{ color: 'var(--text-3)', fontSize: '15px', marginBottom: '24px' }}>
+        <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem', marginBottom: '24px' }}>
           Your nutritionist application is being reviewed. We'll email you once approved.
         </p>
         <Link
@@ -310,10 +310,10 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
       {/* Hero */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <div style={{ fontSize: '64px', marginBottom: '16px' }}>🩺</div>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
           Become a MintyFit Nutritionist
         </h1>
-        <p style={{ color: 'var(--text-3)', fontSize: '15px', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
           Help families achieve their nutrition goals. Review meal plans, leave personalized notes, and make a real difference in people's health.
         </p>
       </div>
@@ -323,10 +323,10 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
         background: 'var(--bg-card)', border: '1px solid var(--border)',
         borderRadius: '12px', padding: '20px', marginBottom: '24px',
       }}>
-        <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '16px' }}>
           What you'll get
         </h2>
-        <ul style={{ color: 'var(--text-2)', fontSize: '14px', lineHeight: 1.8, paddingLeft: '20px' }}>
+        <ul style={{ color: 'var(--text-2)', fontSize: '0.875rem', lineHeight: 1.8, paddingLeft: '20px' }}>
           <li>Connect with families who need your expertise</li>
           <li>Review meal plans and leave nutrition notes</li>
           <li>View client statistics and progress</li>
@@ -339,14 +339,14 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
         background: 'var(--bg-card)', border: '1px solid var(--border)',
         borderRadius: '12px', padding: '24px',
       }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '20px' }}>
+        <h2 style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '20px' }}>
           Application
         </h2>
 
         {error && (
           <div style={{
             background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px',
-            padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '14px',
+            padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '0.875rem',
           }}>
             {error}
           </div>
@@ -354,7 +354,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
               Display name
             </label>
             <input
@@ -368,7 +368,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
               Email
             </label>
             <input
@@ -380,7 +380,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
           </div>
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
               Bio *
             </label>
             <textarea
@@ -392,13 +392,13 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
               style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }}
               required
             />
-            <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px', textAlign: 'right' }}>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: '4px', textAlign: 'right' }}>
               {formData.bio.length}/500
             </div>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
+            <label style={{ display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }}>
               Credentials URL (optional)
             </label>
             <input
@@ -408,7 +408,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
               placeholder="https://linkedin.com/in/your-profile"
               style={inputStyle}
             />
-            <div style={{ fontSize: '12px', color: 'var(--text-3)', marginTop: '4px' }}>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: '4px' }}>
               Link to your LinkedIn, professional website, or certification
             </div>
           </div>
@@ -423,7 +423,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
               onChange={e => setFormData(prev => ({ ...prev, gdpr: e.target.checked }))}
               style={{ marginTop: '2px', width: '16px', height: '16px', accentColor: 'var(--primary)' }}
             />
-            <span style={{ fontSize: '13px', color: 'var(--text-3)', lineHeight: 1.5 }}>
+            <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', lineHeight: 1.5 }}>
               I agree to MintyFit's{' '}
               <Link href="/terms" target="_blank" style={{ color: 'var(--primary)' }}>Terms of Service</Link>
               {' '}and{' '}
@@ -440,7 +440,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
                 width: '100%', padding: '14px',
                 background: 'var(--primary)', color: '#fff',
                 border: 'none', borderRadius: '10px', cursor: 'pointer',
-                fontWeight: '700', fontSize: '16px',
+                fontWeight: '700', fontSize: '1rem',
               }}
             >
               Sign in to apply
@@ -453,7 +453,7 @@ export default function BecomeNutritionistClient({ user, profile, alreadyApplied
                 width: '100%', padding: '14px',
                 background: 'var(--primary)', color: '#fff',
                 border: 'none', borderRadius: '10px', cursor: 'pointer',
-                fontWeight: '700', fontSize: '16px',
+                fontWeight: '700', fontSize: '1rem',
                 opacity: submitting ? 0.7 : 1,
               }}
             >

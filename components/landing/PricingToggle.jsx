@@ -76,7 +76,7 @@ export default function PricingToggle({ onOpenAuth }) {
           </button>
           <span style={{ fontSize: '0.9375rem', color: yearly ? 'var(--text-1)' : 'var(--text-3)', fontWeight: yearly ? 600 : 400 }}>
             Yearly
-            {yearly && <span style={{ marginLeft: '0.5rem', background: '#dcfce7', color: '#15803d', padding: '0.125rem 0.5rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>Save up to 38%</span>}
+            {yearly && <span style={{ marginLeft: '0.5rem', background: '#dcfce7', color: '#15803d', padding: '0.125rem 0.5rem', borderRadius: '20px', fontSize: '0.8125rem', fontWeight: 700 }}>Save up to 38%</span>}
           </span>
         </div>
 
@@ -158,7 +158,7 @@ function PricingCard({ tier, price, subPrice, description, features, cta, onCTA,
         <span style={{
           position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
           background: '#fef08a', color: '#713f12', padding: '0.25rem 0.875rem',
-          borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap',
+          borderRadius: '20px', fontSize: '0.8125rem', fontWeight: 700, whiteSpace: 'nowrap',
         }}>
           {badge}
         </span>

@@ -70,6 +70,12 @@ Always: `['breakfast', 'snack', 'lunch', 'snack2', 'dinner']`
 ### No Service Worker Cache — Ever
 The Android app is a thin WebView shell and must always draw content fresh from the web — **no client-side cache layer** (product decision, 2026-09-07). A caching service worker let installed shells serve stale pre-release UI after deploys. `public/sw.js` is a self-purging no-op; `ServiceWorkerCleanup.jsx` unregisters workers + purges caches on every load. Do NOT reintroduce a caching SW.
 
+### Mobile Controls - Never Raw `px`, Never `--border`
+- **Size interactive controls in `rem` via the tokens in `app/globals.css`**: `var(--control-check)` (checkbox), `var(--control-action)` (round action button), `var(--tap-min)` (min touch target). Raw `px` does **not** scale with the `html { font-size }` bump, which is why checkboxes (`width: 14`) and swap buttons (`width: 22`) became 2.4mm / 3.8mm and untappable on real phones while the surrounding `rem` text looked fine.
+- **Draw control boundaries with `var(--control-line)`** (>=3:1 in both themes). `--border` measures 1.24:1 and `--text-4` 2.54:1 on the light surface - literally invisible. `--border` is for cards/dividers/inputs only.
+- Readable text floor is `var(--text-2xs)` = `0.8125rem`; `0.75rem` only for uppercase badges. No raw `px` font sizes.
+- **To diagnose a mobile sizing/contrast report, ask for a PHOTO of the device, not a screenshot.** Screenshots are captured at device pixel ratio (~3x) and shown on a monitor, which magnifies undersized and low-contrast UI until it looks correct. See `knowledge/sessions/2026-09-25-mobile-control-visibility.md`.
+
 ### Android App Shell — `D:\WORKS\Minty\Android`
 Separate project (not this repo). Thin WebView → mintyfit.com; see **its own `AGENTS.md`** for full rules. Key facts:
 - **Build/release: double-click `build-release.bat`** (JDK env, signed AAB, optional Play production upload). Needs JAVA_HOME = Android Studio JBR; system java hangs.

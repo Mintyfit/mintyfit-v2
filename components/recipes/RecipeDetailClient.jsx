@@ -952,7 +952,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
       {/* Edit meta fields row — only shown in edit mode */}
       {isEditing && (
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem', padding: '0.875rem', background: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 600 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8125rem', color: 'var(--text-3)', fontWeight: 600 }}>
             Meal type
             <select
               value={editedRecipe.meal_type || ''}
@@ -966,7 +966,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
               <option value="snack2">Snack 2</option>
             </select>
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 600 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8125rem', color: 'var(--text-3)', fontWeight: 600 }}>
             Servings
             <input type="number" min="1" max="20"
               value={editedRecipe.base_servings || ''}
@@ -974,7 +974,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
               style={{ width: 64, padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1.5px solid var(--border)', background: 'var(--bg-page)', fontSize: '0.875rem' }}
             />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 600 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8125rem', color: 'var(--text-3)', fontWeight: 600 }}>
             Prep (min)
             <input type="number" min="0"
               value={editedRecipe.prep_time || ''}
@@ -982,7 +982,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
               style={{ width: 72, padding: '0.35rem 0.5rem', borderRadius: '6px', border: '1.5px solid var(--border)', background: 'var(--bg-page)', fontSize: '0.875rem' }}
             />
           </label>
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 600 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.8125rem', color: 'var(--text-3)', fontWeight: 600 }}>
             Cook (min)
             <input type="number" min="0"
               value={editedRecipe.cook_time || ''}
@@ -1005,7 +1005,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
             {isEditing ? '✏️ Edit Steps' : 'Instructions'}
           </h2>
           {!isEditing && (
-            <div style={{ display: 'inline-flex', border: '1.5px solid var(--border)', borderRadius: '8px', overflow: 'hidden', fontSize: '0.75rem', fontWeight: 600 }}>
+            <div style={{ display: 'inline-flex', border: '1.5px solid var(--border)', borderRadius: '8px', overflow: 'hidden', fontSize: '0.8125rem', fontWeight: 600 }}>
               <button
                 onClick={() => setViewMode('steps')}
                 style={{ padding: '0.35rem 0.7rem', background: viewMode === 'steps' ? 'var(--primary)' : 'transparent', color: viewMode === 'steps' ? '#fff' : 'var(--text-3)', border: 'none', cursor: 'pointer' }}
@@ -1050,18 +1050,18 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                         onClick={() => toggleIngredient(item.key)}
                         title={checked ? 'Remove from shopping list selection' : 'Add to shopping list selection'}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: '0.4rem',
-                          fontSize: '0.8125rem',
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          fontSize: '0.875rem',
                           background: checked ? 'var(--primary)' : item.isSwapped ? 'rgba(var(--primary-rgb, 61,138,62),0.08)' : 'var(--bg-page)',
-                          border: `1px solid ${checked ? 'var(--primary)' : item.isSwapped ? 'var(--primary)' : 'var(--border)'}`,
+                          border: 'none',
                           borderRadius: item.isSwapped ? '20px 0 0 20px' : '20px',
-                          padding: '0.2rem 0.65rem 0.2rem 0.45rem',
+                          padding: '0.5rem 0.75rem 0.5rem 0.55rem',
                           color: checked ? '#fff' : item.isSwapped ? 'var(--primary)' : 'var(--text-2)',
                           cursor: 'pointer', userSelect: 'none',
                         }}
                       >
-                        <span style={{ width: 14, height: 14, borderRadius: '3px', flexShrink: 0, border: `1.5px solid ${checked ? '#fff' : 'var(--border)'}`, background: checked ? '#fff' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {checked && <span style={{ color: 'var(--primary)', fontSize: '0.625rem', lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                        <span style={{ width: 'var(--control-check)', height: 'var(--control-check)', borderRadius: '4px', flexShrink: 0, border: `2px solid ${checked ? '#fff' : 'var(--control-line)'}`, background: checked ? '#fff' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {checked && <span style={{ color: 'var(--primary)', fontSize: '0.8125rem', lineHeight: 1, fontWeight: 700 }}>✓</span>}
                         </span>
                         {item.displayAmount ? <strong style={{ color: checked ? '#fff' : item.isSwapped ? 'var(--primary)' : 'var(--text-1)' }}>{item.displayAmount}{item.unit ? ` ${item.unit}` : ''} </strong> : ''}
                         <span style={{ textTransform: 'capitalize' }}>{item.displayName}</span>
@@ -1071,13 +1071,13 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                         title={item.isSwapped ? `Swapped — tap to change` : 'Find alternatives'}
                         style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          width: 22, height: 22,
+                          width: 'var(--control-action)', height: 'var(--control-action)',
                           borderRadius: item.isSwapped ? '0 20px 20px 0' : '50%',
-                          border: `1px solid ${item.isSwapped ? 'var(--primary)' : 'var(--border)'}`,
+                          border: `2px solid ${item.isSwapped ? 'var(--primary)' : 'var(--control-line)'}`,
                           borderLeft: item.isSwapped ? 'none' : undefined,
                           background: item.isSwapped ? 'var(--primary)' : 'var(--bg-page)',
-                          color: item.isSwapped ? '#fff' : 'var(--text-4)',
-                          cursor: 'pointer', fontSize: '0.625rem', padding: 0, flexShrink: 0,
+                          color: item.isSwapped ? '#fff' : 'var(--control-line)',
+                          cursor: 'pointer', fontSize: '0.875rem', padding: 0, flexShrink: 0,
                         }}
                       >
                         ⇄
@@ -1155,16 +1155,16 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                 background: isside ? '#e0e7ff' : 'var(--primary)',
                 color: isside ? '#4338ca' : '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: '0.75rem', flexShrink: 0, marginTop: '0.2rem',
+                fontWeight: 700, fontSize: '0.8125rem', flexShrink: 0, marginTop: '0.2rem',
               }}>
                 {i + 1}
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', marginBottom: '0.375rem', flexWrap: 'wrap' }}>
                   {step.title && <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-1)', margin: 0 }}>{step.title}</h3>}
-                  {step.time_marker && <span style={{ fontSize: '0.75rem', color: 'var(--text-4)' }}>⏱ {step.time_marker}</span>}
+                  {step.time_marker && <span style={{ fontSize: '0.8125rem', color: 'var(--text-4)' }}>⏱ {step.time_marker}</span>}
                   {step.component && (
-                    <span style={{ fontSize: '0.6875rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isside ? '#e0e7ff' : '#d1fae5', color: isside ? '#4338ca' : '#065f46', textTransform: 'capitalize' }}>
+                    <span style={{ fontSize: '0.8125rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: isside ? '#e0e7ff' : '#d1fae5', color: isside ? '#4338ca' : '#065f46', textTransform: 'capitalize' }}>
                       {recipe[`${step.component}_component`] || step.component}
                     </span>
                   )}
@@ -1191,12 +1191,12 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                             onClick={() => toggleIngredient(checkKey)}
                             title={checked ? 'Remove from shopping list selection' : 'Add to shopping list selection'}
                             style={{
-                              display: 'flex', alignItems: 'center', gap: '0.4rem',
-                              fontSize: '0.8125rem',
+                              display: 'flex', alignItems: 'center', gap: '0.5rem',
+                              fontSize: '0.875rem',
                               background: checked ? 'var(--primary)' : isSwapped ? 'rgba(var(--primary-rgb, 61,138,62),0.08)' : 'var(--bg-card)',
-                              border: `1px solid ${checked ? 'var(--primary)' : isSwapped ? 'var(--primary)' : 'var(--border)'}`,
+                              border: 'none',
                               borderRadius: isSwapped ? '20px 0 0 20px' : '20px',
-                              padding: '0.2rem 0.65rem 0.2rem 0.45rem',
+                              padding: '0.5rem 0.75rem 0.5rem 0.55rem',
                               color: checked ? '#fff' : isSwapped ? 'var(--primary)' : 'var(--text-2)',
                               cursor: 'pointer',
                               transition: 'background 0.15s, border-color 0.15s, color 0.15s',
@@ -1204,16 +1204,16 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                             }}
                           >
                             <span style={{
-                              width: 14, height: 14, borderRadius: '3px', flexShrink: 0,
-                              border: `1.5px solid ${checked ? '#fff' : 'var(--border)'}`,
+                              width: 'var(--control-check)', height: 'var(--control-check)', borderRadius: '4px', flexShrink: 0,
+                              border: `2px solid ${checked ? '#fff' : 'var(--control-line)'}`,
                               background: checked ? '#fff' : 'transparent',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              {checked && <span style={{ color: 'var(--primary)', fontSize: '0.625rem', lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                              {checked && <span style={{ color: 'var(--primary)', fontSize: '0.8125rem', lineHeight: 1, fontWeight: 700 }}>✓</span>}
                             </span>
                             {displayAmount ? <strong style={{ color: checked ? '#fff' : isSwapped ? 'var(--primary)' : 'var(--text-1)' }}>{displayAmount}{ing.unit ? ` ${ing.unit}` : ''} </strong> : ''}
                             <span style={{ textDecoration: isSwapped && !checked ? 'none' : 'none', textTransform: 'capitalize' }}>{displayName}</span>
-                            {isSwapped && !checked && <span style={{ fontSize: '0.6rem', opacity: 0.7 }}>✦</span>}
+                            {isSwapped && !checked && <span style={{ fontSize: '0.8125rem', opacity: 0.85 }}>✦</span>}
                           </button>
 
                           {/* Swap button */}
@@ -1229,13 +1229,13 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                             title={isSwapped ? `Swapped from ${ing.name} — tap to change` : 'Find alternatives'}
                             style={{
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              width: 22, height: 22,
+                              width: 'var(--control-action)', height: 'var(--control-action)',
                               borderRadius: isSwapped ? '0 20px 20px 0' : '50%',
-                              border: `1px solid ${isSwapped ? 'var(--primary)' : 'var(--border)'}`,
+                              border: `2px solid ${isSwapped ? 'var(--primary)' : 'var(--control-line)'}`,
                               borderLeft: isSwapped ? 'none' : undefined,
                               background: isSwapped ? 'var(--primary)' : 'var(--bg-card)',
-                              color: isSwapped ? '#fff' : 'var(--text-4)',
-                              cursor: 'pointer', fontSize: '0.625rem',
+                              color: isSwapped ? '#fff' : 'var(--control-line)',
+                              cursor: 'pointer', fontSize: '0.875rem',
                               padding: 0, flexShrink: 0,
                               transition: 'background 0.15s',
                             }}
@@ -1378,11 +1378,11 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
             <div className="rd-card">
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                 <h3 style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>Who&apos;s eating?</h3>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-4)' }}>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--text-4)' }}>
                   {activeEaters.size}/{members.length} checked
                 </span>
               </div>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', margin: '0 0 0.6rem' }}>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-4)', margin: '0 0 0.6rem' }}>
                 Check members to sum their portions. None checked = base recipe.
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -1397,25 +1397,25 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                       onClick={() => toggleEater(m.id)}
                       title={isEating ? `${m.display_name} is eating — click to uncheck` : `Click to add ${m.display_name}`}
                       style={{
-                        padding: '0.35rem 0.875rem', borderRadius: '20px',
-                        border: `1.5px solid ${isEating ? 'var(--primary)' : 'var(--border)'}`,
+                        padding: '0.55rem 1rem', borderRadius: '20px',
+                        border: 'none',
                         background: isEating ? 'var(--primary)' : 'transparent',
-                        color: isEating ? '#fff' : 'var(--text-3)',
-                        fontSize: '0.8125rem', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '0.4rem',
-                        opacity: isEating ? 1 : 0.7,
+                        color: isEating ? '#fff' : 'var(--text-2)',
+                        fontSize: '0.875rem', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        minHeight: 'var(--tap-min)',
                         transition: 'all 0.15s',
                       }}
                     >
                       <span
                         aria-hidden="true"
                         style={{
-                          width: 14, height: 14, borderRadius: 3, flexShrink: 0,
-                          border: `1.5px solid ${isEating ? '#fff' : 'var(--text-4)'}`,
+                          width: 'var(--control-check)', height: 'var(--control-check)', borderRadius: 4, flexShrink: 0,
+                          border: `2px solid ${isEating ? '#fff' : 'var(--control-line)'}`,
                           background: isEating ? '#fff' : 'transparent',
                           color: 'var(--primary)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: '0.625rem', fontWeight: 800, lineHeight: 1,
+                          fontSize: '0.8125rem', fontWeight: 800, lineHeight: 1,
                         }}
                       >
                         {isEating ? '✓' : ''}
@@ -1436,11 +1436,12 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                         key={n}
                         onClick={() => setMealsPerDay(n)}
                         style={{
-                          padding: '0.2rem 0.6rem', borderRadius: '6px',
-                          border: `1px solid ${mealsPerDay === n ? 'var(--primary)' : 'var(--border)'}`,
+                          padding: '0.35rem 0.7rem', borderRadius: '6px',
+                          border: `2px solid ${mealsPerDay === n ? 'var(--primary)' : 'var(--control-line)'}`,
                           background: mealsPerDay === n ? 'var(--primary)' : 'transparent',
-                          color: mealsPerDay === n ? '#fff' : 'var(--text-3)',
-                          fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
+                          color: mealsPerDay === n ? '#fff' : 'var(--text-2)',
+                          fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer',
+                          minWidth: '2.25rem', minHeight: '2.25rem',
                         }}
                       >
                         {n}
@@ -1451,7 +1452,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
               </div>
 
               {isScaled && memberBudget ? (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-4)', marginTop: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                   <span>Batch scale: {Math.round(memberBudget.batchScale * 100)}% · Total: {Math.round(memberBudget.familyMealTarget)} kcal</span>
                   {memberBudget.eaters.map(e => (
                     <span key={e.member.id}>
@@ -1461,7 +1462,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                   {hasGuests && <span>+ {guestCount} guest{guestCount > 1 ? 's' : ''}</span>}
                 </div>
               ) : (
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-4)', marginTop: '0.6rem' }}>
                   Showing full recipe ({recipe.base_servings || 1} serving{(recipe.base_servings || 1) === 1 ? '' : 's'}).
                 </p>
               )}
@@ -1478,7 +1479,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                   }}
                 >
                   <span>Add guests</span>
-                  <span style={{ color: 'var(--text-4)', fontSize: '0.75rem' }}>{showGuests ? '▲' : '▼'}</span>
+                  <span style={{ color: 'var(--text-4)', fontSize: '0.8125rem' }}>{showGuests ? '▲' : '▼'}</span>
                 </button>
                 {showGuests && (
                   <div style={{ paddingTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1492,7 +1493,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                         onChange={e => setGuestCount(parseInt(e.target.value, 10))}
                         style={{ width: '100%', accentColor: 'var(--primary)' }}
                       />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-4)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-4)' }}>
                         <span>1</span>
                         <span>20</span>
                       </div>
@@ -1507,12 +1508,12 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                         onChange={e => setGuestCalories(parseInt(e.target.value, 10))}
                         style={{ width: '100%', accentColor: 'var(--primary)' }}
                       />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--text-4)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: 'var(--text-4)' }}>
                         <span>100</span>
                         <span>500</span>
                       </div>
                     </div>
-                    <p style={{ fontSize: '0.6875rem', color: 'var(--text-4)', margin: 0 }}>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-4)', margin: 0 }}>
                       Guests scale ingredient amounts but their nutrition is not saved to your Plan statistics.
                     </p>
                   </div>
@@ -1527,7 +1528,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 {recipe.prep_time > 0 && (
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Prep Time</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Prep Time</div>
                     <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text-1, #111)' }}>
                       {recipe.prep_time}<span style={{ fontSize: '0.8125rem', fontWeight: 500 }}> Min</span>
                     </div>
@@ -1535,7 +1536,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                 )}
                 {recipe.cook_time > 0 && (
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Cook Time</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Cook Time</div>
                     <div style={{ fontSize: '1.375rem', fontWeight: 800, color: 'var(--text-1, #111)' }}>
                       {recipe.cook_time}<span style={{ fontSize: '0.8125rem', fontWeight: 500 }}> Min</span>
                     </div>
@@ -1556,7 +1557,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
             }
             return (
             <div className="rd-card" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
                 {showRawNutrition ? 'Raw Ingredients' : isScaled ? `For ${eatingMembers.map(m => m.display_name).join(' & ')}` : 'Per Serving'}
               </div>
               <DonutChart ps={ps} />
@@ -1621,14 +1622,14 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                   background: '#fffbeb', borderRadius: 8,
                   display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                 }}>
-                  <span style={{ fontSize: '0.75rem', color: '#92400e' }}>
+                  <span style={{ fontSize: '0.8125rem', color: '#92400e' }}>
                     {rawNutritionData.missingCount}/{rawNutritionData.totalCount} ingredients not found
                   </span>
                   <button
                     onClick={() => handleToggleRawCooked(true)}
                     disabled={isLoadingRaw}
                     style={{
-                      fontSize: '0.75rem', fontWeight: 600, padding: '2px 10px', borderRadius: 6,
+                      fontSize: '0.8125rem', fontWeight: 600, padding: '2px 10px', borderRadius: 6,
                       background: isLoadingRaw ? 'var(--bg-subtle)' : 'var(--primary)',
                       color: isLoadingRaw ? 'var(--text-4)' : '#fff',
                       border: 'none', cursor: isLoadingRaw ? 'default' : 'pointer',
@@ -1642,7 +1643,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
 
               {/* Partial coverage note */}
               {showRawNutrition && rawNutritionData && !rawNutritionData.allMissing && !rawNutritionData.tooIncomplete && rawNutritionData.missingCount > 0 && (
-                <div style={{ fontSize: '0.6875rem', color: '#9ca3af', marginTop: 6 }}>
+                <div style={{ fontSize: '0.8125rem', color: '#9ca3af', marginTop: 6 }}>
                   ({rawNutritionData.missingCount} ingredient{rawNutritionData.missingCount !== 1 ? 's' : ''} unavailable)
                 </div>
               )}

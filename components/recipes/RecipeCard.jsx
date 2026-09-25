@@ -116,7 +116,7 @@ export default function RecipeCard({ recipe, onFavouriteToggle }) {
             color: mealStyle.color,
             padding: '0.2rem 0.6rem',
             borderRadius: '20px',
-            fontSize: '0.75rem',
+            fontSize: '0.8125rem',
             fontWeight: 600,
             textTransform: 'capitalize',
           }}>
@@ -175,7 +175,7 @@ export default function RecipeCard({ recipe, onFavouriteToggle }) {
               </span>
             )}
             {glLabel && (
-              <span style={{ fontSize: '0.75rem' }}>{glLabel}</span>
+              <span style={{ fontSize: '0.8125rem' }}>{glLabel}</span>
             )}
           </div>
         </div>

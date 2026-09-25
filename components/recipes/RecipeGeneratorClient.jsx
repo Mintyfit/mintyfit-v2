@@ -332,7 +332,7 @@ export default function RecipeGeneratorClient() {
               <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-1)', marginBottom: '0.75rem' }}>Instructions</h3>
               {visibleSteps.map((s, i) => (
                 <div key={i} style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0, marginTop: '0.125rem' }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--primary)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8125rem', fontWeight: 700, flexShrink: 0, marginTop: '0.125rem' }}>
                     {i + 1}
                   </div>
                   <div>

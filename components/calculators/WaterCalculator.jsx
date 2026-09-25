@@ -92,7 +92,7 @@ export default function WaterCalculator() {
     border: '1px solid var(--border, #d1d5db)',
     borderRadius: '8px',
     padding: '10px 16px',
-    fontSize: '16px',
+    fontSize: '1rem',
     background: 'var(--bg-page, #fff)',
     color: 'var(--text-1, #111)',
   }
@@ -101,7 +101,7 @@ export default function WaterCalculator() {
     display: 'block',
     marginBottom: '8px',
     fontWeight: 600,
-    fontSize: '14px',
+    fontSize: '0.875rem',
     color: 'var(--text-2, #374151)',
   }
 

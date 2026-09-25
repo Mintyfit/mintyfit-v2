@@ -23,7 +23,7 @@ export function NutritionDelta({ nutrition }) {
         const val = nutrition[key]
         if (val == null) return null
         return (
-          <span key={key} style={{ fontSize: '0.6875rem', color: '#6b7280', fontWeight: 600 }}>
+          <span key={key} style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: 600 }}>
             {label}: {Math.round(val)}{unit}
           </span>
         )
@@ -122,7 +122,7 @@ export function IngredientAlternativesSheet({ ingredient, alternatives, loading,
                   <span style={{ fontWeight: 700, color: 'var(--text-1)', fontSize: '0.9375rem', textTransform: 'capitalize' }}>
                     {alt.name}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--primary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     Use this →
                   </span>
                 </div>
@@ -315,7 +315,7 @@ export function NutritionSection({ nutrition, memberMultiplier, memberGoal }) {
                       <div style={{ flex: 1, height: 6, background: 'var(--bg-page)', borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ width: `${pct}%`, height: '100%', background: getNutrientColor(pct), borderRadius: 3 }} />
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', width: 36 }}>{Math.round(pct)}%</span>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', width: 36 }}>{Math.round(pct)}%</span>
                     </div>
                   )}
                 </div>
@@ -352,7 +352,7 @@ export function NutritionSection({ nutrition, memberMultiplier, memberGoal }) {
                 : '#ef4444'
               return (
                 <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', width: 140, flexShrink: 0 }}>{f.label}</span>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-2)', width: 140, flexShrink: 0 }}>{f.label}</span>
                   <span style={{ fontSize: '0.8125rem', color: 'var(--text-1)', width: 56, textAlign: 'right', flexShrink: 0 }}>
                     {Math.round(val * 10) / 10}{f.unit}
                   </span>
@@ -361,7 +361,7 @@ export function NutritionSection({ nutrition, memberMultiplier, memberGoal }) {
                       <div style={{ flex: 1, height: 5, background: 'var(--bg-page)', borderRadius: 3, overflow: 'hidden' }}>
                         <div style={{ width: `${Math.min(100, pct)}%`, height: '100%', background: barColor, borderRadius: 3 }} />
                       </div>
-                      <span style={{ fontSize: '0.6875rem', color: 'var(--text-4)', width: 32 }}>{Math.round(pct)}%</span>
+                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-4)', width: 32 }}>{Math.round(pct)}%</span>
                     </div>
                   ) : <div style={{ flex: 1 }} />}
                 </div>
@@ -405,7 +405,7 @@ export function SidebarNutrition({ nutrition, memberMultiplier, memberGoal, memb
 
   return (
     <div className="rd-card">
-      <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
+      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
         {memberDailyNeeds ? 'Your portion & % of daily needs' : 'Nutrition Information'}
       </div>
 
@@ -426,7 +426,7 @@ export function SidebarNutrition({ nutrition, memberMultiplier, memberGoal, memb
                 <span style={{ fontWeight: 600, color: 'var(--text-1, #111)', textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {val < 1 && val > 0 ? val.toFixed(2) : Math.round(val * 10) / 10}{' '}{f.unit}
                   {rda && (
-                    <span style={{ color: '#bbb', fontWeight: 400, fontSize: '0.6875rem' }}>
+                    <span style={{ color: '#bbb', fontWeight: 400, fontSize: '0.8125rem' }}>
                       {' '}· {Math.round((val / rda) * 100)}%
                     </span>
                   )}
@@ -467,12 +467,12 @@ export function SidebarNutrition({ nutrition, memberMultiplier, memberGoal, memb
               : '#9ca3af'
             return (
               <div key={f.key}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', alignItems: 'baseline', gap: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', alignItems: 'baseline', gap: 4 }}>
                   <span style={{ color: 'var(--text-3, #666)' }}>{f.label}</span>
                   <span style={{ fontWeight: 600, color: 'var(--text-1, #111)', textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {val < 1 && val > 0 ? val.toFixed(2) : Math.round(val * 10) / 10}{' '}{f.unit}
                     {rda && (
-                      <span style={{ color: '#bbb', fontWeight: 400, fontSize: '0.625rem' }}>
+                      <span style={{ color: '#bbb', fontWeight: 400, fontSize: '0.8125rem' }}>
                         {' '}· {Math.round((val / rda) * 100)}%
                       </span>
                     )}

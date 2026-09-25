@@ -70,7 +70,7 @@ export default function RegenerateImageButton({ recipe, onGenerated, variant = '
         {busy ? 'Generating…' : (isSvgPlaceholder ? 'Generate photo' : 'New photo')}
       </button>
       {error && (
-        <div style={{ marginTop: '0.4rem', background: 'rgba(255,255,255,0.95)', color: '#b91c1c', fontSize: '0.72rem', padding: '0.3rem 0.5rem', borderRadius: '6px' }}>
+        <div style={{ marginTop: '0.4rem', background: 'rgba(255,255,255,0.95)', color: '#b91c1c', fontSize: '0.8125rem', padding: '0.3rem 0.5rem', borderRadius: '6px' }}>
           {error}
         </div>
       )}

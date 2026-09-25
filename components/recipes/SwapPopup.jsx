@@ -37,7 +37,7 @@ function NutritionDelta({ original, replacement, amount }) {
         const positive = lowerBetter ? delta < 0 : delta > 0
         const color = positive ? '#2d6e2e' : '#c0392b'
         return (
-          <span key={key} style={{ fontSize: '0.6875rem', color, fontWeight: 600 }}>
+          <span key={key} style={{ fontSize: '0.8125rem', color, fontWeight: 600 }}>
             {label}: {delta > 0 ? '+' : ''}{Math.round(delta)}
           </span>
         )
@@ -112,7 +112,7 @@ export default function SwapPopup({ ingredient, recipeContext, onSwap, onClose }
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Swap ingredient
             </div>
             <div style={{ fontSize: '1.0625rem', fontWeight: 700, color: 'var(--text-1)', marginTop: 2 }}>

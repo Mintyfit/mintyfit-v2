@@ -30,7 +30,7 @@ function CategorySection({ group, onToggle, onDelete }) {
           </svg>
           {group.label}
         </h3>
-        <span style={{ fontSize: '0.75rem', color: 'var(--text-4)', fontWeight: 400 }}>
+        <span style={{ fontSize: '0.8125rem', color: 'var(--text-4)', fontWeight: 400 }}>
           {group.items.length} item{group.items.length !== 1 ? 's' : ''}
         </span>
       </button>
@@ -61,15 +61,15 @@ function ItemRow({ item, onToggle, onDelete }) {
         onClick={() => onToggle(item.id, !item.checked)}
         aria-label={item.checked ? 'Uncheck item' : 'Check item'}
         style={{
-          width: 22, height: 22, borderRadius: '6px', flexShrink: 0,
-          border: `2px solid ${item.checked ? 'var(--primary)' : 'var(--border)'}`,
+          width: 'var(--control-action)', height: 'var(--control-action)', borderRadius: '10px', flexShrink: 0,
+          border: `2px solid ${item.checked ? 'var(--primary)' : 'var(--control-line)'}`,
           background: item.checked ? 'var(--primary)' : 'transparent',
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s',
         }}
       >
         {item.checked && (
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2">
+          <svg width="20" height="20" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2">
             <polyline points="2 6 5 9 10 3"/>
           </svg>
         )}

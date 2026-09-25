@@ -127,7 +127,7 @@ export default function RecipePickerModal({ mealType, userId, onSelect, onClose 
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.title}</p>
-                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-3)' }}>
+                    <p style={{ margin: 0, fontSize: '0.8125rem', color: 'var(--text-3)' }}>
                       {recipe.meal_type} · {recipe.nutrition?.perServing?.energy_kcal ? `${Math.round(recipe.nutrition.perServing.energy_kcal)} kcal` : ''}
                     </p>
                   </div>

@@ -131,7 +131,7 @@ export default async function BlogPostPage({ params }) {
         {cats.length > 0 && (
           <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
             {cats.map(c => (
-              <span key={c} style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', borderRadius: '999px', background: '#d1fae5', color: '#065f46' }}>
+              <span key={c} style={{ fontSize: '0.8125rem', padding: '0.2rem 0.6rem', borderRadius: '999px', background: '#d1fae5', color: '#065f46' }}>
                 {c}
               </span>
             ))}

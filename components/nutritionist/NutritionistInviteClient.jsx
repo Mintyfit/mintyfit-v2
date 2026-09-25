@@ -79,17 +79,17 @@ export default function NutritionistInviteClient({ token, invite, error, user })
           <div style={{
             width: '64px', height: '64px', borderRadius: '50%',
             background: 'var(--primary)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', margin: '0 auto 20px', fontSize: '28px',
+            justifyContent: 'center', margin: '0 auto 20px', fontSize: '1.75rem',
           }}>
             🩺
           </div>
 
           {error ? (
             <>
-              <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
+              <h1 style={{ fontSize: '1.375rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
                 Invite Not Found
               </h1>
-              <p style={{ color: 'var(--text-3)', fontSize: '15px', marginBottom: '28px' }}>
+              <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem', marginBottom: '28px' }}>
                 {error}
               </p>
               <Link href="/" style={{
@@ -102,25 +102,25 @@ export default function NutritionistInviteClient({ token, invite, error, user })
             </>
           ) : connected ? (
             <>
-              <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
+              <h1 style={{ fontSize: '1.375rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
                 Connected!
               </h1>
-              <p style={{ color: 'var(--text-3)', fontSize: '15px' }}>
+              <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem' }}>
                 You're now connected with <strong>{nutritionistName}</strong>. Redirecting…
               </p>
             </>
           ) : (
             <>
-              <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
+              <h1 style={{ fontSize: '1.375rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '12px' }}>
                 Connect with {nutritionistName}
               </h1>
-              <p style={{ color: 'var(--text-3)', fontSize: '15px', marginBottom: '8px' }}>
+              <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem', marginBottom: '8px' }}>
                 {nutritionistName} has invited you to connect on MintyFit. Once connected, they can review your meal plans and leave personal nutrition guidance.
               </p>
 
               {!user ? (
                 <>
-                  <p style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '20px' }}>
+                  <p style={{ color: 'var(--text-3)', fontSize: '0.875rem', marginBottom: '20px' }}>
                     Sign in or create an account to accept this invite.
                   </p>
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -129,7 +129,7 @@ export default function NutritionistInviteClient({ token, invite, error, user })
                       style={{
                         padding: '12px 24px', borderRadius: '10px',
                         background: 'var(--primary)', color: '#fff',
-                        textDecoration: 'none', fontWeight: '600', fontSize: '15px',
+                        textDecoration: 'none', fontWeight: '600', fontSize: '0.9375rem',
                         border: 'none', cursor: 'pointer',
                       }}
                     >
@@ -140,7 +140,7 @@ export default function NutritionistInviteClient({ token, invite, error, user })
                       style={{
                         padding: '12px 24px', borderRadius: '10px',
                         border: '1px solid var(--border)', color: 'var(--text-1)',
-                        textDecoration: 'none', fontWeight: '600', fontSize: '15px',
+                        textDecoration: 'none', fontWeight: '600', fontSize: '0.9375rem',
                         background: 'var(--bg-card)', cursor: 'pointer',
                       }}
                     >
@@ -151,15 +151,15 @@ export default function NutritionistInviteClient({ token, invite, error, user })
               ) : (
                 <>
                   {invite?.email && invite.email !== user.email && (
-                    <p style={{ color: '#d97706', fontSize: '13px', marginBottom: '16px', background: '#fef3c7', padding: '10px', borderRadius: '8px' }}>
+                    <p style={{ color: '#d97706', fontSize: '0.8125rem', marginBottom: '16px', background: '#fef3c7', padding: '10px', borderRadius: '8px' }}>
                       This invite was sent to {invite.email}. You are signed in as {user.email}.
                     </p>
                   )}
                   {connectError && (
-                    <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '16px' }}>{connectError}</p>
+                    <p style={{ color: '#dc2626', fontSize: '0.8125rem', marginBottom: '16px' }}>{connectError}</p>
                   )}
                   {autoAcceptError && (
-                    <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '16px' }}>{autoAcceptError}</p>
+                    <p style={{ color: '#dc2626', fontSize: '0.8125rem', marginBottom: '16px' }}>{autoAcceptError}</p>
                   )}
                   <button
                     onClick={handleConnect}
@@ -168,13 +168,13 @@ export default function NutritionistInviteClient({ token, invite, error, user })
                       width: '100%', padding: '14px',
                       background: 'var(--primary)', color: '#fff',
                       border: 'none', borderRadius: '10px', cursor: 'pointer',
-                      fontWeight: '700', fontSize: '16px',
+                      fontWeight: '700', fontSize: '1rem',
                       opacity: connecting ? 0.7 : 1,
                     }}
                   >
                     {connecting ? 'Connecting…' : `Connect with ${nutritionistName}`}
                   </button>
-                  <p style={{ marginTop: '16px', color: 'var(--text-3)', fontSize: '13px' }}>
+                  <p style={{ marginTop: '16px', color: 'var(--text-3)', fontSize: '0.8125rem' }}>
                     Signed in as {user.email}
                   </p>
                 </>

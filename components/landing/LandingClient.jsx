@@ -105,7 +105,7 @@ function Section({ section, idx, onOpenAuth }) {
     }}>
       <div style={{ position: 'absolute', inset: 'auto -15% -30% auto', width: 520, height: 520, background: 'radial-gradient(circle, rgba(159,207,127,0.22), transparent 64%)', pointerEvents: 'none', borderRadius: '50%' }} />
       <div style={{ maxWidth: 820, position: 'relative', zIndex: 1 }}>
-        <div style={{ fontSize: 'clamp(14px, 1.4vw, 17px)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-1)', marginBottom: 28 }}>
+          <div style={{ fontSize: 'clamp(0.875rem, 1.4vw, 1.0625rem)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-1)', marginBottom: 28 }}>
           {section.eyebrow}
         </div>
         {idx === 0 ? (

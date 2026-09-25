@@ -23,10 +23,10 @@ const inputStyle = {
   width: '100%', padding: '10px 12px',
   border: '1px solid var(--border)', borderRadius: '8px',
   background: 'var(--bg-page)', color: 'var(--text-1)',
-  fontSize: '14px', outline: 'none',
+  fontSize: '0.875rem', outline: 'none',
 }
 
-const labelStyle = { display: 'block', fontSize: '13px', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }
+const labelStyle = { display: 'block', fontSize: '0.8125rem', color: 'var(--text-2)', marginBottom: '6px', fontWeight: '500' }
 
 function Section({ title, children }) {
   return (
@@ -34,7 +34,7 @@ function Section({ title, children }) {
       background: 'var(--bg-card)', border: '1px solid var(--border)',
       borderRadius: '12px', padding: '20px', marginBottom: '16px',
     }}>
-      <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
+      <h2 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
         {title}
       </h2>
       {children}
@@ -116,14 +116,14 @@ function BMRBreakdown({ profile, weightLogs, isMetric }) {
 
   return (
     <Section title="Energy Needs (BMR)">
-      <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: '0 0 14px', lineHeight: 1.5 }}>
+      <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', margin: '0 0 14px', lineHeight: 1.5 }}>
         Your Basal Metabolic Rate is the foundation for every nutrition target on the
         Plan and Statistics pages. It's recalculated whenever you update weight,
         height, age, or gender.
       </p>
 
       {!bmr ? (
-        <div style={{ padding: '14px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px', fontSize: '13px', color: '#92400e' }}>
+        <div style={{ padding: '14px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '8px', fontSize: '0.8125rem', color: '#92400e' }}>
           We can't calculate your BMR yet — please fill in your weight, height, age,
           and gender above.
         </div>
@@ -135,10 +135,10 @@ function BMRBreakdown({ profile, weightLogs, isMetric }) {
           </div>
 
           <div style={{ background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px', marginBottom: '12px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 }}>
               Equation used
             </div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-1)', marginBottom: 8 }}>
               {explained.branch}
             </div>
             {explained.steps && explained.steps.length > 0 && (
@@ -146,7 +146,7 @@ function BMRBreakdown({ profile, weightLogs, isMetric }) {
                 {explained.steps.map((s, i) => (
                   <div key={i} style={{
                     display: 'flex', justifyContent: 'space-between', padding: '3px 0',
-                    fontSize: '12px', color: s.isTotal ? 'var(--text-2)' : 'var(--text-3)',
+                    fontSize: '0.8125rem', color: s.isTotal ? 'var(--text-2)' : 'var(--text-3)',
                     borderTop: s.isTotal ? '1px dashed var(--border)' : 'none',
                     fontWeight: s.isTotal ? 600 : 400,
                     marginTop: s.isTotal ? 4 : 0, paddingTop: s.isTotal ? 7 : 3,
@@ -157,11 +157,11 @@ function BMRBreakdown({ profile, weightLogs, isMetric }) {
                 ))}
               </div>
             )}
-            <code style={{ fontSize: '12px', color: 'var(--text-2)', fontFamily: 'ui-monospace, monospace' }}>
+            <code style={{ fontSize: '0.8125rem', color: 'var(--text-2)', fontFamily: 'ui-monospace, monospace' }}>
               {explained.formula} = {bmr} kcal/day
             </code>
             {explained.additions.length > 0 && (
-              <div style={{ marginTop: 8, fontSize: '12px', color: 'var(--text-2)' }}>
+              <div style={{ marginTop: 8, fontSize: '0.8125rem', color: 'var(--text-2)' }}>
                 {explained.additions.map((a, i) => (
                   <div key={i}>{a.op} {a.kcal} kcal — {a.label}</div>
                 ))}
@@ -170,10 +170,10 @@ function BMRBreakdown({ profile, weightLogs, isMetric }) {
           </div>
 
           <div style={{ background: 'var(--bg-page)', border: '1px solid var(--border)', borderRadius: '8px', padding: '12px 14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
+            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 8 }}>
               Inputs
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '13px', color: 'var(--text-2)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
               <span>Weight</span><strong style={{ color: 'var(--text-1)' }}>{user.weight ? formatWeight(user.weight, isMetric) : '—'}</strong>
               <span>Height</span><strong style={{ color: 'var(--text-1)' }}>{user.height ? formatHeight(user.height, isMetric) : '—'}</strong>
               <span>Age</span><strong style={{ color: 'var(--text-1)' }}>{a ?? '—'}</strong>
@@ -183,7 +183,7 @@ function BMRBreakdown({ profile, weightLogs, isMetric }) {
           </div>
 
           {needs && (
-            <div style={{ marginTop: 14, fontSize: '12px', color: 'var(--text-3)', lineHeight: 1.5 }}>
+            <div style={{ marginTop: 14, fontSize: '0.8125rem', color: 'var(--text-3)', lineHeight: 1.5 }}>
               At {sedentaryTDEE} kcal/day your daily targets work out to roughly{' '}
               <strong>{Math.round(needs.protein)}g protein</strong>,{' '}
               <strong>{Math.round(needs.carbs_total)}g carbs</strong>,{' '}
@@ -205,10 +205,10 @@ function Stat({ label, value, accent }) {
       border: `1px solid ${accent ? 'var(--primary)' : 'var(--border)'}`,
       borderRadius: '8px', padding: '12px 14px',
     }}>
-      <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>
+      <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 4 }}>
         {label}
       </div>
-      <div style={{ fontSize: '20px', fontWeight: 700, color: accent ? 'var(--primary)' : 'var(--text-1)' }}>
+      <div style={{ fontSize: '1.25rem', fontWeight: 700, color: accent ? 'var(--primary)' : 'var(--text-1)' }}>
         {value}
       </div>
     </div>
@@ -350,12 +350,12 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
 
   return (
     <div style={{ maxWidth: '700px', margin: '0 auto', padding: '24px 16px 80px' }}>
-      <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '24px' }}>
+      <h1 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '24px' }}>
         My Profile
       </h1>
 
       {error && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '14px' }}>
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: '#dc2626', fontSize: '0.875rem' }}>
           {error}
         </div>
       )}
@@ -367,7 +367,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
             <div style={{ fontSize: '40px', fontWeight: '800', color: 'var(--primary)' }}>
               {currentWeight ? formatWeight(currentWeight, isMetric).replace(/ (kg|lbs)/, '') : '—'}
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
               {isMetric ? 'kg' : 'lbs'} · current weight
             </div>
           </div>
@@ -393,7 +393,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
             style={{
               background: 'var(--primary)', color: '#fff', border: 'none',
               borderRadius: '8px', padding: '10px 18px', cursor: 'pointer',
-              fontSize: '14px', fontWeight: '500', opacity: (loggingWeight || !newWeight) ? 0.6 : 1,
+              fontSize: '0.875rem', fontWeight: '500', opacity: (loggingWeight || !newWeight) ? 0.6 : 1,
             }}
           >
             {loggingWeight ? 'Logging…' : 'Log weight'}
@@ -403,7 +403,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
         {weightLogs.length > 0 && (
           <button
             onClick={() => setShowWeightHistory(v => !v)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '13px', padding: '0' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: '0.8125rem', padding: '0' }}
           >
             {showWeightHistory ? 'Hide' : 'See full history'} ({weightLogs.length} entries)
           </button>
@@ -415,11 +415,11 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
               <div key={log.id} style={{
                 display: 'flex', justifyContent: 'space-between',
                 padding: '6px 0', borderBottom: '1px solid var(--border)',
-                fontSize: '13px',
+                fontSize: '0.8125rem',
               }}>
                 <span style={{ color: 'var(--text-2)' }}>{log.logged_date}</span>
                 <span style={{ fontWeight: '600', color: 'var(--text-1)' }}>{formatWeight(log.weight, isMetric)}</span>
-                {log.note && <span style={{ color: 'var(--text-3)', fontSize: '12px' }}>{log.note}</span>}
+                {log.note && <span style={{ color: 'var(--text-3)', fontSize: '0.8125rem' }}>{log.note}</span>}
               </div>
             ))}
           </div>
@@ -498,7 +498,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
                   borderColor: profile.dietary_type === t ? 'var(--primary)' : 'var(--border)',
                   background: profile.dietary_type === t ? 'var(--primary)' : 'transparent',
                   color: profile.dietary_type === t ? '#fff' : 'var(--text-2)',
-                  cursor: 'pointer', fontSize: '13px', textTransform: 'capitalize',
+                  cursor: 'pointer', fontSize: '0.8125rem', textTransform: 'capitalize',
                 }}
               >
                 {t}
@@ -521,7 +521,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
                     borderColor: active ? '#ef4444' : 'var(--border)',
                     background: active ? '#fef2f2' : 'transparent',
                     color: active ? '#ef4444' : 'var(--text-2)',
-                    cursor: 'pointer', fontSize: '13px', textTransform: 'capitalize',
+                    cursor: 'pointer', fontSize: '0.8125rem', textTransform: 'capitalize',
                   }}
                 >
                   {active ? '✕ ' : ''}{a}
@@ -544,7 +544,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
                 borderColor: profile.primary_goal === g.value ? 'var(--primary)' : 'var(--border)',
                 background: profile.primary_goal === g.value ? 'var(--primary)' : 'transparent',
                 color: profile.primary_goal === g.value ? '#fff' : 'var(--text-2)',
-                cursor: 'pointer', fontSize: '14px',
+                cursor: 'pointer', fontSize: '0.875rem',
               }}
             >
               {g.label}
@@ -567,7 +567,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
                   borderColor: profile.units_preference === u ? 'var(--primary)' : 'var(--border)',
                   background: profile.units_preference === u ? 'var(--primary)' : 'transparent',
                   color: profile.units_preference === u ? '#fff' : 'var(--text-2)',
-                  cursor: 'pointer', fontSize: '14px', textTransform: 'capitalize',
+                  cursor: 'pointer', fontSize: '0.875rem', textTransform: 'capitalize',
                 }}
               >
                 {u}
@@ -581,10 +581,10 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
       <Section title="Subscription">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <div style={{ fontWeight: '600', color: 'var(--text-1)', textTransform: 'capitalize', fontSize: '16px' }}>
+            <div style={{ fontWeight: '600', color: 'var(--text-1)', textTransform: 'capitalize', fontSize: '1rem' }}>
               {profile.subscription_tier || 'Free'} Plan
             </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-3)', marginTop: '2px' }}>
+            <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: '2px' }}>
               {profile.subscription_tier === 'free' || !profile.subscription_tier
                 ? '5 AI recipes/day · Up to 2 family members'
                 : 'Unlimited AI recipes · Full features'}
@@ -595,7 +595,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
               <Link href="/pricing" style={{
                 display: 'inline-block', background: 'var(--primary)', color: '#fff',
                 padding: '10px 20px', borderRadius: '8px', textDecoration: 'none',
-                fontSize: '14px', fontWeight: '500',
+                fontSize: '0.875rem', fontWeight: '500',
               }}>
                 Upgrade
               </Link>
@@ -625,7 +625,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
                 style={{
                   display: 'inline-block', border: '1px solid var(--border)', color: 'var(--text-2)',
                   padding: '10px 20px', borderRadius: '8px', background: 'transparent',
-                  fontSize: '14px', cursor: portalLoading ? 'wait' : 'pointer',
+                  fontSize: '0.875rem', cursor: portalLoading ? 'wait' : 'pointer',
                   opacity: portalLoading ? 0.7 : 1,
                 }}>
                 {portalLoading ? 'Opening…' : 'Manage billing'}
@@ -633,7 +633,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
             )}
           </div>
           {portalError && (
-            <div style={{ fontSize: '13px', color: '#dc2626', marginTop: '8px' }}>{portalError}</div>
+            <div style={{ fontSize: '0.8125rem', color: '#dc2626', marginTop: '8px' }}>{portalError}</div>
           )}
         </div>
       </Section>
@@ -646,7 +646,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
               <div style={{ fontWeight: '600', color: 'var(--text-1)' }}>
                 {nutritionist.profiles?.full_name || 'Your nutritionist'}
               </div>
-              <div style={{ fontSize: '13px', color: 'var(--text-3)' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
                 Status: Active · Can view your meal plans, nutrition stats
               </div>
             </div>
@@ -654,7 +654,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
               onClick={disconnectNutritionist}
               style={{
                 background: 'none', border: '1px solid #fecaca', color: '#ef4444',
-                borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '13px',
+                borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '0.8125rem',
               }}
             >
               Disconnect
@@ -662,7 +662,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
           </div>
         ) : (
           <div>
-            <div style={{ color: 'var(--text-3)', fontSize: '14px', marginBottom: '12px' }}>
+            <div style={{ color: 'var(--text-3)', fontSize: '0.875rem', marginBottom: '12px' }}>
               Share your nutrition data with a professional.
             </div>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -679,7 +679,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
                 style={{
                   background: 'var(--primary)', color: '#fff', border: 'none',
                   borderRadius: '8px', padding: '10px 18px', cursor: 'pointer',
-                  fontSize: '14px', opacity: (connectingNutritionist || !nutritionistEmail) ? 0.6 : 1,
+                  fontSize: '0.875rem', opacity: (connectingNutritionist || !nutritionistEmail) ? 0.6 : 1,
                 }}
               >
                 {connectingNutritionist ? 'Connecting…' : 'Connect'}
@@ -695,7 +695,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
           <a href="/api/gdpr/export" style={{
             border: '1px solid var(--border)', color: 'var(--text-2)',
             padding: '8px 16px', borderRadius: '8px', textDecoration: 'none',
-            fontSize: '14px',
+            fontSize: '0.875rem',
           }}>
             Export my data
           </a>
@@ -712,7 +712,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
             }}
             style={{
               background: 'none', border: '1px solid #fecaca', color: '#ef4444',
-              borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '14px',
+              borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '0.875rem',
             }}
           >
             Delete account
@@ -728,7 +728,7 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
           style={{
             background: 'var(--primary)', color: '#fff', border: 'none',
             borderRadius: '8px', padding: '12px 32px', cursor: 'pointer',
-            fontSize: '15px', fontWeight: '600', opacity: saving ? 0.7 : 1,
+            fontSize: '0.9375rem', fontWeight: '600', opacity: saving ? 0.7 : 1,
           }}
         >
           {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save changes'}

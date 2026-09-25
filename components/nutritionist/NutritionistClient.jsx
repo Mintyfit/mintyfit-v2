@@ -47,15 +47,15 @@ function ClientCard({ client, onLeaveNote }) {
           width: '48px', height: '48px', borderRadius: '50%',
           background: 'var(--primary)', color: '#fff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: '700', fontSize: '20px', flexShrink: 0,
+          fontWeight: '700', fontSize: '1.25rem', flexShrink: 0,
         }}>
           {(profile?.full_name || 'C')[0].toUpperCase()}
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: '600', color: 'var(--text-1)', fontSize: '16px' }}>
+          <div style={{ fontWeight: '600', color: 'var(--text-1)', fontSize: '1rem' }}>
             {profile?.full_name || 'Client'}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-3)' }}>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>
             {daysSinceActive === null ? 'No activity' :
              daysSinceActive === 0 ? 'Active today' :
              daysSinceActive === 1 ? 'Active yesterday' :
@@ -65,8 +65,8 @@ function ClientCard({ client, onLeaveNote }) {
         <div style={{ textAlign: 'right' }}>
           {avgCalories && (
             <div>
-              <div style={{ fontSize: '20px', fontWeight: '700', color: 'var(--primary)' }}>{avgCalories}</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-3)' }}>avg kcal/day</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--primary)' }}>{avgCalories}</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)' }}>avg kcal/day</div>
             </div>
           )}
         </div>
@@ -74,11 +74,11 @@ function ClientCard({ client, onLeaveNote }) {
 
       {/* Stats badges */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
-        <span style={{ padding: '4px 10px', borderRadius: '10px', fontSize: '12px', background: 'var(--bg-page)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
+        <span style={{ padding: '4px 10px', borderRadius: '10px', fontSize: '0.8125rem', background: 'var(--bg-page)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
           {calendarEntries.length} meal entries (7d)
         </span>
         {profile?.subscription_tier && (
-          <span style={{ padding: '4px 10px', borderRadius: '10px', fontSize: '12px', background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', textTransform: 'capitalize' }}>
+          <span style={{ padding: '4px 10px', borderRadius: '10px', fontSize: '0.8125rem', background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', textTransform: 'capitalize' }}>
             {profile.subscription_tier}
           </span>
         )}
@@ -87,14 +87,14 @@ function ClientCard({ client, onLeaveNote }) {
       {/* Recent notes */}
       {recentNotes.length > 0 && (
         <div style={{ marginBottom: '16px' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-3)', fontWeight: '500', marginBottom: '6px' }}>Your notes</div>
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-3)', fontWeight: '500', marginBottom: '6px' }}>Your notes</div>
           {recentNotes.map(note => (
             <div key={note.id} style={{
               background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px',
-              padding: '8px 12px', marginBottom: '6px', fontSize: '13px', color: '#15803d',
+              padding: '8px 12px', marginBottom: '6px', fontSize: '0.8125rem', color: '#15803d',
             }}>
               <div>{note.content}</div>
-              <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px' }}>
+              <div style={{ fontSize: '0.8125rem', opacity: 0.7, marginTop: '4px' }}>
                 {new Date(note.created_at).toLocaleDateString()}
               </div>
             </div>
@@ -106,13 +106,13 @@ function ClientCard({ client, onLeaveNote }) {
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
         <Link href={`/statistics?clientId=${profile.id}`} style={{
           padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)',
-          color: 'var(--text-2)', textDecoration: 'none', fontSize: '13px',
+          color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.8125rem',
         }}>
           View stats
         </Link>
         <Link href={`/plan?clientId=${profile.id}`} style={{
           padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border)',
-          color: 'var(--text-2)', textDecoration: 'none', fontSize: '13px',
+          color: 'var(--text-2)', textDecoration: 'none', fontSize: '0.8125rem',
         }}>
           View plan
         </Link>
@@ -121,7 +121,7 @@ function ClientCard({ client, onLeaveNote }) {
           style={{
             padding: '8px 14px', borderRadius: '8px',
             background: 'var(--primary)', color: '#fff',
-            border: 'none', cursor: 'pointer', fontSize: '13px',
+            border: 'none', cursor: 'pointer', fontSize: '0.8125rem',
           }}
         >
           Leave note
@@ -139,20 +139,20 @@ function ClientCard({ client, onLeaveNote }) {
               width: '100%', padding: '10px 12px',
               border: '1px solid var(--border)', borderRadius: '8px',
               background: 'var(--bg-page)', color: 'var(--text-1)',
-              fontSize: '14px', resize: 'vertical', fontFamily: 'inherit',
+              fontSize: '0.875rem', resize: 'vertical', fontFamily: 'inherit',
             }}
           />
           <div style={{ display: 'flex', gap: '8px', marginTop: '8px', justifyContent: 'flex-end' }}>
             <button
               onClick={() => { setShowNoteForm(false); setNoteText('') }}
-              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-2)' }}
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '0.8125rem', color: 'var(--text-2)' }}
             >
               Cancel
             </button>
             <button
               onClick={submitNote}
               disabled={savingNote || !noteText.trim()}
-              style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '13px', opacity: (savingNote || !noteText.trim()) ? 0.6 : 1 }}
+              style={{ background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '0.8125rem', opacity: (savingNote || !noteText.trim()) ? 0.6 : 1 }}
             >
               {savingNote ? 'Saving…' : 'Save note'}
             </button>
@@ -177,10 +177,10 @@ export default function NutritionistClient({ userId, nutritionistName, initialDa
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '24px 16px 80px' }}>
       <div style={{ marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-1)', marginBottom: '4px' }}>
+        <h1 style={{ fontSize: '1.625rem', fontWeight: '700', color: 'var(--text-1)', marginBottom: '4px' }}>
           Your Clients
         </h1>
-        <p style={{ color: 'var(--text-3)', fontSize: '14px' }}>
+        <p style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>
           {clientData.length} active client{clientData.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -192,7 +192,7 @@ export default function NutritionistClient({ userId, nutritionistName, initialDa
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>🩺</div>
           <div style={{ fontWeight: '600', color: 'var(--text-1)', marginBottom: '8px' }}>No clients yet</div>
-          <div style={{ color: 'var(--text-3)', fontSize: '14px' }}>
+          <div style={{ color: 'var(--text-3)', fontSize: '0.875rem' }}>
             Clients can connect to you from their MintyFit profile by entering your email address.
           </div>
         </div>
@@ -211,12 +211,12 @@ export default function NutritionistClient({ userId, nutritionistName, initialDa
       {/* Pending invites */}
       {initialData.allLinks.filter(l => l.status !== 'active').length > 0 && (
         <div style={{ marginTop: '24px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-2)', marginBottom: '12px' }}>Inactive connections</h2>
+          <h2 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-2)', marginBottom: '12px' }}>Inactive connections</h2>
           {initialData.allLinks.filter(l => l.status !== 'active').map(link => (
             <div key={link.id} style={{
               display: 'flex', justifyContent: 'space-between',
               padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)',
-              borderRadius: '8px', marginBottom: '8px', fontSize: '14px',
+              borderRadius: '8px', marginBottom: '8px', fontSize: '0.875rem',
             }}>
               <span style={{ color: 'var(--text-2)' }}>{link.profiles?.full_name}</span>
               <span style={{ color: 'var(--text-3)', textTransform: 'capitalize' }}>{link.status}</span>

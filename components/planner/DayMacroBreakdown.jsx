@@ -51,11 +51,11 @@ function MacroDonut({ protein, carbs, fat }) {
           { label: 'Carbs', val: carbs, color: '#f59e0b', cal: Math.round(carbs * 4) },
           { label: 'Fat', val: fat, color: '#6366f1', cal: Math.round(fat * 9) },
         ].map(m => (
-          <div key={m.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '15px' }}>
+          <div key={m.label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9375rem' }}>
             <span style={{ width: 10, height: 10, borderRadius: 2, background: m.color, flexShrink: 0 }} />
             <span style={{ color: 'var(--text-2)', minWidth: 48 }}>{m.label}</span>
             <strong style={{ color: 'var(--text-1)', minWidth: 45 }}>{Math.round(m.val)}g</strong>
-            <span style={{ color: 'var(--text-4)', fontSize: '13px' }}>({m.cal} kcal)</span>
+            <span style={{ color: 'var(--text-4)', fontSize: '0.8125rem' }}>({m.cal} kcal)</span>
           </div>
         ))}
       </div>
@@ -71,19 +71,19 @@ function MealTypeFilter({ mealType, enabled, onToggle, entryCount }) {
       padding: '0.5rem 0.75rem', borderRadius: '8px',
       background: enabled ? 'rgba(61,138,62,0.08)' : 'transparent',
       border: `1px solid ${enabled ? 'var(--primary)' : 'var(--border)'}`,
-      cursor: 'pointer', fontSize: '15px', userSelect: 'none',
+      cursor: 'pointer', fontSize: '0.9375rem', userSelect: 'none',
     }}>
       <input
         type="checkbox"
         checked={enabled}
         onChange={() => onToggle(mealType)}
-        style={{ width: 16, height: 16, accentColor: 'var(--primary)', cursor: 'pointer' }}
+        style={{ width: 'var(--control-check)', height: 'var(--control-check)', accentColor: 'var(--primary)', cursor: 'pointer' }}
       />
       <span style={{ color: enabled ? 'var(--text-1)' : 'var(--text-3)' }}>
         {MEAL_ICONS[mealType]} {MEAL_LABELS[mealType]}
       </span>
       {entryCount > 0 && (
-        <span style={{ color: 'var(--text-4)', fontSize: '13px' }}>({entryCount})</span>
+        <span style={{ color: 'var(--text-4)', fontSize: '0.8125rem' }}>({entryCount})</span>
       )}
     </label>
   )
@@ -128,7 +128,7 @@ export default function DayMacroBreakdown({
         <Link
           href="/statistics"
           style={{
-            fontSize: '15px', fontWeight: 600, color: 'var(--primary)',
+            fontSize: '0.9375rem', fontWeight: 600, color: 'var(--primary)',
             textDecoration: 'none', padding: '0.5rem 0.75rem',
             borderRadius: '8px', border: '1px solid var(--primary)',
             background: 'rgba(61,138,62,0.08)',
@@ -172,21 +172,21 @@ export default function DayMacroBreakdown({
         marginBottom: '0.75rem',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '15px', color: 'var(--text-2)' }}>Total consumed</span>
-          <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-1)' }}>{calories} kcal</span>
+          <span style={{ fontSize: '0.9375rem', color: 'var(--text-2)' }}>Total consumed</span>
+          <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-1)' }}>{calories} kcal</span>
         </div>
         {activityCalories > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '15px', color: 'var(--text-2)' }}>Activity burned</span>
-            <span style={{ fontSize: '15px', fontWeight: 600, color: '#6366f1' }}>−{activityCalories} kcal</span>
+            <span style={{ fontSize: '0.9375rem', color: 'var(--text-2)' }}>Activity burned</span>
+            <span style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#6366f1' }}>−{activityCalories} kcal</span>
           </div>
         )}
         <div style={{
           height: 1, background: 'var(--border)', margin: '0.5rem 0',
         }} />
         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '15px', color: 'var(--text-2)' }}>Net calories</span>
-          <span style={{ fontSize: '15px', fontWeight: 700, color: netCalories >= 0 ? '#10b981' : '#ef4444' }}>
+          <span style={{ fontSize: '0.9375rem', color: 'var(--text-2)' }}>Net calories</span>
+          <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: netCalories >= 0 ? '#10b981' : '#ef4444' }}>
             {netCalories} kcal
           </span>
         </div>
@@ -200,7 +200,7 @@ export default function DayMacroBreakdown({
           padding: '1rem',
           border: '1px solid rgba(99,102,241,0.2)',
         }}>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-1)', marginBottom: '0.75rem' }}>
+          <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: 'var(--text-1)', marginBottom: '0.75rem' }}>
             ⚡ Nutrients depleted by activity
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.5rem' }}>
@@ -215,14 +215,14 @@ export default function DayMacroBreakdown({
                   background: 'var(--bg-page)',
                   borderRadius: '8px',
                 }}>
-                  <span style={{ fontSize: '15px', color: 'var(--text-2)' }}>{n.label}</span>
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#6366f1' }}>
+                  <span style={{ fontSize: '0.9375rem', color: 'var(--text-2)' }}>{n.label}</span>
+                  <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#6366f1' }}>
                     {formatNutrientValue(n.value, n.unit)}
                   </span>
                 </div>
               ))}
           </div>
-          <p style={{ fontSize: '13px', color: 'var(--text-3)', marginTop: '0.75rem', fontStyle: 'italic', margin: 0 }}>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-3)', marginTop: '0.75rem', fontStyle: 'italic', margin: 0 }}>
             Estimates based on average sweat rates; individual variation is significant.
           </p>
         </div>

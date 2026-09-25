@@ -122,7 +122,7 @@ export default function VitaminD3Calculator() {
     border: '1px solid var(--border, #e5e7eb)',
     borderRadius: '8px',
     padding: '10px 16px',
-    fontSize: '16px',
+    fontSize: '1rem',
     background: 'var(--bg-page, #fff)',
     color: 'var(--text-1, #111)',
   }
@@ -131,7 +131,7 @@ export default function VitaminD3Calculator() {
     display: 'block',
     marginBottom: '8px',
     fontWeight: 600,
-    fontSize: '14px',
+    fontSize: '0.875rem',
     color: 'var(--text-2, #374151)',
   }
 

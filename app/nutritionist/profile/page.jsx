@@ -50,10 +50,10 @@ export default async function NutritionistProfilePage() {
               displayName[0].toUpperCase()
             )}
           </div>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-1)', margin: '0 0 4px' }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-1)', margin: '0 0 4px' }}>
             {displayName}
           </h1>
-          <p style={{ color: 'var(--text-3)', fontSize: '15px', margin: 0 }}>
+          <p style={{ color: 'var(--text-3)', fontSize: '0.9375rem', margin: 0 }}>
             MintyFit Nutritionist
           </p>
         </div>
@@ -63,10 +63,10 @@ export default async function NutritionistProfilePage() {
             background: 'var(--bg-card)', border: '1px solid var(--border)',
             borderRadius: '12px', padding: '20px', marginBottom: '16px',
           }}>
-            <h2 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-2)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h2 style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--text-2)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               About
             </h2>
-            <p style={{ color: 'var(--text-2)', fontSize: '15px', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>
+            <p style={{ color: 'var(--text-2)', fontSize: '0.9375rem', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-wrap' }}>
               {profile.bio}
             </p>
           </div>
@@ -77,7 +77,7 @@ export default async function NutritionistProfilePage() {
             background: 'var(--bg-card)', border: '1px solid var(--border)',
             borderRadius: '12px', padding: '20px', marginBottom: '16px',
           }}>
-            <h2 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-2)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h2 style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--text-2)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Credentials
             </h2>
             <a
@@ -85,7 +85,7 @@ export default async function NutritionistProfilePage() {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                color: 'var(--primary)', fontSize: '14px', textDecoration: 'none',
+                color: 'var(--primary)', fontSize: '0.875rem', textDecoration: 'none',
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
               }}
             >
@@ -106,7 +106,7 @@ export default async function NutritionistProfilePage() {
               padding: '10px 24px', borderRadius: '10px',
               border: '1px solid var(--border)',
               color: 'var(--text-2)', textDecoration: 'none',
-              fontSize: '14px', fontWeight: '500',
+              fontSize: '0.875rem', fontWeight: '500',
             }}
           >
             Edit profile
@@ -116,7 +116,7 @@ export default async function NutritionistProfilePage() {
             style={{
               padding: '10px 24px', borderRadius: '10px',
               background: 'var(--primary)', color: '#fff',
-              textDecoration: 'none', fontSize: '14px', fontWeight: '500',
+              textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500',
             }}
           >
             My Clients

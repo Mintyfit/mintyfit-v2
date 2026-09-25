@@ -25,6 +25,23 @@
   --text-lg: 1.125rem;   /* 18px */
   --text-xl: 1.375rem;   /* 22px */
   --text-2xl: 1.75rem;   /* 28px */
+  --text-2xs: 0.8125rem; /* 13px @16px root - floor for anything the user must READ.
+                            Nothing readable goes below this. 0.75rem is allowed only
+                            for uppercase badges / decorative markers. */
+
+  /* Interactive control sizing - ALWAYS rem, never raw px.
+     Raw px does not scale with the html font-size bump below, which is why
+     checkboxes (14px) and swap buttons (22px) stayed microscopic while the
+     surrounding text grew. Use these tokens instead of hardcoding numbers. */
+  --control-check: 1.25rem;   /* 20px @16px root - checkbox glyph */
+  --control-action: 2.25rem;  /* 36px @16px root - round action button (swap/replace) */
+  --tap-min: 2.75rem;         /* 44px @16px root - minimum touch target (WCAG 2.5.5) */
+
+  /* Interactive control chrome. Do NOT use --border / --text-4 here: on the
+     light surface they measure 1.19:1 and 2.54:1 - invisible. WCAG 1.4.11
+     requires 3:1 for the boundary of a control. --control-line measures 4.83:1
+     on --bg-card and 9.85:1 in dark mode, so one token covers both themes. */
+  --control-line: #6b7280;
 }
 
 /* Root font size — set explicitly on every platform.
@@ -53,6 +70,7 @@ html { font-size: 17px; }
   --border: #334155;
   --border-light: #334155;
   --shadow: rgba(0, 0, 0, 0.4);
+  --control-line: #cbd5e1;
 }
 
 * {

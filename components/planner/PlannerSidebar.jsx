@@ -179,7 +179,7 @@ export default function PlannerSidebar({
                           border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
                           background: active ? 'var(--primary)' : 'transparent',
                           color: active ? '#fff' : 'var(--text-3)',
-                          fontSize: '0.6875rem',
+                          fontSize: '0.8125rem',
                           fontWeight: active ? 600 : 500,
                           cursor: 'pointer',
                           lineHeight: 1.4,

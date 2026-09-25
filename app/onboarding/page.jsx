@@ -380,7 +380,7 @@ function StepIndicator({ step, steps }) {
   const pct = Math.round((step / (steps.length - 1)) * 100)
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-3)', fontWeight: 600 }}>{step + 1}/{steps.length}</span>
+      <span style={{ fontSize: '0.8125rem', color: 'var(--text-3)', fontWeight: 600 }}>{step + 1}/{steps.length}</span>
       <div style={{ width: '80px', height: '6px', background: 'var(--border)', borderRadius: '3px', overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: 'var(--primary)', borderRadius: '3px', transition: 'width 0.3s' }} />
       </div>
