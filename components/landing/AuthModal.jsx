@@ -234,6 +234,22 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
           ))}
         </div>
 
+        {/* OAuth — Apple (required by App Store Guideline 4.8 wherever
+            third-party login is offered; keep it at least as prominent as Google) */}
+        <button
+          onClick={() => handleOAuth('apple')}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '0.75rem', padding: '0.875rem', borderRadius: '10px',
+            border: '1px solid #000', background: '#000',
+            cursor: 'pointer', fontSize: '0.9375rem', fontWeight: 600, color: '#fff',
+            marginBottom: '0.75rem',
+          }}
+        >
+          <AppleIcon />
+          Continue with Apple
+        </button>
+
         {/* OAuth — Google */}
         <button
           onClick={() => handleOAuth('google')}
@@ -362,6 +378,14 @@ export default function AuthModal({ isOpen, onClose, onSuccess, defaultTab = 'si
         )}
       </div>
     </>
+  )
+}
+
+function AppleIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff">
+      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+    </svg>
   )
 }
 

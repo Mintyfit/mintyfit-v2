@@ -17,6 +17,18 @@ const nextConfig = {
     ]
   },
 
+  async rewrites() {
+    return [
+      // App Router ignores dot-prefixed folders — serve the Apple App Site
+      // Association file (iOS universal links) from an /api route instead.
+      // Android's equivalent is the static public/.well-known/assetlinks.json.
+      {
+        source: '/.well-known/apple-app-site-association',
+        destination: '/api/well-known/apple-app-site-association',
+      },
+    ]
+  },
+
   async headers() {
     return [
       {

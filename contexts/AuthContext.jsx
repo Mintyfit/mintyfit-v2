@@ -83,6 +83,18 @@ export function AuthProvider({ children }) {
     return { data, error }
   }
 
+  // Sign in with Apple — required by App Store Guideline 4.8 alongside any
+  // third-party login. Provider must be enabled in Supabase dashboard
+  // (Services ID + key from the Apple Developer portal).
+  async function signInWithApple() {
+    if (!supabase) return { data: null, error: new Error('Supabase not configured') }
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: `${window.location.origin}/` },
+    })
+    return { data, error }
+  }
+
   async function signOut() {
     if (!supabase) return
     await supabase.auth.signOut()
@@ -109,6 +121,7 @@ export function AuthProvider({ children }) {
       signUp,
       signInWithEmail,
       signInWithGoogle,
+      signInWithApple,
       resetPassword,
     }}>
       {children}

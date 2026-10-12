@@ -4,6 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 export async function POST(request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
   try {
+    // App Store Guideline 3.1.1: the iOS app shell must not start Stripe
+    // checkout in-app (PricingClient hides the CTA; this is the server-side
+    // backstop). The shell appends MintyFitApp-iOS to the WebView UA.
+    const ua = request.headers.get('user-agent') || ''
+    if (ua.includes('MintyFitApp-iOS')) {
+      return Response.json(
+        { error: 'Subscriptions are managed at mintyfit.com — please subscribe on the website.' },
+        { status: 403 }
+      )
+    }
+
     const { priceId, userId } = await request.json()
     if (!priceId) return Response.json({ error: 'priceId required' }, { status: 400 })
 

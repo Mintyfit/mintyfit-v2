@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import Link from 'next/link'
 import { useToast } from '@/components/ui/Toast'
+import { isIOSShell, openExternal } from '@/lib/platform'
 
 const PLANS = [
   {
@@ -94,9 +95,17 @@ export default function PricingClient() {
   const [openFaq, setOpenFaq] = useState(null)
   const { user } = useAuth()
   const toast = useToast()
+  // In the iOS app shell, paid-plan CTAs link out to the website (App Store
+  // Guideline 3.1.1) instead of starting Stripe checkout in-app. Resolved
+  // after mount — reading window during render would mismatch SSR HTML.
+  const [iosShell, setIosShell] = useState(false)
+  useEffect(() => { setIosShell(isIOSShell()) }, [])
 
   async function startCheckout(plan, isAnnual) {
     if (!plan.stripePriceIdMonthly) return
+    // App Store Guideline 3.1.1: no in-app Stripe checkout on iOS — send the
+    // user to the website (opens in Safari via the shell's openExternal bridge).
+    if (isIOSShell()) { openExternal('https://mintyfit.com/pricing'); return }
     if (!user) { window.location.href = '/?auth=login&redirect=/pricing'; return }
     setLoading(plan.name)
     try {
@@ -118,6 +127,8 @@ export default function PricingClient() {
 
   async function manageSubscription() {
     if (!user) return
+    // Same App Store rule: billing portal opens on the website, not in-app.
+    if (isIOSShell()) { openExternal('https://mintyfit.com/my-account'); return }
     setLoading('manage')
     try {
       const res = await fetch('/api/stripe/portal', {
@@ -206,7 +217,7 @@ export default function PricingClient() {
                   fontWeight: 700, fontSize: '1rem', marginBottom: '2rem', transition: 'opacity 0.2s',
                   opacity: loading === plan.name ? 0.6 : 1,
                 }}>
-                {loading === plan.name ? 'Loading…' : plan.cta}
+                {loading === plan.name ? 'Loading…' : iosShell && plan.stripePriceIdMonthly ? 'Subscribe at mintyfit.com' : plan.cta}
               </button>
 
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

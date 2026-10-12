@@ -82,6 +82,14 @@ Separate project (not this repo). Thin WebView → mintyfit.com; see **its own `
 - Shell-side freshness: `allowBackup="false"` + all backup/transfer excluded (else reinstalls restore stale WebView state), plus `nukeStaleWebStateAfterUpgrade()` wipes WebView state once per versionCode.
 - Site-side freshness (this repo): `/api/version` + `DeploymentCheck` auto-reload stale builds. **Ship self-heal code immediately** — it only protects builds that contain it.
 
+### iOS App Shell — `D:\WORKS\Minty\iOS`
+Separate project (not this repo). Thin WKWebView → mintyfit.com (Expo + react-native-webview, built in the cloud via EAS — no Mac); see **its own `AGENTS.md`**. Site-side contract it depends on (do not break):
+- `lib/platform.js` — `__MINTY_PLATFORM__` / `MintyFitApp-iOS` UA detection + `openExternal()` postMessage bridge.
+- **Guideline 3.1.1:** paid-plan CTAs + billing portal use `openExternal()` on iOS; `/api/stripe/checkout` 403s the `MintyFitApp-iOS` UA. Never let Stripe checkout run inside the iOS WebView.
+- **Guideline 4.8:** Sign in with Apple must stay wherever Google OAuth is offered.
+- **Guideline 5.1.1:** account deletion = My Account → "Delete account" (`/api/gdpr/delete`). Must stay reachable in-app.
+- Universal links: `/.well-known/apple-app-site-association` (needs `APPLE_TEAM_ID` env in Vercel; 404 until set).
+
 ### Family Architecture
 Two member types in a family:
 - **Linked members** — teens/adults with their own account (profile_id in family_memberships)
