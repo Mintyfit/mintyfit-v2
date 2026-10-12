@@ -16,6 +16,56 @@ let msgId = 0
 const nextId = () => ++msgId
 
 /**
+ * VoiceStatusBar — unmistakable recording feedback for the mic button.
+ * Shows "Starting microphone…" while the WebView/permission layer answers,
+ * a pulsing dot + waveform + Stop button while recording (the MediaRecorder
+ * path used inside the app shells has no silence auto-stop — the user MUST
+ * see that recording is active and how to end it), and "Transcribing…"
+ * while Whisper works.
+ */
+function VoiceStatusBar({ voice }) {
+  if (!voice.isStarting && !voice.isListening && !voice.isProcessing) return null
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        display: 'flex', alignItems: 'center', gap: '0.625rem',
+        padding: '0.5rem 0.75rem',
+        borderRadius: '10px',
+        background: voice.isListening ? 'rgba(220,38,38,0.08)' : 'var(--bg-subtle)',
+        border: `1px solid ${voice.isListening ? 'rgba(220,38,38,0.4)' : 'var(--border)'}`,
+        fontSize: 'var(--text-xs)', color: 'var(--text-2)',
+      }}
+    >
+      {voice.isListening && <span className="mf-rec-dot" aria-hidden="true" />}
+      <span style={{ flex: 1, fontWeight: voice.isListening ? 600 : 400 }}>
+        {voice.isStarting ? 'Starting microphone…' : voice.isProcessing ? 'Transcribing…' : 'Listening… speak now'}
+      </span>
+      {voice.isListening && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '1rem' }} aria-hidden="true">
+          {[0, 1, 2, 3, 4].map(i => (
+            <span key={i} className="mf-voice-bar" style={{ animationDelay: `${i * 0.12}s` }} />
+          ))}
+        </div>
+      )}
+      {voice.isListening && (
+        <button
+          onClick={voice.stopListening}
+          style={{
+            padding: '0.25rem 0.875rem', borderRadius: '999px', border: 'none',
+            background: '#dc2626', color: '#fff', fontWeight: 700,
+            fontSize: 'var(--text-xs)', cursor: 'pointer',
+          }}
+        >
+          Stop
+        </button>
+      )}
+    </div>
+  )
+}
+
+/**
  * AssistantPanel — conversational interface ("Minty Chat").
  *
  * Supports: recipe search (catalogue cards), recipe creation (inline
@@ -54,9 +104,9 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
 
   const handleTranscript = useCallback((text) => {
     if (!text?.trim()) return
-    setInput('')
-    // Voice is conversational — send automatically after a beat
-    setTimeout(() => sendRef.current?.(text.trim()), 350)
+    // Dictation lands in the input so the user sees (and can fix) the spoken
+    // text before sending — never silently auto-send a misheard transcript.
+    setInput(prev => (prev?.trim() ? `${prev.trim()} ${text.trim()}` : text.trim()))
   }, [])
 
   const voice = useVoiceInput({ onTranscript: handleTranscript })
@@ -181,9 +231,6 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
       setBusy(false)
     }
   }
-  const sendRef = useRef(send)
-  sendRef.current = send
-
   // Single entry point for Enter + the Send button. The input is cleared only
   // once the text is actually handed to send() — clearing it unconditionally
   // (`send(input); setInput('')`) silently ate the user's message whenever
@@ -285,7 +332,7 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
           <div style={{ display: 'flex', gap: '0.375rem' }}>
             <button
               onClick={voice.isListening ? voice.stopListening : voice.startListening}
-              disabled={voice.isProcessing}
+              disabled={voice.isStarting || voice.isProcessing}
               aria-label={voice.isListening ? 'Stop listening' : 'Voice input'}
               style={{
                 width: 'var(--control-action)', height: 'var(--control-action)', borderRadius: '50%', flexShrink: 0,
@@ -314,6 +361,7 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
               <Send size={16} /> Send
             </button>
           </div>
+          <VoiceStatusBar voice={voice} />
           {(voice.error || voice.upgradeRequired) && (
             <div style={{ fontSize: 'var(--text-xs)', color: '#dc2626' }}>
               {voice.upgradeRequired
@@ -521,10 +569,15 @@ export default function AssistantPanel({ members = [], onClose, autoFocus = fals
       </div>
 
       {/* Input row — flexShrink: 0 so it is never clipped by maxHeight */}
+      {(voice.isStarting || voice.isListening || voice.isProcessing) && (
+        <div style={{ padding: '0.625rem 0.625rem 0', flexShrink: 0 }}>
+          <VoiceStatusBar voice={voice} />
+        </div>
+      )}
       <div style={{ display: 'flex', gap: '0.375rem', padding: '0.625rem', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
         <button
           onClick={voice.isListening ? voice.stopListening : voice.startListening}
-          disabled={voice.isProcessing}
+          disabled={voice.isStarting || voice.isProcessing}
           aria-label={voice.isListening ? 'Stop listening' : 'Voice input'}
           style={{
             width: 'var(--control-action)', height: 'var(--control-action)', borderRadius: '50%', flexShrink: 0,

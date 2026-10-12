@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { useVoice } from '@/hooks/useVoice'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { useSubscription } from '@/hooks/useSubscription'
 import { pickNutritionFields, sumNutrition } from '@/lib/nutrition/nutrition'
 import { EMPTY_NUTRITION } from '@/lib/journal/grokFoodLookup'
@@ -92,7 +92,7 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
     fetchFrequentFoods()
   }, [userId])
 
-  const { isListening, startListening } = useVoice({
+  const voice = useVoiceInput({
     onTranscript: text => {
       if (tab === 'quick') setFoodName(p => p ? `${p} ${text}` : text)
       if (tab === 'describe') setAiText(p => p ? `${p} ${text}` : text)
@@ -372,8 +372,16 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
                   placeholder="Food name (e.g. Greek yogurt)"
                   style={{ flex: 1, padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.9375rem', outline: 'none' }}
                 />
-                <button onClick={startListening} style={{ width: 40, height: 40, borderRadius: '50%', border: `2px solid ${isListening ? 'var(--primary)' : 'var(--border)'}`, background: isListening ? 'rgba(61,138,62,0.1)' : 'transparent', color: isListening ? 'var(--primary)' : 'var(--text-3)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🎤</button>
+                <button onClick={voice.isListening ? voice.stopListening : voice.startListening} disabled={voice.isStarting || voice.isProcessing} title={voice.isListening ? 'Stop recording' : 'Voice input'} style={{ width: 40, height: 40, borderRadius: '50%', border: `2px solid ${voice.isListening ? '#dc2626' : 'var(--border)'}`, background: voice.isListening ? 'rgba(220,38,38,0.1)' : 'transparent', color: voice.isListening ? '#dc2626' : 'var(--text-3)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>🎤</button>
               </div>
+              {(voice.isStarting || voice.isListening || voice.isProcessing) && (
+                <div role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.875rem', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
+                  {voice.isListening && <span className="mf-rec-dot" aria-hidden="true" />}
+                  <span style={{ fontWeight: voice.isListening ? 600 : 400 }}>
+                    {voice.isStarting ? 'Starting microphone…' : voice.isProcessing ? 'Transcribing…' : 'Listening… tap the mic again to stop'}
+                  </span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
                 <input
                   type="number"
@@ -414,8 +422,16 @@ export default function JournalEntryForm({ mealType, dateKey, userId, members, o
                       rows={3}
                       style={{ flex: 1, padding: '0.625rem 0.875rem', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-page)', color: 'var(--text-1)', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical', outline: 'none' }}
                     />
-                    <button onClick={startListening} style={{ width: 40, height: 40, borderRadius: '50%', border: `2px solid ${isListening ? 'var(--primary)' : 'var(--border)'}`, background: isListening ? 'rgba(61,138,62,0.1)' : 'transparent', color: isListening ? 'var(--primary)' : 'var(--text-3)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, alignSelf: 'flex-start' }}>🎤</button>
+                    <button onClick={voice.isListening ? voice.stopListening : voice.startListening} disabled={voice.isStarting || voice.isProcessing} title={voice.isListening ? 'Stop recording' : 'Voice input'} style={{ width: 40, height: 40, borderRadius: '50%', border: `2px solid ${voice.isListening ? '#dc2626' : 'var(--border)'}`, background: voice.isListening ? 'rgba(220,38,38,0.1)' : 'transparent', color: voice.isListening ? '#dc2626' : 'var(--text-3)', cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, alignSelf: 'flex-start' }}>🎤</button>
                   </div>
+                  {(voice.isStarting || voice.isListening || voice.isProcessing) && (
+                    <div role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
+                      {voice.isListening && <span className="mf-rec-dot" aria-hidden="true" />}
+                      <span style={{ fontWeight: voice.isListening ? 600 : 400 }}>
+                        {voice.isStarting ? 'Starting microphone…' : voice.isProcessing ? 'Transcribing…' : 'Listening… tap the mic again to stop'}
+                      </span>
+                    </div>
+                  )}
                   {error && <p style={{ color: '#ef4444', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{error}</p>}
                   <button
                     onClick={handleAIDescribe}

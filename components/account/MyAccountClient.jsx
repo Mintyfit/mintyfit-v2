@@ -8,6 +8,8 @@ import { formatWeight, formatHeight, fieldLabel, dbToDisplay, lbsToKg, inToCm } 
 import { useToast } from '@/components/ui/Toast'
 import { useConfirm } from '@/components/ui/ConfirmDialog'
 import { invalidateCache } from '@/hooks/useCachedData'
+import { isIOSShell, openExternal } from '@/lib/platform'
+import TextSizeSettings from './TextSizeSettings'
 
 const DIETARY_TYPES = ['none', 'omnivore', 'vegetarian', 'vegan', 'keto', 'paleo', 'pescatarian']
 const ALLERGENS = ['none', 'gluten', 'dairy', 'nuts', 'shellfish', 'soy', 'eggs', 'fish', 'peanuts']
@@ -575,6 +577,9 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
             ))}
           </div>
         </div>
+        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+          <TextSizeSettings />
+        </div>
       </Section>
 
       {/* Subscription */}
@@ -603,6 +608,9 @@ export default function MyAccountClient({ userId, userEmail, initialData }) {
             {profile.stripe_customer_id && (
               <button
                 onClick={async () => {
+                  // App Store Guideline 3.1.1: on iOS the billing portal opens
+                  // on the website (Safari), never inside the app WebView.
+                  if (isIOSShell()) { openExternal('https://mintyfit.com/my-account'); return }
                   setPortalError(null)
                   setPortalLoading(true)
                   try {

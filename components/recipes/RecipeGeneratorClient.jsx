@@ -5,7 +5,8 @@ import { useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { generateRecipe } from '@/lib/recipe/recipeGenerator'
-import { useVoice } from '@/hooks/useVoice'
+import InstructionText from './InstructionText'
+import { useVoiceInput } from '@/hooks/useVoiceInput'
 import { useAuth } from '@/contexts/AuthContext'
 
 
@@ -143,7 +144,7 @@ export default function RecipeGeneratorClient() {
   const [saving, setSaving] = useState(false)
   const promptRef = useRef(null)
 
-  const { isListening, startListening } = useVoice({
+  const voice = useVoiceInput({
     onTranscript: text => setPrompt(p => (p ? p + ' ' + text : text)),
   })
 
@@ -337,7 +338,7 @@ export default function RecipeGeneratorClient() {
                   </div>
                   <div>
                     {s.title && <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-1)', marginBottom: '0.2rem' }}>{s.title}</p>}
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-2)', lineHeight: 1.5 }}>{s.instruction}</p>
+                    <InstructionText text={s.instruction} fontSize="0.875rem" />
                   </div>
                 </div>
               ))}
@@ -434,14 +435,15 @@ export default function RecipeGeneratorClient() {
             }}
           />
           <button
-            onClick={startListening}
-            title="Voice input"
+            onClick={voice.isListening ? voice.stopListening : voice.startListening}
+            disabled={voice.isStarting || voice.isProcessing}
+            title={voice.isListening ? 'Stop recording' : 'Voice input'}
             style={{
               width: 40, height: 40,
-              border: `2px solid ${isListening ? 'var(--primary)' : 'var(--border)'}`,
+              border: `2px solid ${voice.isListening ? '#dc2626' : 'var(--border)'}`,
               borderRadius: '50%',
-              background: isListening ? 'rgba(61,138,62,0.1)' : 'transparent',
-              color: isListening ? 'var(--primary)' : 'var(--text-3)',
+              background: voice.isListening ? 'rgba(220,38,38,0.1)' : 'transparent',
+              color: voice.isListening ? '#dc2626' : 'var(--text-3)',
               cursor: 'pointer',
               fontSize: '1.125rem',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -452,6 +454,22 @@ export default function RecipeGeneratorClient() {
             🎤
           </button>
         </div>
+        {(voice.isStarting || voice.isListening || voice.isProcessing) && (
+          <div role="status" aria-live="polite" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.8125rem', color: 'var(--text-2)' }}>
+            {voice.isListening && <span className="mf-rec-dot" aria-hidden="true" />}
+            <span style={{ fontWeight: voice.isListening ? 600 : 400 }}>
+              {voice.isStarting ? 'Starting microphone…' : voice.isProcessing ? 'Transcribing…' : 'Listening… tap the mic again to stop'}
+            </span>
+            {voice.isListening && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '3px', height: '0.875rem' }} aria-hidden="true">
+                {[0, 1, 2, 3].map(i => <span key={i} className="mf-voice-bar" style={{ animationDelay: `${i * 0.12}s` }} />)}
+              </span>
+            )}
+          </div>
+        )}
+        {voice.error && (
+          <p style={{ marginTop: '0.375rem', fontSize: '0.8125rem', color: '#dc2626' }}>{voice.error}</p>
+        )}
 
         {/* Meal type selector */}
         <div style={{ marginTop: '1rem' }}>

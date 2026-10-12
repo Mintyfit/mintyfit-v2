@@ -91,7 +91,7 @@ export default function RootLayout({ children }) {
       <body suppressHydrationWarning>
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.__MINTY_BUILD__=${JSON.stringify(buildId)}`,
+            __html: `window.__MINTY_BUILD__=${JSON.stringify(buildId)};try{var s=parseFloat(localStorage.getItem('minty-text-scale'));if(s>0)document.documentElement.style.setProperty('--user-text-scale',String(s));}catch(e){}`,
           }}
         />
         <ThemeProvider>

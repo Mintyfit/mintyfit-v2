@@ -15,9 +15,12 @@
 - Font: Montserrat (loaded via Next.js `localFont` in `app/layout.jsx`)
 
 ## Root font size
-`app/globals.css` sets `html { font-size: 17px }` (18px below 767px, 18.5px below 380px).
+`app/globals.css` sets `html { font-size: calc(17px * var(--user-text-scale, 1)) }` (18px below 767px, 18.5px below 380px).
 Almost every component declares sizes inline in `rem`, so the root scales the whole app.
 This was done because Android WebView defaults to ~14-15px and text came out too small.
+`--user-text-scale` (default 1) comes from the My Account → Preferences text-size slider
+(`components/account/TextSizeSettings.jsx`, localStorage `minty-text-scale`, applied pre-paint
+by the inline script in `app/layout.jsx`) — users can scale ALL text 85%–140%.
 
 **Consequence — the rule that matters:**
 > Anything sized in **raw `px` does not scale** with that root bump.

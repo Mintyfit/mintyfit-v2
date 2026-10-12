@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useCachedData } from '@/hooks/useCachedData'
 
 import { NutritionDelta, IngredientAlternativesSheet, DonutChart, NutritionSection, SidebarNutrition, MEAL_COLORS } from './RecipeNutrition'
+import InstructionText from './InstructionText'
 import RegenerateImageButton from './RegenerateImageButton'
 import RecipeChatPanel from './RecipeChatPanel'
 // ── Family member loading (client-side, SWR-cached) ─────────────────────────
@@ -1248,7 +1249,7 @@ export default function RecipeDetailClient({ recipe: initialRecipe, members: ini
                   </ul>
                 )}
 
-                <p style={{ fontSize: '0.9375rem', color: 'var(--text-2)', lineHeight: 1.6, margin: '0 0 0.375rem' }}>{step.instruction}</p>
+                <InstructionText text={step.instruction} />
                 {step.tip && (
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-4)', fontStyle: 'italic', margin: 0 }}>
                     💡 {step.tip}

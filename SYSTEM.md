@@ -94,6 +94,7 @@ Operated under Smart Diet OÜ (Estonia). Deployed on Vercel. Database on Supabas
 | `lib/recipe/ingredientDatabase.js` | Central ingredient lookup: Supabase → USDA → Claude Haiku fallback |
 | `lib/recipe/imageGeneration.js` | Ideogram image generation + Supabase Storage upload |
 | `lib/recipe/ingredientSwap.js` | AI-powered ingredient substitution |
+| `lib/recipe/instructionSteps.js` | `splitInstructionSentences()` — splits a step's instruction paragraph into sentences for numbered sub-step rendering (display-only, storage/JSON-LD unchanged) |
 | `lib/journal/openFoodFacts.js` | `lookupBarcode()` — barcode scan product lookup + nutrient mapping |
 | `lib/nutrition/usdaLookup.js` | USDA FoodData Central API wrapper |
 | `lib/usageLimits.js` | `getLimits()`, `enforceUsageLimit()` (server-side, RPC-backed), `canUseVoiceAssistant()`. `checkAndIncrementUsage()` is DEPRECATED (client-side, racy) |
@@ -160,6 +161,7 @@ AprillBuild/
 │   │   ├── saveRecipeImageServer.js  # SERVER ONLY — download+sharp-resize+service-role storage upload. /api/recipe/save-image is a thin wrapper
 │   │   ├── ingredientDatabase.js     # Ingredient nutrition lookup
 │   │   ├── ingredientSwap.js         # AI ingredient substitution
+│   │   ├── instructionSteps.js       # Sentence splitter for numbered sub-step instruction rendering
 │   │   └── foodGroups.js             # Food group classification
 │   ├── journal/
 │   │   ├── grokFoodLookup.js         # Grok AI food nutrition lookup
@@ -180,20 +182,19 @@ AprillBuild/
 │   ├── useProfile.js                 # Profile state
 │   ├── useSubscription.js            # Stripe subscription state
 │   ├── useCachedData.js              # localStorage SWR cache + invalidateCache() events
-│   ├── useVoiceInput.js              # Voice→text: Web Speech API or MediaRecorder→/api/transcribe
-│   └── useVoice.js                   # Web Speech API wrapper (legacy — prefer useVoiceInput)
+│   └── useVoiceInput.js              # THE voice→text hook (only one — useVoice.js deleted): Web Speech API or MediaRecorder→/api/transcribe. States: isStarting → isListening → isProcessing; 12s mic-timeout + 30s auto-stop cap
 │
 ├── components/                       # UI components
 │   ├── ui/                           # Primitives: Toast (useToast), Modal (focus trap), ConfirmDialog (useConfirm) — NEVER use alert()/confirm()
 │   ├── shared/                       # NavbarWrapper, ShoppingCartLink, SafeHtml (ONLY sanitized-HTML site), ServiceWorkerCleanup, DeploymentCheck
 │   ├── assistant/                    # AssistantPanel (Minty Chat) + AssistantFab — conversational search/create/log, paid tier
 │   ├── landing/                      # LandingClient (full landing page), AuthModal
-│   ├── recipes/                      # RecipesClient, RecipeCard, RecipeDetailClient, RecipeGeneratorClient, RecipeNutrition (extracted sub-components), RecipeChatPanel ("Adjust with AI"), RegenerateImageButton
+│   ├── recipes/                      # RecipesClient, RecipeCard, RecipeDetailClient, RecipeGeneratorClient, RecipeNutrition (extracted sub-components), RecipeChatPanel ("Adjust with AI"), RegenerateImageButton, InstructionText (numbered sub-step rendering of step instructions)
 │   ├── planner/                      # PlannerClient, PlannerSidebar (recipe/menu browser), WeekOverview, DayAgenda, plannerConstants.js, ActivityForm, JournalEntryForm, RecipePickerModal
 │   ├── shopping/                     # ShoppingListClient
 │   ├── menus/                        # MenusClient, MenuDetailClient
 │   ├── statistics/                   # StatisticsClient (family dashboard + individual detail)
-│   ├── account/                      # MyAccountClient (profile, weight, nutritionist, GDPR)
+│   ├── account/                      # MyAccountClient (profile, weight, nutritionist, GDPR), TextSizeSettings (text-size slider → --user-text-scale root font multiplier, localStorage `minty-text-scale`, applied pre-paint by layout.jsx boot script)
 │   ├── family/                       # MyFamilyClient, FamilyInviteClient
 │   ├── nutritionist/                 # NutritionistClient (dashboard, client cards, notes)
 │   ├── blog/                         # BlogListClient, BlogEditorClient
@@ -340,6 +341,7 @@ STRIPE_FAMILY_MONTHLY_PRICE_ID=...
 STRIPE_FAMILY_YEARLY_PRICE_ID=...
 STRIPE_WEBHOOK_SECRET=...
 NEXT_PUBLIC_APP_URL=https://mintyfit.com      # Used for family invite link generation
+APPLE_TEAM_ID=...                           # Apple App Store Connect team id (10 chars) — enables /.well-known/apple-app-site-association (iOS universal links). Route returns 404 until set.
 ```
 
 No `VITE_` prefixed variables. All browser-safe vars use `NEXT_PUBLIC_`.
@@ -348,8 +350,9 @@ No `VITE_` prefixed variables. All browser-safe vars use `NEXT_PUBLIC_`.
 
 ## Authentication
 
-- Supabase Auth (email/password + OAuth)
-- `AuthContext.jsx` wraps app; provides `user`, `profile`, `setProfile`, `loading`
+- Supabase Auth (email/password + OAuth: Google, Apple)
+- `AuthContext.jsx` wraps app; provides `user`, `profile`, `setProfile`, `loading`, `signInWithGoogle`, `signInWithApple`
+- Sign in with Apple exists for App Store Guideline 4.8 (required alongside any third-party login). Needs the Apple provider enabled in the Supabase dashboard (Services ID + key from Apple Developer portal).
 - `middleware.js` refreshes Supabase session on every request
 - Protected routes: `/dashboard`, `/recipes`, `/generate`, `/plan`, `/journal`, `/stats`, `/family`, `/account`
 
@@ -405,6 +408,7 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 | Auth | `/auth/callback`, `/auth/verify`, `/auth/reset-callback`, `/onboarding` |
 | API | `/api/onboarding/complete` — saves family data and clears onboarding |
 | SEO | `/sitemap.xml`, `/robots.txt` |
+| App shells | `/.well-known/apple-app-site-association` (iOS universal links; rewritten to `/api/well-known/apple-app-site-association`, needs `APPLE_TEAM_ID`), `/api/version` (deployment id for WebView staleness self-heal) |
 
 ### Environment Variables Required for Production
 
@@ -432,6 +436,17 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 - Client data cache: `hooks/useCachedData.js` (localStorage + TTL + SWR). Invalidate after writes via `invalidateCache('recipes:')` etc.
 - **Stale WebView self-heal (2026-09-09):** even with no SW, the Android WebView's own HTTP cache can hold stale HTML. `GET /api/version` (no-store) returns the running deployment id (`VERCEL_GIT_COMMIT_SHA || VERCEL_DEPLOYMENT_ID || 'dev'`); the root layout bakes the same value into the HTML as `window.__MINTY_BUILD__`; `components/shared/DeploymentCheck.jsx` (mounted in root layout) compares them on mount/focus/visible/5-min interval and, on mismatch, navigates to a cache-busting `?_fresh=` URL (new cache key = forced network fetch). Loop-guarded via `_fresh` param + sessionStorage flag. The shell must still load fresh once after this ships (clear app cache / reinstall) — the check only exists in builds from this commit on.
 - **Shell v1.2 (2026-09-10, `D:\WORKS\Minty\Android`, see its AGENTS.md):** Auto Backup disabled (`allowBackup="false"` + all domains excluded from cloud/D2D — restored WebView profiles made reinstalls useless) and `nukeStaleWebStateAfterUpgrade()` wipes WebView cache/cookies/storage once per versionCode, so every app update self-heals existing installs. Rebuild/release via `build-release.bat` there.
+
+### App Shell Platform Contract (2026-09-25, iOS app)
+
+The web app runs inside native shells: Android WebView (`D:\WORKS\Minty\Android`) and iOS WKWebView (`D:\WORKS\Minty\iOS`). Contract between shell and site:
+
+- **Shell identity:** shells inject `window.__MINTY_PLATFORM__` (`'android'` | `'ios'`) before page scripts run and append `MintyFitApp-<platform>` to the WebView User-Agent. Client helper: `lib/platform.js` (`getShellPlatform()`, `isIOSShell()`, `openExternal()`). Read it after mount (useEffect) — reading `window` during render mismatches SSR HTML.
+- **External links:** `openExternal(url)` posts `{type:'openExternal', url}` over the `ReactNativeWebView` postMessage bridge; the shell opens the URL in the system browser. Falls back to `window.open` on the plain web.
+- **App Store Guideline 3.1.1 (no in-app purchase on iOS):** `PricingClient` paid-plan CTAs and the My Account "Manage billing" portal button call `openExternal('https://mintyfit.com/...')` when `isIOSShell()`; `/api/stripe/checkout` additionally refuses requests with the `MintyFitApp-iOS` UA (403). Stripe stays fully functional on web + Android.
+- **App Store Guideline 4.8:** Sign in with Apple is offered wherever Google OAuth is (AuthModal, AuthContext). In the shell, OAuth completes in the system browser and hands the session back via universal link → `/auth/callback` (PKCE verifier lives in WebView cookies, so the exchange still completes in-app).
+- **App Store Guideline 5.1.1:** account deletion lives at My Account → "Delete account" → `DELETE /api/gdpr/delete` (deletes all user rows + the auth user).
+- **Universal links:** `/.well-known/apple-app-site-association` (route handler, needs `APPLE_TEAM_ID` env; 404 until set) makes mintyfit.com links — magic-link login `/auth/handle-session`, deep links — open the iOS app. Android's equivalent is `public/.well-known/assetlinks.json`.
 
 ### 🔄 Server/Data Caching & Loading UX (2026-09-09 perf pass)
 
