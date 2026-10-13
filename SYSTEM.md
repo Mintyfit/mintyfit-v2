@@ -135,7 +135,7 @@ AprillBuild/
 │       │   ├── export/route.js       # GET full data export (JSON download)
 │       │   └── delete/route.js       # DELETE account + all data
 │       ├── shopping-list/route.js    # Shopping list CRUD
-│       ├── transcribe/route.js       # POST audio → Groq Whisper STT (paid tier)
+│       ├── transcribe/route.js       # POST audio → xAI STT grok-voice-transcribe-2.0 (paid tier; was Groq Whisper until 2026-10-13)
 │       ├── assistant/route.js        # POST conversational assistant (intent classify → find/create/log/question)
 │       ├── ingredient-alternatives/
 │       │   └── route.js              # GET ingredient swap suggestions
@@ -418,7 +418,7 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 - `SUPABASE_SERVICE_ROLE_KEY` — For GDPR delete and admin operations
 - `IDEOGRAM_API_KEY` — For recipe image generation
 - `NEXT_PUBLIC_USDA_API_KEY` — USDA FoodData Central (browser-exposed by design; falls back to public DEMO_KEY)
-- `GROQ_API_KEY` — Groq Whisper STT (`whisper-large-v3-turbo`) for `/api/transcribe`. Without it, voice works via Web Speech API in browsers and fails gracefully in the app.
+- `XAI_API_KEY` — Grok chat/food-parse AND speech-to-text: `/api/transcribe` uses `POST https://api.x.ai/v1/stt` (`grok-voice-transcribe-2.0`, ~$0.10/hr audio, webm/mp4 supported). (Replaced `GROQ_API_KEY`/Groq Whisper on 2026-10-13 — one less provider; without it voice falls back to Web Speech API in browsers and fails with a visible error in the app.)
 
 ### Manual Ops Pending (after 2026-09-01 hardening session)
 

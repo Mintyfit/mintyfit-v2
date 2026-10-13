@@ -149,7 +149,7 @@
 1. Run migration 058 (usage RPC) — until then limits fail open (no breakage)
 2. Run migration 059 (recipes.search_vector) — until then assistant falls back to ILIKE search
 3. `supabase functions deploy stripe-webhook` — tier fix
-4. Add `GROQ_API_KEY` to Vercel env — until then voice falls back to Web Speech API (browsers) and fails gracefully in the app
+4. ~~Add `GROQ_API_KEY` to Vercel env~~ — OBSOLETE 2026-10-13: `/api/transcribe` switched to xAI STT (`grok-voice-transcribe-2.0`), uses the existing `XAI_API_KEY` already in Vercel. Round-trip tested OK.
 
 ### ⚠️ Manual steps required (Android app, D:\WORKS\Minty\Android)
 1. ~~Rebuild the app (Gradle)~~ — DONE 04-Sep-2026 (v1.1/vc2), superseded: **v1.2 (versionCode 3) built and live on Play production 10-Sep-2026** (backup disabled + WebView state nuke on upgrade). Future rebuilds: double-click `build-release.bat` in the Android project (handles JAVA_HOME=Android Studio JBR, daemon workarounds, optional Play upload).

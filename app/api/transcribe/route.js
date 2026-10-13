@@ -4,7 +4,9 @@ import { enforceUsageLimit, canUseVoiceAssistant } from '@/lib/usageLimits'
 
 export const maxDuration = 30
 
-// POST /api/transcribe — audio file → text via Groq-hosted Whisper.
+// POST /api/transcribe — audio file → text via xAI Speech-to-Text
+// (grok-voice-transcribe-2.0) — uses the same XAI_API_KEY as the rest of the
+// Grok features (was Groq-hosted Whisper until 2026-10-13; xAI shipped STT).
 // Paid feature (STT costs per minute): pro/family tiers only.
 // Body: multipart/form-data with `audio` (webm/opus/m4a), optional `language`.
 export async function POST(request) {
@@ -35,8 +37,8 @@ export async function POST(request) {
     )
   }
 
-  const groqKey = process.env.GROQ_API_KEY
-  if (!groqKey) {
+  const xaiKey = process.env.XAI_API_KEY
+  if (!xaiKey) {
     return NextResponse.json({ error: 'Transcription not configured' }, { status: 500 })
   }
 
@@ -61,19 +63,18 @@ export async function POST(request) {
   try {
     const upstream = new FormData()
     upstream.append('file', audioFile, audioFile.name || 'audio.webm')
-    upstream.append('model', 'whisper-large-v3-turbo')
-    upstream.append('response_format', 'json')
+    upstream.append('model', 'grok-voice-transcribe-2.0')
     if (language) upstream.append('language', language)
 
-    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    const response = await fetch('https://api.x.ai/v1/stt', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${groqKey}` },
+      headers: { Authorization: `Bearer ${xaiKey}` },
       body: upstream,
     })
 
     if (!response.ok) {
       const err = await response.text()
-      console.error('Groq Whisper error:', response.status, err.slice(0, 300))
+      console.error('xAI STT error:', response.status, err.slice(0, 300))
       return NextResponse.json({ error: 'Transcription failed' }, { status: 502 })
     }
 
