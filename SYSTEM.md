@@ -182,7 +182,7 @@ AprillBuild/
 │   ├── useProfile.js                 # Profile state
 │   ├── useSubscription.js            # Stripe subscription state
 │   ├── useCachedData.js              # localStorage SWR cache + invalidateCache() events
-│   └── useVoiceInput.js              # THE voice→text hook (only one — useVoice.js deleted): Web Speech API or MediaRecorder→/api/transcribe. States: isStarting → isListening → isProcessing; 12s mic-timeout + 30s auto-stop cap
+│   └── useVoiceInput.js              # THE voice→text hook (only one — useVoice.js deleted): Web Speech API or MediaRecorder→/api/transcribe. States: isStarting → isListening → isProcessing; 12s mic-timeout, 30s auto-stop cap, 250ms timeslice (WebView empty-file fix), 4s onstart watchdog, mic always released on teardown, NO silent failures (empty recording / empty transcript both surface errors)
 │
 ├── components/                       # UI components
 │   ├── ui/                           # Primitives: Toast (useToast), Modal (focus trap), ConfirmDialog (useConfirm) — NEVER use alert()/confirm()

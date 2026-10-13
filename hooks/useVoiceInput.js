@@ -6,6 +6,16 @@ import { useState, useRef, useCallback } from 'react'
 // the WebView/browser is swallowing the permission request (observed on stale
 // app shells) — surface an error instead of hanging silently.
 const MIC_START_TIMEOUT_MS = 12000
+// MediaRecorder is started WITH a timeslice so `dataavailable` keeps firing
+// during the recording. Without it, Android WebView builds can deliver an
+// EMPTY file on stop() (no dataavailable ever fires) — which used to be
+// swallowed by the "too short" early return: the user pressed Stop and got
+// nothing at all.
+const CHUNK_TIMESLICE_MS = 250
+// If recorder.onstart never fires after start(), the recorder is wedged
+// (WebView audio device left in a bad state) — tear down and say so instead
+// of leaving the UI stuck on "Starting microphone…" with a dead mic button.
+const RECORDER_START_TIMEOUT_MS = 4000
 // The MediaRecorder path has no silence detection, so without a cap a
 // forgotten recording would run (and stream chunks) indefinitely.
 const MAX_RECORD_MS = 30000
@@ -23,7 +33,9 @@ const MAX_RECORD_MS = 30000
  * UI can render an upgrade prompt instead of an error.
  *
  * State machine: idle → isStarting (mic/permission wait) → isListening →
- * isProcessing (Whisper only) → idle. `error` is set on any failure.
+ * isProcessing (Whisper only) → idle. `error` is set on ANY failure — no
+ * silent no-ops: an empty recording and an empty transcript both tell the
+ * user what happened.
  */
 export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
   const [isStarting, setIsStarting] = useState(false)
@@ -32,8 +44,11 @@ export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
   const [error, setError] = useState(null)
   const [upgradeRequired, setUpgradeRequired] = useState(false)
   const mediaRecorderRef = useRef(null)
+  const recognitionRef = useRef(null)
+  const streamRef = useRef(null)
   const chunksRef = useRef([])
   const autoStopRef = useRef(null)
+  const startWatchdogRef = useRef(null)
 
   const supportsWebSpeech =
     typeof window !== 'undefined' &&
@@ -46,16 +61,29 @@ export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
     }
   }, [])
 
+  const clearStartWatchdog = useCallback(() => {
+    if (startWatchdogRef.current) {
+      clearTimeout(startWatchdogRef.current)
+      startWatchdogRef.current = null
+    }
+  }, [])
+
   const startWithWebSpeech = useCallback(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     const recognition = new SpeechRecognition()
     recognition.continuous = false
     recognition.interimResults = false
     recognition.lang = language
+    recognitionRef.current = recognition
 
     recognition.onstart = () => { setIsStarting(false); setIsListening(true) }
-    recognition.onend = () => { setIsStarting(false); setIsListening(false) }
+    recognition.onend = () => {
+      recognitionRef.current = null
+      setIsStarting(false)
+      setIsListening(false)
+    }
     recognition.onerror = (e) => {
+      recognitionRef.current = null
       setIsStarting(false)
       setIsListening(false)
       if (e.error !== 'aborted' && e.error !== 'no-speech') {
@@ -70,13 +98,20 @@ export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
     try {
       recognition.start()
     } catch {
+      recognitionRef.current = null
       setIsStarting(false)
       setError('Speech recognition failed. Try typing instead.')
     }
-    return recognition
   }, [language, onTranscript])
 
   const startWithRecorder = useCallback(async () => {
+    // Defensive release: a previous session whose onstop never fired (seen in
+    // the Android WebView) keeps the mic device locked, and the next
+    // getUserMedia then hangs until the timeout — "mic works once, then never".
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+    mediaRecorderRef.current = null
+
     // Race getUserMedia against a timeout — inside a WebView whose shell
     // never answers the PermissionRequest the promise hangs FOREVER (no
     // reject), which is why the mic button used to appear dead.
@@ -87,6 +122,7 @@ export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
         timeoutId = setTimeout(() => reject(new Error('mic-timeout')), MIC_START_TIMEOUT_MS)
       }),
     ]).finally(() => clearTimeout(timeoutId))
+    streamRef.current = stream
 
     const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
       ? 'audio/webm;codecs=opus'
@@ -96,17 +132,48 @@ export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
     const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
     mediaRecorderRef.current = recorder
     chunksRef.current = []
+    // Terminal-state guard: onerror and the start watchdog both stop the
+    // recorder, which still fires onstop — that onstop must NOT run the
+    // transcribe flow or overwrite the real error message.
+    let failed = false
+
+    const teardown = () => {
+      clearAutoStop()
+      clearStartWatchdog()
+      stream.getTracks().forEach(t => t.stop())
+      if (streamRef.current === stream) streamRef.current = null
+      if (mediaRecorderRef.current === recorder) mediaRecorderRef.current = null
+    }
 
     recorder.ondataavailable = (e) => {
       if (e.data?.size) chunksRef.current.push(e.data)
     }
-    recorder.onstart = () => { setIsStarting(false); setIsListening(true) }
+    recorder.onstart = () => {
+      clearStartWatchdog()
+      setIsStarting(false)
+      setIsListening(true)
+    }
+    recorder.onerror = () => {
+      failed = true
+      teardown()
+      setIsStarting(false)
+      setIsListening(false)
+      setIsProcessing(false)
+      setError('Recording failed — please try again.')
+    }
     recorder.onstop = async () => {
       setIsListening(false)
-      clearAutoStop()
-      stream.getTracks().forEach(t => t.stop())
+      teardown()
+      if (failed) return // onerror/watchdog already handled + messaged
       const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
-      if (blob.size < 1000) return // too short — ignore
+      chunksRef.current = []
+      if (blob.size < 1000) {
+        // Empty file on stop is a known WebView MediaRecorder failure mode —
+        // never swallow it silently (this used to look exactly like
+        // "press Stop and nothing happens").
+        setError('Nothing was captured. Tap the mic and speak right away.')
+        return
+      }
 
       setIsProcessing(true)
       setError(null)
@@ -123,6 +190,7 @@ export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
         }
         if (!res.ok) throw new Error(data.error || 'Transcription failed')
         if (data.text) onTranscript?.(data.text)
+        else setError('Could not understand that — please try again.')
       } catch (err) {
         setError('Could not transcribe. Try again or type instead.')
       } finally {
@@ -130,13 +198,24 @@ export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
       }
     }
 
-    recorder.start()
+    recorder.start(CHUNK_TIMESLICE_MS)
+    // Watchdog: onstart should fire immediately. If it doesn't, the recorder
+    // is wedged — tear down instead of a stuck "Starting microphone…" state.
+    clearStartWatchdog()
+    startWatchdogRef.current = setTimeout(() => {
+      failed = true
+      try { if (recorder.state !== 'inactive') recorder.stop() } catch {}
+      teardown()
+      setIsStarting(false)
+      setIsListening(false)
+      setError('Microphone did not start. Please try again.')
+    }, RECORDER_START_TIMEOUT_MS)
     // Safety net: auto-stop long recordings (the recorder never stops itself).
     clearAutoStop()
     autoStopRef.current = setTimeout(() => {
-      try { recorder.stop() } catch {}
+      try { if (recorder.state !== 'inactive') recorder.stop() } catch {}
     }, MAX_RECORD_MS)
-  }, [language, onTranscript, clearAutoStop])
+  }, [language, onTranscript, clearAutoStop, clearStartWatchdog])
 
   const startListening = useCallback(async () => {
     setError(null)
@@ -161,7 +240,12 @@ export function useVoiceInput({ language = 'en-US', onTranscript } = {}) {
 
   const stopListening = useCallback(() => {
     clearAutoStop()
-    try { mediaRecorderRef.current?.stop() } catch {}
+    // Web Speech path: stop() finalizes and still delivers the result.
+    try { recognitionRef.current?.stop() } catch {}
+    const recorder = mediaRecorderRef.current
+    if (recorder && recorder.state !== 'inactive') {
+      try { recorder.stop() } catch {}
+    }
     setIsStarting(false)
     setIsListening(false)
   }, [clearAutoStop])
