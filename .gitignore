@@ -39,3 +39,9 @@ next-env.d.ts
 
 .vercel
 .claude/worktrees/
+
+# Runtime fallback store for weekly SEO reports (lib/reporting/store.js)
+data/seo-weekly-reports.json
+
+# GCP service-account key (weekly SEO report, local dev)
+.secrets/

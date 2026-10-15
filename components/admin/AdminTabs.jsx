@@ -11,6 +11,7 @@ const tabs = [
   { href: '/admin/nutritionists', label: 'Nutritionists' },
   { href: '/admin/approvals', label: 'Approvals' },
   { href: '/admin/audit', label: 'Audit Log' },
+  { href: '/admin/seo-reports', label: 'SEO Reports' },
   { href: '/admin/gdpr', label: 'GDPR' },
   { href: '/admin/import-plan', label: 'Import Plan' },
 ]

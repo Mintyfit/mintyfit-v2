@@ -28,6 +28,7 @@ import NavbarWrapper from '@/components/shared/NavbarWrapper'
 import AppFooter from '@/components/landing/AppFooter'
 import ServiceWorkerCleanup from '@/components/shared/ServiceWorkerCleanup'
 import DeploymentCheck from '@/components/shared/DeploymentCheck'
+import GoogleTagManager from '@/components/shared/GoogleTagManager'
 import './globals.css'
 
 const montserrat = localFont({
@@ -103,6 +104,7 @@ export default function RootLayout({ children }) {
                 <AppFooter />
                 <ServiceWorkerCleanup />
                 <DeploymentCheck />
+                <GoogleTagManager />
               </ConfirmProvider>
             </ToastProvider>
           </AuthProvider>

@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Bundle SEO-STRATEGY.md into the weekly-report serverless function so the
+  // LLM narrative can read the strategy document at runtime (fs.readFileSync).
+  outputFileTracingIncludes: {
+    '/api/cron/weekly-seo-report': ['./SEO-STRATEGY.md'],
+  },
   images: {
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
