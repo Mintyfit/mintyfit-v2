@@ -59,7 +59,7 @@ export default async function SeoReportDetailPage({ params }) {
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <Link href="/admin/seo-reports" style={{ fontSize: 13, color: '#6b7280', textDecoration: 'none' }}>← All reports</Link>
+        <Link href="/mintadmn/seo-reports" style={{ fontSize: 13, color: '#6b7280', textDecoration: 'none' }}>← All reports</Link>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginTop: 6 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1f2937', margin: 0 }}>
             Week {report.weekStart} → {report.weekEnd}

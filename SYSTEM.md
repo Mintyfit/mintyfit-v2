@@ -271,6 +271,11 @@ All tables in Supabase PostgreSQL. RLS enabled on everything.
 **`admin_settings`** — Key-value settings editable in admin (currently `seo_report_recipients` — the weekly report's e-mail recipients).
 - key (PK), value, updated_at. RLS enabled, no policies → service-role only.
 
+**`blog_posts`** — Blog content (migration 064 adds `pillar`)
+- id, title, slug (unique), excerpt, content (HTML), image_url, categories (text[]), tags (text[]), status (draft|published), is_published, published_at, pillar (text A–E or NULL — SEO pillar per SEO-STRATEGY.md §3; legacy wellness posts stay NULL), seo_title, seo_description, sidebar_html, author_id (FK→profiles), created_at, updated_at
+- **Scheduled publishing:** a `published_at` in the future keeps the post hidden — every public query (`/blog`, `/blog/[slug]`, related posts, `sitemap.js`, landing) filters `published_at <= now()`. The editor (BlogEditorClient) exposes the publish date + pillar dropdown. The weekly report's `blog.js` counts only live posts, degrades gracefully if 064 isn't applied, and passes `pillar` + `scheduledUpcoming` to the LLM digest.
+- Apply migrations manually in the Supabase SQL Editor — the Management API token (`Supabase_token` in .env.local) is invalid (401).
+
 ### Core Tables
 
 **`profiles`** — User accounts
@@ -423,13 +428,13 @@ All 40 routes built and passing `next build`. Sessions 01–09 complete.
 |---|---|
 | Public | `/`, `/recipes`, `/recipes/[slug]`, `/recipes/generate`, `/menus`, `/menus/[slug]`, `/blog`, `/blog/[slug]`, `/pricing`, `/pages/[slug]` |
 | Authenticated | `/plan`, `/statistics`, `/my-account`, `/my-family`, `/shopping-list`, `/nutritionist`, `/family-invite/[token]` |
-| Admin | `/admin`, `/blog/new`, `/blog/[slug]/edit`, `/admin/seo-reports` (+ `/[id]` detail) |
+| Admin | `/mintadmn` (renamed from `/admin` 2026-10-16 — scanner-noise reduction; obscurity only, the real gate is the super_admin role check in `app/mintadmn/layout.jsx` + RLS), `/mintadmn/blog` (list + manage all posts), `/mintadmn/blog/new`, `/mintadmn/blog/[slug]/edit`, `/mintadmn/seo-reports` (+ `/[id]` detail). Legacy `/blog/new` + `/blog/[slug]/edit` redirect into `/mintadmn/blog/*`. NOTE: internal module namespace `lib/admin/` and API route `/api/admin/import-plan/*` intentionally keep the old name. |
 
 ### Weekly SEO report (2026-10-15)
 
 Automated SEO monitoring + content-suggestion pipeline, ported from the SPS Grupp reporting system (all SPS identifiers removed):
 
-- **`SEO-STRATEGY.md`** (repo root) — the single source of truth for SEO: five keyword pillars (A meal-planning systems, B budget family meals, C picky eaters, D tools, E commercial), out-of-scope YMYL rules, content rules, methodology. The weekly report's LLM reads it at runtime (bundled via `outputFileTracingIncludes` in next.config.mjs) and frames every finding/suggestion against it.
+- **`SEO-STRATEGY.md`** (repo root) — the single source of truth for SEO: five keyword pillars (A meal-planning systems, B budget family meals, C picky eaters, D the system shown working — generator/template queries answered with the live product, never static artifacts, E commercial), out-of-scope YMYL rules, content rules, methodology. The weekly report's LLM reads it at runtime (bundled via `outputFileTracingIncludes` in next.config.mjs) and frames every finding/suggestion against it.
 - **`lib/reporting/`** — `snapshot.js` (GSC + GA4 + blog activity from `blog_posts`), `keyword-families.js` (pillar keyword families, impression-weighted position, carrier pages), `insights.js` (rule engine: clicks ±15%, risers/fallers ±3 pos, striking distance pos 4–15/≥30 impr, low-CTR, carrier swaps, content gaps, silent pillars, YMYL drift watch, publishing cadence), `llm.js` (Anthropic narrative; **number audit** rejects any figure not present in the data/insights/strategy doc + one corrective retry), `store.js` (Supabase `seo_weekly_reports` + JSON fallback), `email-html.js`, `notify.js` (Resend, sender `RESEND_FROM_REPORTS`), `generate.js`.
 - **`/api/cron/weekly-seo-report`** — Vercel Cron Fridays 06:00 UTC (`vercel.json`), CRON_SECRET bearer, `?send=0` to generate without e-mailing.
 - **Admin → SEO Reports** — report list + full detail view (scorecard, narrative, findings, family table, new queries), "Generate now", delete, re-send e-mail, and the **recipients manager** (`admin_settings.seo_report_recipients`).

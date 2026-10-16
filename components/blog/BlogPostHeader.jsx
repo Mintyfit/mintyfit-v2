@@ -17,7 +17,7 @@ export default function BlogPostHeader({ post, isSuperAdmin }) {
       </Link>
       {isSuperAdmin && post?.slug && (
         <Link
-          href={`/blog/${post.slug}/edit`}
+          href={`/mintadmn/blog/${post.slug}/edit`}
           style={{
             display: 'flex',
             alignItems: 'center',

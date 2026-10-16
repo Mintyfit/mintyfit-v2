@@ -8,7 +8,7 @@ const PROTECTED_PATHS = [
   '/my-family',
   '/shopping-list',
   '/nutritionist',
-  '/admin',
+  '/mintadmn',
 ]
 
 export async function middleware(request) {

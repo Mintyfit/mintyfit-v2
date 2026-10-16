@@ -6,14 +6,15 @@ import { useState } from 'react'
 
 const tabs = [
   { href: '/my-account', label: 'My Account' },
-  { href: '/admin/customers', label: 'Customers' },
-  { href: '/admin/families', label: 'Families' },
-  { href: '/admin/nutritionists', label: 'Nutritionists' },
-  { href: '/admin/approvals', label: 'Approvals' },
-  { href: '/admin/audit', label: 'Audit Log' },
-  { href: '/admin/seo-reports', label: 'SEO Reports' },
-  { href: '/admin/gdpr', label: 'GDPR' },
-  { href: '/admin/import-plan', label: 'Import Plan' },
+  { href: '/mintadmn/customers', label: 'Customers' },
+  { href: '/mintadmn/families', label: 'Families' },
+  { href: '/mintadmn/nutritionists', label: 'Nutritionists' },
+  { href: '/mintadmn/approvals', label: 'Approvals' },
+  { href: '/mintadmn/audit', label: 'Audit Log' },
+  { href: '/mintadmn/blog', label: 'Blog' },
+  { href: '/mintadmn/seo-reports', label: 'SEO Reports' },
+  { href: '/mintadmn/gdpr', label: 'GDPR' },
+  { href: '/mintadmn/import-plan', label: 'Import Plan' },
 ]
 
 export default function AdminTabs() {

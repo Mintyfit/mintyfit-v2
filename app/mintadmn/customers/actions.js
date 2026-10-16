@@ -27,7 +27,7 @@ export async function updateProfileField(formData) {
   await supabase.from('profiles').update({ [field]: parsed }).eq('id', userId)
 
   await logAudit({ actorId, action: `admin.update.${field}`, targetId: userId, targetType: 'profile', details: { [field]: parsed } })
-  revalidatePath('/admin/customers')
+  revalidatePath('/mintadmn/customers')
 }
 
 export async function toggleSuspend(formData) {
@@ -40,5 +40,5 @@ export async function toggleSuspend(formData) {
   await supabase.from('profiles').update({ is_active: !currentActive }).eq('id', userId)
 
   await logAudit({ actorId, action: currentActive ? 'admin.suspend' : 'admin.activate', targetId: userId, targetType: 'profile' })
-  revalidatePath('/admin/customers')
+  revalidatePath('/mintadmn/customers')
 }

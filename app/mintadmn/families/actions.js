@@ -22,7 +22,7 @@ export async function removeFamilyMember(formData) {
   await supabase.from('family_memberships').delete().eq('family_id', familyId).eq('profile_id', profileId)
 
   await logAudit({ actorId, action: 'admin.family.remove_member', targetId: familyId, targetType: 'family', details: { profileId } })
-  revalidatePath('/admin/families')
+  revalidatePath('/mintadmn/families')
 }
 
 export async function updateMemberRole(formData) {
@@ -36,5 +36,5 @@ export async function updateMemberRole(formData) {
   await supabase.from('family_memberships').update({ role }).eq('family_id', familyId).eq('profile_id', profileId)
 
   await logAudit({ actorId, action: 'admin.family.update_role', targetId: familyId, targetType: 'family', details: { profileId, role } })
-  revalidatePath(`/admin/families/${familyId}`)
+  revalidatePath(`/mintadmn/families/${familyId}`)
 }

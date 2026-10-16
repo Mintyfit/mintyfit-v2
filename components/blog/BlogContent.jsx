@@ -68,6 +68,7 @@ export default function BlogContent({ html }) {
       <div ref={ref}>
         <SafeHtml
           html={cleanHtml}
+          className="blog-article"
           style={{ fontSize: '1.05rem', lineHeight: 1.8, color: 'var(--text-2)' }}
         />
       </div>

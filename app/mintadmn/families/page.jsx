@@ -77,7 +77,7 @@ export default async function FamiliesPage({ searchParams }) {
                   {new Date(f.created_at).toLocaleDateString()}
                 </td>
                 <td style={{ padding: '11px 14px', textAlign: 'right' }}>
-                  <a href={`/admin/families/${f.id}`} style={{
+                  <a href={`/mintadmn/families/${f.id}`} style={{
                     fontSize: 14, color: '#2d6e2e', textDecoration: 'none', fontWeight: 500,
                   }}>
                     View members

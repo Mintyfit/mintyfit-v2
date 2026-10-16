@@ -26,7 +26,7 @@ export default async function CustomerDetailPage({ params }) {
 
   return (
     <div>
-      <Link href="/admin/customers" style={{
+      <Link href="/mintadmn/customers" style={{
         background: '#f3f4f6', border: 'none', borderRadius: 8, padding: '8px 14px',
         fontSize: 14, cursor: 'pointer', color: '#374151', marginBottom: 20,
         textDecoration: 'none', display: 'inline-block',

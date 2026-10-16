@@ -19,7 +19,7 @@ async function requireSuperAdmin() {
 export async function generateNow() {
   await requireSuperAdmin()
   const report = await generateWeeklySeoReport()
-  revalidatePath('/admin/seo-reports')
+  revalidatePath('/mintadmn/seo-reports')
   return { id: report.id, insights: report.insights.length, errors: report.snapshot.errors }
 }
 
@@ -30,8 +30,8 @@ export async function resendEmail(formData) {
   const report = await getWeeklyReport(id)
   if (!report) throw new Error('Report not found')
   const result = await sendReportEmail(report)
-  revalidatePath('/admin/seo-reports')
-  revalidatePath(`/admin/seo-reports/${id}`)
+  revalidatePath('/mintadmn/seo-reports')
+  revalidatePath(`/mintadmn/seo-reports/${id}`)
   return result
 }
 
@@ -44,7 +44,7 @@ export async function removeReports(formData) {
     .filter((n) => Number.isFinite(n) && n > 0)
   const deleted = await deleteWeeklyReports(ids)
   await logAudit({ actorId, action: 'admin.seo-reports.delete', targetId: ids.join(','), targetType: 'seo_weekly_reports' })
-  revalidatePath('/admin/seo-reports')
+  revalidatePath('/mintadmn/seo-reports')
   return { deleted }
 }
 
@@ -62,6 +62,6 @@ export async function saveRecipients(formData) {
   const value = emails.join(', ')
   await saveReportRecipients(value)
   await logAudit({ actorId, action: 'admin.seo-reports.recipients', targetId: value, targetType: 'admin_settings' })
-  revalidatePath('/admin/seo-reports')
+  revalidatePath('/mintadmn/seo-reports')
   return { saved: true, count: emails.length }
 }

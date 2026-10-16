@@ -30,11 +30,12 @@ export default async function sitemap() {
     priority: 0.8,
   }))
 
-  // Published blog posts
+  // Published blog posts (scheduled/future-dated posts enter the sitemap when live)
   const { data: posts } = await supabase
     .from('blog_posts')
     .select('slug, updated_at')
     .eq('status', 'published')
+    .lte('published_at', new Date().toISOString())
     .not('slug', 'is', null)
     .order('updated_at', { ascending: false })
     .limit(500)

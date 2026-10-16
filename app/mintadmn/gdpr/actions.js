@@ -22,5 +22,5 @@ export async function resolveGdprRequest(formData) {
   await supabase.from('gdpr_requests').update({ status: decision, resolved_by: actorId, resolved_at: new Date().toISOString() }).eq('id', requestId)
 
   await logAudit({ actorId, action: `admin.gdpr.${decision}`, targetId: requestId, targetType: 'gdpr_request' })
-  revalidatePath('/admin/gdpr')
+  revalidatePath('/mintadmn/gdpr')
 }

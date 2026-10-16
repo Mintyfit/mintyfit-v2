@@ -5,7 +5,7 @@ export default function robots() {
         userAgent: '*',
         allow: '/',
         disallow: [
-          '/admin',
+          '/mintadmn',
           '/my-account',
           '/my-family',
           '/nutritionist',

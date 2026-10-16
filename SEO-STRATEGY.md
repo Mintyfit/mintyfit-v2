@@ -43,36 +43,50 @@ Targets: `theme night dinner ideas`, `weekly dinner themes`,
 `cook once eat twice`, `leftover makeover meals`.
 Angle: systems that kill the 5pm "what's for dinner" decision. Differentiate
 with **different appetites, one meal** — nobody covers per-person sizing.
+Template/printable demand in this pillar is answered with the live planner
+(rule 9), never a downloadable file.
 SERP evidence: small mom-blogs dominate (familyfoodonthetable.com,
 sunnydayfamily.com). Winnable now.
 
 ### Pillar B — Budget family meals (strongest product tie-in)
 Targets: `family meal plan on a budget`, `$50 weekly meal plan`,
 `$100 grocery list family`, `grocery budget for family of 4`,
-`aldi meal plan`, `walmart meal plan`, `how to waste less food`.
-Angle: **priced weekly plans with real grocery lists** — publishable at scale
-from our own menu engine (`/menus/` pages + blog). racion.app ranks with
-exactly this format.
+`cheap keto meals for a family`, `how to waste less food`.
+Angle: **budget week plans that work at any store, in any country** — real
+quantities with TARGET prices ("beat this and the week is under budget"),
+never one store's receipt. MintyFit is a global product: single-store
+content (Aldi/Walmart/Lidl-specific items or prices) is useless to most of
+the world and is NEVER published. Keto budget staples per rule 10 (eggs,
+whole chicken, ground meat, cabbage, frozen broccoli), publishable at scale
+from our own menu engine (`/menus/` pages + blog).
 SERP evidence: thetexmexmom.com (#1), thesavvybite.com — small blogs win.
 
 ### Pillar C — Picky eaters (practical only)
 Targets: `weekly meal plan for picky eaters`, `picky eater meal plan with
 grocery list`, `deconstructed dinners`, `build your own dinner ideas`,
 `one meal for the whole family`, `no short order cooking`.
-Angle: build-your-own/deconstructed formats (taco bar, pasta bar, snack
-board) — one meal, everyone assembles. One neutral "safe food" sentence max;
+Angle: build-your-own/deconstructed formats (lettuce-cup taco bar, burger
+bowls, loaded cauliflower, snack board) — one meal, everyone assembles, all
+keto-friendly per rule 10. One neutral "safe food" sentence max;
 NO nutrient/medical claims (link out to AAP instead).
 SERP evidence: childrensrecipes.com, PickyPlanIt, Netmums — small sites win.
 Recipe-roundup queries ("dinner ideas picky eaters") are medium difficulty
 (Taste of Home, BBC present) — supporting content only.
 
-### Pillar D — Tools (link magnets, engine reuse)
+### Pillar D — The system, shown working (tools & generator queries)
 Targets: `meal plan generator`, `grocery list generator`,
-`weekly meal planner template` (interactive + printable),
+`weekly meal planner template`, `meal planner online`,
 `recipe serving size calculator`, `family calorie calculator`.
-Angle: free interactive tools beat static PDFs; each tool page gets a
-supporting article, each article embeds the tool. The family calorie
-calculator reuses the production BMR/RDA engine (formulas, not advice).
+Angle: searchers asking for a template, printable or generator want the JOB
+done, not a file. MintyFit IS the tool — every Pillar D page demonstrates
+the live system doing that job: the `/plan` weekly planner with per-person
+portions, auto-generated grocery lists, ready-made week plans under
+`/menus/`. The supporting article wraps the demonstration (screenshots, a
+real family's week), never a download. We NEVER ship static artifacts (rule
+9) — a "template" query is answered by showing the system doing what a
+template only describes. Future free interactive pages (e.g. a family
+portions/calorie calculator) reuse the production BMR/RDA engine
+(formulas, not advice) and hang off this pillar's hub post.
 SERP evidence: Swoodie, Burnplate, FamilyMacro — small tools rank.
 
 ### Pillar E — Commercial (product pages)
@@ -104,6 +118,20 @@ Relevance beats domain authority here.
 8. **Cadence:** 1 post per week minimum, alternating pillars A→B→C→D until
    each pillar has 4+ posts, then follow the data (double down on pillars
    showing impressions growth in the weekly report).
+9. **No static artifacts, ever.** We do not publish printable PDFs,
+   downloadable or fillable templates, spreadsheets, or email-gated files.
+   The live system replaced them: when a target query implies a file
+   ("template", "printable", "worksheet"), the post demonstrates MintyFit
+   doing that job interactively (theme rotation in /plan, a priced week
+   under /menus/, the generated grocery list) and CTAs into the product.
+10. **Keto-friendly system.** MintyFit is keto friendly, and the blog eats
+    the way the product plans. Never build meal ideas around high-carb
+    staples (regular pasta, pizza dough, bread, rice, potatoes, tortillas,
+    sugar, beans-as-centerpiece). Use the keto formats instead: lettuce-cup
+    tacos, cauliflower rice, zucchini noodles, fathead or crustless pizza,
+    roasted low-carb vegetables, eggs, cheese, whole cuts of meat. Budget
+    content (Pillar B) must respect this too — cheap keto staples (eggs,
+    whole chicken, ground meat, cabbage, frozen broccoli), not pasta/rice.
 
 ## 5. What the weekly report must do
 
@@ -130,6 +158,16 @@ Rules for its analysis:
 - **Content suggestions must name the pillar**, the target query, the working
   title, and the carrier/competitor evidence from this week's data — never
   generic "write about meal planning" advice.
+- **Suggestions develop the system, never static artifacts.** A suggestion
+  must never be a printable PDF, a downloadable/fillable template, a
+  spreadsheet, or any file (rule 9). Tool/template/generator queries (Pillar
+  D) are answered by showcasing the live product — /plan, /menus/, generated
+  grocery lists, per-person portions — or by proposing a new interactive page
+  built on our engines.
+- **Legacy posts have no pillar.** The pre-strategy wellness library
+  (supplements, FODMAPs, bloating, stress, adult calculators) is out of scope
+  per §2: never suggest refreshes, interlink campaigns, or pillar tags for
+  it. Pillar attribution and hub links apply to new posts only.
 - **Publishing cadence check:** if 0 posts were published in the last 14 days,
   the report says so plainly — consistency is the strategy.
 - **SERP reality check:** all recommendations respect §2 (out of scope). The

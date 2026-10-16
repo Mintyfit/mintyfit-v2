@@ -8,7 +8,7 @@ MintyFit v2 (mintyfit.com) — a family nutrition and meal planning platform. Re
 
 ## Strategic Position
 
-"The only nutrition platform built for families, not individuals." Each family member has their own account with personalized nutrition targets. Families share meal plans, recipes, and shopping lists. AI generates custom recipes with 47-nutrient profiles.
+"The only nutrition platform built for families, not individuals." Each family member has their own account with personalized nutrition targets. Families share meal plans, recipes, and shopping lists. AI generates custom recipes with 47-nutrient profiles. **Keto friendly system** — content and recipe suggestions never center high-carb staples (regular pasta, pizza dough, bread, rice, potatoes, sugar); use keto formats (SEO-STRATEGY.md rule 10).
 
 ## Core Principles
 

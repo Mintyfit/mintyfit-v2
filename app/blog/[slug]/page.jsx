@@ -6,14 +6,17 @@ import BlogPostHeader from '@/components/blog/BlogPostHeader'
 
 export const revalidate = 300
 
-async function getPost(slug) {
+async function getPost(slug, includeScheduled = false) {
   const supabase = createPublicClient()
-  const { data, error } = await supabase
+  let query = supabase
     .from('blog_posts')
     .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
-    .single()
+  // Scheduled posts (future published_at) are not live yet — but super-admins
+  // may preview them before they go live.
+  if (!includeScheduled) query = query.lte('published_at', new Date().toISOString())
+  const { data, error } = await query.single()
   if (error) {
     console.error(`[Blog] Failed to load post "${slug}":`, error.message)
     return null
@@ -28,6 +31,7 @@ async function getRelated(categories, currentSlug) {
     .from('blog_posts')
     .select('id, slug, title, excerpt, image_url, published_at')
     .eq('status', 'published')
+    .lte('published_at', new Date().toISOString())
     .neq('slug', currentSlug)
     .contains('categories', categories.slice(0, 1))
     .limit(3)
@@ -40,7 +44,7 @@ async function getRelated(categories, currentSlug) {
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
-  const post = await getPost(slug)
+  const post = await getPost(slug, await getIsSuperAdmin())
   if (!post) return { title: 'Article Not Found — MintyFit' }
   return {
     title: `${post.seo_title || post.title} — MintyFit Blog`,
@@ -85,12 +89,14 @@ async function getIsSuperAdmin() {
 
 export default async function BlogPostPage({ params }) {
   const { slug } = await params
-  const post = await getPost(slug)
+  const isSuperAdmin = await getIsSuperAdmin()
+  const post = await getPost(slug, isSuperAdmin)
   if (!post) notFound()
 
   const cats = Array.isArray(post.categories) ? post.categories : (post.categories ? [post.categories] : [])
-  const [related, isSuperAdmin] = await Promise.all([getRelated(cats, slug), getIsSuperAdmin()])
+  const related = await getRelated(cats, slug)
   const cta = getCTA(cats)
+  const isScheduled = new Date(post.published_at) > new Date()
   const date = post.published_at ? new Date(post.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''
   const imageUrl = post.image_url || post.cover_url
   const authorName = post.author_name || 'MintyFit Team'
@@ -117,6 +123,13 @@ export default async function BlogPostPage({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '2rem 1rem' }}>
         <BlogPostHeader post={post} isSuperAdmin={isSuperAdmin} />
+
+        {/* Admin-only notice when previewing a scheduled (not yet live) post */}
+        {isScheduled && isSuperAdmin && (
+          <div style={{ marginBottom: '1.5rem', padding: '0.75rem 1rem', borderRadius: '0.5rem', background: '#fef3c7', color: '#92400e', fontSize: '0.875rem', fontWeight: 600 }}>
+            Scheduled post — goes live {new Date(post.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}. Only visible to admins until then.
+          </div>
+        )}
 
         {/* Breadcrumb */}
         <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--text-3)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>

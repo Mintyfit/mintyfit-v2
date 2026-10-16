@@ -44,7 +44,7 @@ export async function approveNutritionist(formData) {
   }
 
   await logAudit({ actorId, action: 'admin.nutritionist.approve', targetId: userId, targetType: 'profile' })
-  revalidatePath('/admin/nutritionists')
+  revalidatePath('/mintadmn/nutritionists')
 }
 
 export async function revokeNutritionist(formData) {
@@ -56,7 +56,7 @@ export async function revokeNutritionist(formData) {
   await supabase.from('profiles').update({ role: 'customer', is_approved: false }).eq('id', userId)
 
   await logAudit({ actorId, action: 'admin.nutritionist.revoke', targetId: userId, targetType: 'profile' })
-  revalidatePath('/admin/nutritionists')
+  revalidatePath('/mintadmn/nutritionists')
 }
 
 export async function updateNutritionistTier(formData) {
@@ -69,5 +69,5 @@ export async function updateNutritionistTier(formData) {
   await supabase.from('profiles').update({ subscription_tier: tier }).eq('id', userId)
 
   await logAudit({ actorId, action: 'admin.nutritionist.update_tier', targetId: userId, targetType: 'profile', details: { tier } })
-  revalidatePath('/admin/nutritionists')
+  revalidatePath('/mintadmn/nutritionists')
 }

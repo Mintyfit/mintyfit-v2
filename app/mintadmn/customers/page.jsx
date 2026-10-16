@@ -63,7 +63,7 @@ export default async function CustomersPage({ searchParams }) {
               <tr key={p.id} style={{ borderBottom: '1px solid #fafafa' }}>
                 <td style={{ padding: '11px 14px' }}>
                   <div style={{ fontWeight: 600, color: '#1f2937' }}>
-                    <Link href={`/admin/customers/${p.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                    <Link href={`/mintadmn/customers/${p.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                       {p.email}
                     </Link>
                   </div>
@@ -111,7 +111,7 @@ export default async function CustomersPage({ searchParams }) {
                 <td style={{ padding: '11px 14px' }}>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <Link
-                      href={`/admin/customers/${p.id}`}
+                      href={`/mintadmn/customers/${p.id}`}
                       style={{
                         fontSize: 14, padding: '4px 10px', borderRadius: 6,
                         border: 'none', cursor: 'pointer', background: '#f0fdf4',

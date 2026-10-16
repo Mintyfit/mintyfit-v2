@@ -11,6 +11,25 @@ function slugify(str) {
 
 const CATEGORY_OPTIONS = ['Nutrition', 'Meal Planning', 'Family Health', 'Recipes', 'Weight Loss', 'Kids']
 
+// SEO pillars from SEO-STRATEGY.md §3. '' = no pillar (legacy posts stay untagged).
+const PILLAR_OPTIONS = [
+  { value: '', label: '— No pillar (legacy)' },
+  { value: 'A', label: 'A · Meal planning systems' },
+  { value: 'B', label: 'B · Budget family meals' },
+  { value: 'C', label: 'C · Picky eaters' },
+  { value: 'D', label: 'D · The system, shown working' },
+  { value: 'E', label: 'E · Commercial' },
+]
+
+/** ISO string → value for <input type="datetime-local"> (local time). */
+function toLocalInput(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export default function BlogEditorClient({ post, isNew }) {
   const confirmDialog = useConfirm()
   const router = useRouter()
@@ -23,6 +42,8 @@ export default function BlogEditorClient({ post, isNew }) {
   const [coverUrl, setCoverUrl] = useState(post?.image_url || post?.cover_url || '')
   const [categories, setCategories] = useState(post?.categories || [])
   const [status, setStatus] = useState(post?.status || 'draft')
+  const [pillar, setPillar] = useState(post?.pillar || '')
+  const [publishAt, setPublishAt] = useState(toLocalInput(post?.published_at))
   const [seoTitle, setSeoTitle] = useState(post?.seo_title || '')
   const [seoDesc, setSeoDesc] = useState(post?.seo_description || '')
   const [saving, setSaving] = useState(false)
@@ -47,9 +68,12 @@ export default function BlogEditorClient({ post, isNew }) {
 
     const payload = {
       title, slug, excerpt, content, image_url: coverUrl, categories, status,
+      pillar: pillar || null,
       seo_title: seoTitle, seo_description: seoDesc,
       is_published: status === 'published',
-      published_at: status === 'published' ? (post?.published_at || new Date().toISOString()) : null,
+      // Scheduled publishing: a future publish date keeps the post hidden
+      // (public queries filter published_at <= now) until it goes live.
+      published_at: status === 'published' ? (publishAt ? new Date(publishAt).toISOString() : new Date().toISOString()) : null,
       updated_at: new Date().toISOString(),
     }
 
@@ -65,13 +89,13 @@ export default function BlogEditorClient({ post, isNew }) {
     setSaving(false)
     if (error) { setMessage({ type: 'error', text: error.message }); return }
     setMessage({ type: 'success', text: 'Post saved!' })
-    if (isNew) router.push(`/blog/${slug}/edit`)
+    if (isNew) router.push(`/mintadmn/blog/${slug}/edit`)
   }
 
   async function handleDelete() {
     if (!(await confirmDialog({ title: 'Delete this post?', body: 'This cannot be undone.', confirmLabel: 'Delete post', destructive: true }))) return
     await supabase.from('blog_posts').delete().eq('id', post.id)
-    router.push('/blog')
+    router.push('/mintadmn/blog')
   }
 
   const inputStyle = { width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border)', fontSize: '1rem', boxSizing: 'border-box', fontFamily: 'inherit', background: 'var(--bg-card)', color: 'var(--text-1)' }
@@ -79,7 +103,10 @@ export default function BlogEditorClient({ post, isNew }) {
   return (
     <div style={{ maxWidth: 820, margin: '0 auto', padding: '2rem 1rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700 }}>{isNew ? 'New Post' : 'Edit Post'}</h1>
+        <div>
+          <a href="/mintadmn/blog" style={{ fontSize: '0.875rem', color: '#2d6e2e', textDecoration: 'none', fontWeight: 600 }}>← All posts</a>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '0.25rem' }}>{isNew ? 'New Post' : 'Edit Post'}</h1>
+        </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           {!isNew && (
             <button onClick={handleDelete}
@@ -155,6 +182,26 @@ export default function BlogEditorClient({ post, isNew }) {
             <option value="published">Published</option>
           </select>
         </div>
+
+        <div>
+          <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500 }}>SEO Pillar</label>
+          <select value={pillar} onChange={e => setPillar(e.target.value)}
+            style={{ ...inputStyle, width: 'auto' }}>
+            {PILLAR_OPTIONS.map(p => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>Every new post belongs to exactly one pillar (SEO-STRATEGY.md §3). Legacy wellness posts stay untagged.</p>
+        </div>
+
+        {status === 'published' && (
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500 }}>Publish date</label>
+            <input type="datetime-local" value={publishAt} onChange={e => setPublishAt(e.target.value)}
+              style={{ ...inputStyle, width: 'auto' }} />
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.25rem' }}>Set a future date/time to schedule the post — it stays hidden until then. Empty = publish immediately.</p>
+          </div>
+        )}
 
         <div>
           <label style={{ display: 'block', marginBottom: '0.4rem', fontWeight: 500 }}>Content (HTML)</label>

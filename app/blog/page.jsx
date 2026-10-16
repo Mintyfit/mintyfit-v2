@@ -20,6 +20,8 @@ async function getPosts() {
     .from('blog_posts')
     .select('id, slug, title, excerpt, content, image_url, categories, published_at')
     .eq('status', 'published')
+    // Scheduled posts (future published_at) stay hidden until they go live.
+    .lte('published_at', new Date().toISOString())
     .order('published_at', { ascending: false })
     .limit(100)
   if (error) {

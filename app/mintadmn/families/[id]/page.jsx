@@ -17,7 +17,7 @@ export default async function FamilyDetailPage({ params }) {
 
   return (
     <div>
-      <Link href="/admin/families" style={{
+      <Link href="/mintadmn/families" style={{
         background: '#f3f4f6', border: 'none', borderRadius: 8, padding: '8px 14px',
         fontSize: 14, cursor: 'pointer', color: '#374151', marginBottom: 20,
         textDecoration: 'none', display: 'inline-block',

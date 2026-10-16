@@ -213,7 +213,7 @@ export default function Navbar() {
               <Link href="/my-family" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 16, fontWeight: 500, textDecoration: 'none' }}><Users size={20} />My Family</Link>
               {isNutritionist && <Link href="/nutritionist" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 16, fontWeight: 500, textDecoration: 'none' }}>👥 My Clients</Link>}
               {isNutritionist && <Link href="/nutritionist/profile" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 16, fontWeight: 500, textDecoration: 'none' }}>🩺 My Profile</Link>}
-              {isSuperAdmin && <Link href="/admin" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 16, fontWeight: 500, textDecoration: 'none' }}>⚙️ Admin</Link>}
+              {isSuperAdmin && <Link href="/mintadmn" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 24px', borderBottom: '1px solid var(--border)', color: 'var(--text-2)', fontSize: 16, fontWeight: 500, textDecoration: 'none' }}>⚙️ Admin</Link>}
             </>
           )}
           <div style={{ marginTop: 12, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -299,7 +299,7 @@ export default function Navbar() {
                     <Link href="/my-family" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', color: 'var(--text-2)', fontSize: 16, textDecoration: 'none' }}><Users size={16} />My Family</Link>
                     {isNutritionist && <Link href="/nutritionist" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', color: 'var(--text-2)', fontSize: 16, textDecoration: 'none' }}>👥 My Clients</Link>}
                     {isNutritionist && <Link href="/nutritionist/profile" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', color: 'var(--text-2)', fontSize: 16, textDecoration: 'none' }}>🩺 My Profile</Link>}
-                    {isSuperAdmin && <Link href="/admin" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', color: 'var(--text-2)', fontSize: 16, textDecoration: 'none' }}>⚙️ Admin</Link>}
+                    {isSuperAdmin && <Link href="/mintadmn" onClick={() => setDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', color: 'var(--text-2)', fontSize: 16, textDecoration: 'none' }}>⚙️ Admin</Link>}
                     <div style={{ height: 1, backgroundColor: 'var(--border)' }} />
                     <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', color: '#E53E3E', fontSize: 16, width: '100%', background: 'none', border: 'none', cursor: 'pointer' }}><LogOut size={16} />Sign Out</button>
                   </div>

@@ -26,5 +26,5 @@ export async function setPublic(formData) {
   await supabase.from(table).update({ is_public: approve }).eq('id', id)
 
   await logAudit({ actorId, action: `admin.${approve ? 'approve' : 'reject'}.${table}`, targetId: id, targetType: table })
-  revalidatePath('/admin/approvals')
+  revalidatePath('/mintadmn/approvals')
 }

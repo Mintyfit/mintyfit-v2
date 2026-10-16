@@ -167,6 +167,8 @@ export default function LandingClient() {
         .from('blog_posts')
         .select('id, title, slug, excerpt, image_url, published_at, created_at, content, blog_post_categories(blog_categories(id,name,slug,color))')
         .eq('is_published', true)
+        // Scheduled posts (future published_at) stay hidden until they go live.
+        .lte('published_at', new Date().toISOString())
         .order('published_at', { ascending: false, nullsLast: true })
         .limit(12),
       supabase

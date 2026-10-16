@@ -66,7 +66,7 @@ export default async function SeoReportsPage() {
               return (
                 <tr key={r.id}>
                   <td style={td}>
-                    <Link href={`/admin/seo-reports/${r.id}`} style={{ color: '#2d6e2e', fontWeight: 600, textDecoration: 'none' }}>
+                    <Link href={`/mintadmn/seo-reports/${r.id}`} style={{ color: '#2d6e2e', fontWeight: 600, textDecoration: 'none' }}>
                       {fmtDate(r.weekStart)} – {fmtDate(r.weekEnd)}
                     </Link>
                   </td>
