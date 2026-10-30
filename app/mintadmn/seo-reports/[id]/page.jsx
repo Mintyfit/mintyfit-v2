@@ -28,7 +28,8 @@ function Scorecard({ report }) {
   const cells = [
     g && { label: 'GSC clicks/day', value: r1(g.current.clicks / g.current.days), sub: `prev ${r1(g.previous.clicks / g.previous.days)}` },
     g && { label: 'Impressions/day', value: r1(g.current.impressions / g.current.days), sub: `prev ${r1(g.previous.impressions / g.previous.days)}` },
-    g && { label: 'Avg position', value: r1(g.current.position), sub: `prev ${r1(g.previous.position)}` },
+    // Position is undefined (not 0) when there were no impressions.
+    g && { label: 'Avg position', value: g.current.impressions > 0 ? r1(g.current.position) : '–', sub: g.previous.impressions > 0 ? `prev ${r1(g.previous.position)}` : 'no impressions' },
     a && { label: 'Sessions', value: a.current.sessions, sub: `prev ${a.previous.sessions}` },
     b && { label: 'Posts this week', value: b.publishedThisWeek.length, sub: `${b.totalPublished} total` },
   ].filter(Boolean)
@@ -52,9 +53,13 @@ export default async function SeoReportDetailPage({ params }) {
   if (!report) notFound()
 
   const g = report.snapshot.gsc
+  const ga4 = report.snapshot.ga4
   const blog = report.snapshot.blog
   const families = g?.families?.filter((f) => f.current.impressions > 0 || f.previous.impressions > 0) ?? []
   const newQueries = g?.newQueries?.slice(0, 15) ?? []
+  const topQueries = g?.topQueries?.slice(0, 10) ?? []
+  const ga4Channels = ga4?.channels?.slice(0, 8) ?? []
+  const ga4Pages = ga4?.topPages?.slice(0, 10) ?? []
 
   return (
     <div>
@@ -166,16 +171,93 @@ export default async function SeoReportDetailPage({ params }) {
         <div style={card}>
           <h3 style={{ margin: '0 0 10px', fontSize: 16, color: '#1f2937' }}>Blog activity</h3>
           {blog.publishedThisWeek.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#92400e', margin: 0 }}>
+            <p style={{ fontSize: 13, color: '#92400e', margin: '0 0 6px' }}>
               No posts published this week. Days since last post: {blog.daysSinceLastPost ?? '–'}.
             </p>
           ) : (
-            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: '#374151' }}>
+            <ul style={{ margin: '0 0 6px', paddingLeft: 20, fontSize: 13, color: '#374151' }}>
               {blog.publishedThisWeek.map((p) => (
-                <li key={p.slug}><a href={`/blog/${p.slug}`} style={{ color: '#2d6e2e' }}>{p.title}</a></li>
+                <li key={p.slug}>
+                  <a href={`/blog/${p.slug}`} style={{ color: '#2d6e2e' }}>{p.title}</a>
+                  {p.pillar && <span style={{ color: '#9ca3af', fontSize: 12 }}> · Pillar {p.pillar}</span>}
+                </li>
               ))}
             </ul>
           )}
+          {(blog.scheduledUpcoming ?? []).length > 0 && (
+            <div style={{ marginTop: 8, padding: '10px 12px', background: '#f0f9ff', border: '1px solid #dbeafe', borderRadius: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#1d4ed8', marginBottom: 4 }}>Scheduled pipeline ({blog.scheduledUpcoming.length})</div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#374151' }}>
+                {blog.scheduledUpcoming.map((p) => (
+                  <li key={p.slug}>
+                    <a href={`/blog/${p.slug}`} style={{ color: '#2d6e2e' }}>{p.title}</a>
+                    <span style={{ color: '#6b7280', fontSize: 12 }}> · goes live {p.publishedAt.slice(0, 10)}{p.pillar ? ` · Pillar ${p.pillar}` : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Top queries (GSC, by impressions) */}
+      {topQueries.length > 0 && (
+        <div style={card}>
+          <h3 style={{ margin: '0 0 10px', fontSize: 16, color: '#1f2937' }}>Top queries this week (GSC)</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr><th style={th}>Query</th><th style={th}>Impressions</th><th style={th}>Clicks</th><th style={th}>Pos</th></tr>
+            </thead>
+            <tbody>
+              {topQueries.map((q) => (
+                <tr key={q.query}>
+                  <td style={td}>{q.query}</td>
+                  <td style={td}>{q.impressions}</td>
+                  <td style={td}>{q.clicks}</td>
+                  <td style={td}>{fmtPos(q.position)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* GA4 traffic detail */}
+      {ga4 && (ga4Channels.length > 0 || ga4Pages.length > 0) && (
+        <div style={card}>
+          <h3 style={{ margin: '0 0 10px', fontSize: 16, color: '#1f2937' }}>Traffic detail (GA4)</h3>
+          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+            {ga4Channels.length > 0 && (
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Channels</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {ga4Channels.map((c) => (
+                      <tr key={c.channel}>
+                        <td style={td}>{c.channel}</td>
+                        <td style={{ ...td, textAlign: 'right' }}>{c.sessions} sessions</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {ga4Pages.length > 0 && (
+              <div style={{ flex: 1, minWidth: 260 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Top pages</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {ga4Pages.map((p) => (
+                      <tr key={p.path}>
+                        <td style={{ ...td, wordBreak: 'break-all' }}>{p.path}</td>
+                        <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>{p.sessions} sessions</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
