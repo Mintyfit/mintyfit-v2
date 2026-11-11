@@ -24,6 +24,15 @@ const nextConfig = {
 
   async rewrites() {
     return [
+      // Public CMS/legal URLs live at /pages/<slug>, but a top-level "pages"
+      // segment in the App Router collides with the Pages Router namespace on
+      // Vercel — /pages/* 500'd there (bare pages/_error, X-Matched-Path: /500)
+      // while working locally. The real route is /content/[slug]; this rewrite
+      // keeps the public URL stable (privacy policy is the App Store listing URL).
+      {
+        source: '/pages/:path*',
+        destination: '/content/:path*',
+      },
       // App Router ignores dot-prefixed folders — serve the Apple App Site
       // Association file (iOS universal links) from an /api route instead.
       // Android's equivalent is the static public/.well-known/assetlinks.json.
