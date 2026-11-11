@@ -5,11 +5,12 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/cron/weekly-seo-report': ['./SEO-STRATEGY.md'],
   },
-  // jsdom (isomorphic-dompurify's server entry) must be required from
-  // node_modules at runtime, NOT bundled — its dynamic requires break under
-  // serverless bundling/tracing, hard-crashing any Vercel function whose
-  // SERVER component imports SafeHtml (/pages/* 500'd; blog survived because
-  // it only uses SafeHtml inside a client component). Externalizing fixes it.
+  // jsdom (isomorphic-dompurify's server entry) is heavy and was the source of
+  // the /pages/* 500 incident (Nov 2026): jsdom -> html-encoding-sniffer (CJS)
+  // -> require() of ESM-only @exodus/bytes throws ERR_REQUIRE_ESM on Node <22.12
+  // (Vercel ran Node 20; local Node 24 has require(esm) so it never failed
+  // locally). Real fix = engines.node 22.x in package.json; keeping jsdom
+  // externalized as well so it is required from node_modules, never bundled.
   serverExternalPackages: ['isomorphic-dompurify', 'jsdom'],
   images: {
     deviceSizes: [640, 750, 828, 1080, 1200],
@@ -30,15 +31,6 @@ const nextConfig = {
 
   async rewrites() {
     return [
-      // Public CMS/legal URLs live at /pages/<slug>, but a top-level "pages"
-      // segment in the App Router collides with the Pages Router namespace on
-      // Vercel — /pages/* 500'd there (bare pages/_error, X-Matched-Path: /500)
-      // while working locally. The real route is /content/[slug]; this rewrite
-      // keeps the public URL stable (privacy policy is the App Store listing URL).
-      {
-        source: '/pages/:path*',
-        destination: '/content/:path*',
-      },
       // App Router ignores dot-prefixed folders — serve the Apple App Site
       // Association file (iOS universal links) from an /api route instead.
       // Android's equivalent is the static public/.well-known/assetlinks.json.

@@ -4,7 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const steps = {}
+  const steps = { nodeVersion: process.version }
 
   try {
     const m = await import('isomorphic-dompurify')
@@ -24,7 +24,7 @@ export async function GET() {
   }
 
   try {
-    await import('@/app/content/[slug]/page')
+    await import('@/app/pages/[slug]/page')
     steps.pageModuleImport = 'ok'
   } catch (e) {
     steps.pageModuleError = String((e && e.stack) || e).slice(0, 2000)
