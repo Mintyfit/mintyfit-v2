@@ -5,13 +5,6 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/cron/weekly-seo-report': ['./SEO-STRATEGY.md'],
   },
-  // jsdom (isomorphic-dompurify's server entry) is heavy and was the source of
-  // the /pages/* 500 incident (Nov 2026): jsdom -> html-encoding-sniffer (CJS)
-  // -> require() of ESM-only @exodus/bytes throws ERR_REQUIRE_ESM on Node <22.12
-  // (Vercel ran Node 20; local Node 24 has require(esm) so it never failed
-  // locally). Real fix = engines.node 22.x in package.json; keeping jsdom
-  // externalized as well so it is required from node_modules, never bundled.
-  serverExternalPackages: ['isomorphic-dompurify', 'jsdom'],
   images: {
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
