@@ -5,6 +5,12 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/api/cron/weekly-seo-report': ['./SEO-STRATEGY.md'],
   },
+  // jsdom (isomorphic-dompurify's server entry) must be required from
+  // node_modules at runtime, NOT bundled — its dynamic requires break under
+  // serverless bundling/tracing, hard-crashing any Vercel function whose
+  // SERVER component imports SafeHtml (/pages/* 500'd; blog survived because
+  // it only uses SafeHtml inside a client component). Externalizing fixes it.
+  serverExternalPackages: ['isomorphic-dompurify', 'jsdom'],
   images: {
     deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
