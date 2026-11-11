@@ -39,6 +39,7 @@
     "eslint-config-next": "^15.3.0",
     "globals": "^17.4.0",
     "pg": "^8.20.0",
+    "playwright-core": "^1.65.0",
     "sharp": "^0.34.5",
     "supabase": "^2.98.1",
     "tailwindcss": "^4.1.4"
